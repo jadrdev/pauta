@@ -111,6 +111,7 @@ struct ItemRowView: View {
         .onChange(of: notes) { guard isSelected else { return }; commitText() }
         .contextMenu {
             Button("Programar para hoy") { store.schedule(item, to: .now) }
+            Button("Aparcar en Algún día") { store.park(item) }
             Button("Quitar fecha") { store.schedule(item, to: nil) }
             Divider()
             Button("Eliminar", role: .destructive) { store.delete(item) }
@@ -132,12 +133,19 @@ struct ItemRowView: View {
                     .font(.system(size: 11.5))
                     .foregroundStyle(Paper.inkFaint)
             }
-            if let when = item.when, !item.isToday, !item.isCompleted {
+            // En Próximamente la lista ya va agrupada por día, así que repetir la
+            // fecha en cada fila solo añade ruido.
+            if let when = item.when, !item.isToday, !item.isCompleted, !isGroupedByDay {
                 Text(when.formatted(.dateTime.day().month(.abbreviated)))
                     .font(.system(size: 11.5))
                     .foregroundStyle(Paper.inkFaint)
             }
         }
+    }
+
+    private var isGroupedByDay: Bool {
+        if case .upcoming = nav.perspective { return true }
+        return false
     }
 
     private func isProjectPerspective(_ id: UUID) -> Bool {
@@ -161,6 +169,11 @@ struct ItemRowView: View {
                     Button("Mañana") {
                         store.schedule(item, to: Calendar.current.date(byAdding: .day, value: 1, to: .now))
                     }
+                    Button("Próxima semana") {
+                        store.schedule(item, to: Calendar.current.date(byAdding: .day, value: 7, to: .now))
+                    }
+                    Divider()
+                    Button("Algún día") { store.park(item) }
                     Button("Sin fecha") { store.schedule(item, to: nil) }
                 } label: {
                     Text(whenLabel.uppercased()).rubricStyle(Paper.accentInk)
@@ -201,6 +214,7 @@ struct ItemRowView: View {
     }
 
     private var whenLabel: String {
+        if item.isSomeday { return "Algún día" }
         guard let when = item.when else { return "Sin fecha" }
         if Calendar.current.isDateInToday(when) { return "Hoy" }
         if Calendar.current.isDateInTomorrow(when) { return "Mañana" }

@@ -24,27 +24,35 @@ final class Navigation {
     }
 }
 
-/// Punto de entrada. `--dump` imprime el estado guardado y sale: sirve para
-/// comprobar la persistencia y los filtros sin abrir la interfaz.
 /// Opciones de arranque para maquetar: datos falsos y apariencia forzada.
 @MainActor
 enum Launch {
     static var demo = false
     static var appearance: NSAppearance.Name?
+    /// Vista inicial en maqueta, 1…5 según el orden de la barra lateral.
+    static var view: Perspective?
 }
 
 @main
 @MainActor
 struct Entry {
+    /// `--dump` imprime el estado y sale: comprueba persistencia y filtros sin
+    /// abrir la interfaz. Con `--demo` inspecciona la maqueta en memoria en vez
+    /// de los datos reales.
     static func main() {
         Launch.demo = CommandLine.arguments.contains("--demo")
         if CommandLine.arguments.contains("--light") { Launch.appearance = .aqua }
         if CommandLine.arguments.contains("--dark")  { Launch.appearance = .darkAqua }
+        if let i = CommandLine.arguments.firstIndex(of: "--view"),
+           let n = CommandLine.arguments.dropFirst(i + 1).first.flatMap(Int.init),
+           (1...Perspective.allCases.count).contains(n) {
+            Launch.view = Perspective.allCases[n - 1]
+        }
         if CommandLine.arguments.contains("--dump") {
-            let store = Store()
-            print("archivo: \(store.storageLocation)")
+            let store = Launch.demo ? Store.demo() : Store()
+            print(Launch.demo ? "maqueta en memoria" : "archivo: \(store.storageLocation)")
             print("tareas: \(store.items.count)  proyectos: \(store.projects.count)")
-            for perspective in [Perspective.inbox, .today, .logbook] {
+            for perspective in Perspective.allCases {
                 let titles = store.items(for: perspective).map(\.title)
                 print("\n[\(perspective.title)] \(titles.count)")
                 titles.forEach { print("  · \($0)") }
@@ -85,12 +93,12 @@ struct PautaApp: App {
                 .keyboardShortcut("n", modifiers: [.command, .shift])
             }
             CommandGroup(after: .toolbar) {
-                Button("Bandeja de entrada") { nav.go(to: .inbox) }
-                    .keyboardShortcut("1", modifiers: .command)
-                Button("Hoy") { nav.go(to: .today) }
-                    .keyboardShortcut("2", modifiers: .command)
-                Button("Registro") { nav.go(to: .logbook) }
-                    .keyboardShortcut("3", modifiers: .command)
+                // ⌘1…⌘5 en el mismo orden en que aparecen en la barra lateral.
+                ForEach(Array(Perspective.allCases.enumerated()), id: \.element) { index, perspective in
+                    Button(perspective.title) { nav.go(to: perspective) }
+                        .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")),
+                                          modifiers: .command)
+                }
             }
         }
     }
@@ -118,8 +126,9 @@ struct RootView: View {
             }
             // En maqueta, abre una tarea para ver el editor desplegado.
             if Launch.demo {
-                nav.perspective = .today
-                nav.selectedItemID = store.items(for: .today).dropFirst().first?.id
+                nav.perspective = Launch.view ?? .today
+                // Abre una tarea para que se vea el editor desplegado.
+                nav.selectedItemID = store.items(for: nav.perspective).dropFirst().first?.id
             }
         }
     }

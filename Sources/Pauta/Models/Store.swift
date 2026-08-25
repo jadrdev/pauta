@@ -76,7 +76,8 @@ final class Store {
     func items(for perspective: Perspective) -> [Item] {
         switch perspective {
         case .inbox:
-            items.filter { !$0.isCompleted && $0.projectID == nil && $0.when == nil }
+            items.filter { !$0.isCompleted && $0.projectID == nil
+                           && $0.when == nil && !$0.isSomeday }
                 .sorted { $0.createdAt < $1.createdAt }
         case .today:
             items.filter(\.isToday)
@@ -85,6 +86,15 @@ final class Store {
                     // Desempate por creación: lo nuevo va al final, como en Things.
                     return a == b ? $0.createdAt < $1.createdAt : a < b
                 }
+        case .upcoming:
+            items.filter(\.isUpcoming)
+                .sorted {
+                    let a = $0.when ?? .distantFuture, b = $1.when ?? .distantFuture
+                    return a == b ? $0.createdAt < $1.createdAt : a < b
+                }
+        case .someday:
+            items.filter { !$0.isCompleted && $0.isSomeday }
+                .sorted { $0.createdAt < $1.createdAt }
         case .logbook:
             items.filter(\.isCompleted)
                 .sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
@@ -95,6 +105,16 @@ final class Store {
     }
 
     func count(for perspective: Perspective) -> Int { items(for: perspective).count }
+
+    /// Las tareas de «Próximamente» agrupadas por día, en orden. Sin agrupar,
+    /// una lista de fechas mezcladas no dice de un vistazo qué cae cada día.
+    func upcomingByDay() -> [(day: Date, items: [Item])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: items(for: .upcoming)) { item in
+            calendar.startOfDay(for: item.when ?? .distantFuture)
+        }
+        return grouped.keys.sorted().map { ($0, grouped[$0] ?? []) }
+    }
 
     func project(_ id: UUID) -> Project? { projects.first { $0.id == id } }
 
@@ -112,6 +132,12 @@ final class Store {
         switch perspective {
         case .today:
             item.when = Calendar.current.startOfDay(for: .now)
+        case .upcoming:
+            // Sin más contexto, «próximamente» más cercano es mañana.
+            item.when = Calendar.current.startOfDay(
+                for: Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now)
+        case .someday:
+            item.isSomeday = true
         case .project(let id):
             item.projectID = id
         case .inbox, .logbook:
@@ -140,9 +166,20 @@ final class Store {
         save()
     }
 
+    /// Poner o quitar fecha. Ambas cosas sacan la tarea de «Algún día»: una
+    /// tarea aparcada y con fecha a la vez sería un estado contradictorio.
     func schedule(_ item: Item, to date: Date?) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[idx].when = date.map { Calendar.current.startOfDay(for: $0) }
+        items[idx].isSomeday = false
+        save()
+    }
+
+    /// Aparca la tarea en «Algún día», quitándole cualquier fecha.
+    func park(_ item: Item) {
+        guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
+        items[idx].isSomeday = true
+        items[idx].when = nil
         save()
     }
 
@@ -187,6 +224,16 @@ extension Store {
         store.addItem(title: "Definir la paleta de color", in: .project(project.id))
         store.schedule(store.items.last!, to: .now)
         store.addItem(title: "Comprar entradas del concierto", in: .inbox)
+        // Dos días distintos, para que se vea el agrupado de Próximamente.
+        let calendar = Calendar.current
+        let dentist = store.addItem(title: "Cita con el dentista", in: .upcoming)
+        store.schedule(dentist, to: calendar.date(byAdding: .day, value: 1, to: .now))
+        let taxes = store.addItem(title: "Presentar el trimestre", in: .upcoming)
+        store.schedule(taxes, to: calendar.date(byAdding: .day, value: 4, to: .now))
+        let flights = store.addItem(title: "Buscar vuelos de septiembre", in: .upcoming)
+        store.schedule(flights, to: calendar.date(byAdding: .day, value: 4, to: .now))
+        store.addItem(title: "Aprender a tocar el bajo", in: .someday)
+        store.addItem(title: "Rehacer la estantería del salón", in: .someday)
         let done = store.addItem(title: "Reservar mesa para el viernes", in: .inbox)
         store.toggleComplete(done)
         return store

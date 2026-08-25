@@ -23,8 +23,18 @@ struct ItemListView: View {
                 }
 
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(items) { item in
-                        ItemRowView(item: item)
+                    if case .upcoming = nav.perspective {
+                        ForEach(store.upcomingByDay(), id: \.day) { group in
+                            Text(dayLabel(group.day).uppercased())
+                                .rubricStyle()
+                                .padding(.top, 18)
+                                .padding(.bottom, 6)
+                            ForEach(group.items) { ItemRowView(item: $0) }
+                        }
+                    } else {
+                        ForEach(items) { item in
+                            ItemRowView(item: item)
+                        }
                     }
                 }
 
@@ -86,10 +96,23 @@ struct ItemListView: View {
         }
     }
 
+    /// «Mañana», «Sábado» dentro de la semana, y fecha con mes más allá.
+    private func dayLabel(_ day: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInTomorrow(day) { return "Mañana" }
+        let days = calendar.dateComponents([.day],
+                                           from: calendar.startOfDay(for: .now),
+                                           to: day).day ?? 0
+        if days <= 6 { return day.formatted(.dateTime.weekday(.wide)) }
+        return day.formatted(.dateTime.weekday(.abbreviated).day().month(.wide))
+    }
+
     private var emptyTitle: String {
         switch nav.perspective {
         case .inbox: "La bandeja está vacía."
         case .today: "Nada para hoy."
+        case .upcoming: "Nada planificado más adelante."
+        case .someday: "Nada aparcado para algún día."
         case .logbook: "Todavía no has completado nada."
         case .project: "Este proyecto no tiene tareas."
         }

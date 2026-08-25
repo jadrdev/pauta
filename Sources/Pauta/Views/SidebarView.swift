@@ -9,9 +9,9 @@ struct SidebarView: View {
             // Sin cabecera de marca: el icono del Dock ya identifica la app, y un
             // logo dentro de su propia barra lateral solo come espacio vertical.
             VStack(alignment: .leading, spacing: 1) {
-                SidebarRow(perspective: .inbox, label: "Bandeja")
-                SidebarRow(perspective: .today, label: "Hoy")
-                SidebarRow(perspective: .logbook, label: "Registro")
+                ForEach(Perspective.allCases, id: \.self) { perspective in
+                    SidebarRow(perspective: perspective, label: perspective.title)
+                }
             }
 
             if !store.projects.isEmpty {
@@ -90,7 +90,7 @@ private struct SidebarRow: View {
                 .font(.system(size: 13, weight: isSelected ? .bold : .medium))
                 .lineLimit(1)
             Spacer(minLength: 8)
-            if count > 0, perspective != .logbook {
+            if count > 0, perspective.showsCount {
                 Text("\(count)")
                     .font(.system(size: 11.5, weight: .semibold).monospacedDigit())
                     .foregroundStyle(isSelected ? Paper.accentInk : Paper.inkFaint)

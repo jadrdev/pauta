@@ -97,7 +97,7 @@ siguen funcionando.
 | `⌘⇧N` | Nuevo proyecto |
 | `↩` | Guardar y seguir escribiendo otra tarea |
 | `esc` | Cancelar la tarea nueva |
-| `⌘1` / `⌘2` / `⌘3` | Bandeja / Hoy / Registro |
+| `⌘1` … `⌘5` | Bandeja / Hoy / Próximamente / Algún día / Registro |
 
 Clic en una tarea para desplegarla y editar notas, fecha o proyecto.
 Clic derecho para programarla o eliminarla.
@@ -109,8 +109,26 @@ en memoria (no escribe en disco) y permite forzar la apariencia.
 
 ```bash
 ./build/Pauta.app/Contents/MacOS/Pauta --demo --light
-./build/Pauta.app/Contents/MacOS/Pauta --demo --dark
+./build/Pauta.app/Contents/MacOS/Pauta --demo --dark --view 3
 ```
+
+`--view 1…5` elige la lista de arranque, en el orden de la barra lateral.
+Combinado con `--dump` inspecciona la maqueta en vez de los datos reales.
+
+## Listas
+
+| Lista | Qué contiene |
+|---|---|
+| Bandeja | Sin fecha, sin proyecto y sin aparcar: lo que aún no has decidido |
+| Hoy | Planificadas para hoy o antes. Una tarea vencida sigue apareciendo aquí |
+| Próximamente | Planificadas para más adelante, **agrupadas por día** |
+| Algún día | Aparcadas a propósito, sin fecha |
+| Registro | Completadas, lo más reciente primero |
+
+«Sin fecha» y «Algún día» son estados distintos: el primero significa «todavía
+no lo he decidido» y deja la tarea en la bandeja; el segundo, «lo quiero hacer,
+pero no ahora». Por eso ponerle fecha a una tarea aparcada la saca de «Algún
+día» — estar aparcada y con fecha a la vez sería contradictorio.
 
 ## Cómo se guardan los datos
 
@@ -120,7 +138,14 @@ Un único JSON legible, con escritura atómica:
 ~/Library/Application Support/Pauta/data.json
 ```
 
-Copiarlo es la copia de seguridad; borrarlo deja la app a cero. Para ver el
+Copiarlo es la copia de seguridad; borrarlo deja la app a cero.
+
+Las tareas y los proyectos se leen con un `init(from:)` escrito a mano que usa
+`decodeIfPresent` para todo. No es un capricho: el `Codable` sintetizado de
+Swift usa `decode` para las propiedades no opcionales e **ignora sus valores por
+defecto**, así que añadir un campo nuevo haría fallar la lectura de los archivos
+ya guardados con un `keyNotFound`. Con el decodificador tolerante, los campos que
+se añadan en el futuro no rompen los datos existentes. Para ver el
 estado guardado sin abrir la interfaz:
 
 ```bash
@@ -151,7 +176,7 @@ Sources/Pauta/
 
 ## Qué falta (siguiente iteración)
 
-- Perspectivas `Próximamente`, `Cualquier momento` y `Algún día`
+- Perspectiva `Cualquier momento`
 - Áreas que agrupen proyectos
 - Tareas repetitivas y fechas límite
 - Listas de comprobación y etiquetas
