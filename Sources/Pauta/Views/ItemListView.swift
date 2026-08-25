@@ -1,0 +1,162 @@
+import SwiftUI
+
+struct ItemListView: View {
+    @Environment(Store.self) private var store
+    @Environment(Navigation.self) private var nav
+
+    @State private var draftTitle = ""
+    @FocusState private var draftFocused: Bool
+
+    private var items: [Item] { store.items(for: nav.perspective) }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                header
+
+                Rectangle().fill(Paper.hairline).frame(height: 1)
+                    .padding(.top, 16)
+                    .padding(.bottom, 10)
+
+                if items.isEmpty && !nav.isAddingItem {
+                    emptyState.padding(.top, 26).padding(.bottom, 10)
+                }
+
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(items) { item in
+                        ItemRowView(item: item)
+                    }
+                }
+
+                if nav.isAddingItem {
+                    draftRow
+                } else if nav.perspective != .logbook {
+                    addButton
+                }
+            }
+            .padding(.horizontal, 46)
+            .padding(.top, 46)
+            .padding(.bottom, 60)
+            .frame(maxWidth: 700, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .background(Paper.bg)
+        .onTapGesture {
+            nav.selectedItemID = nil
+            commitDraft()
+        }
+    }
+
+    // MARK: - Cabecera
+
+    @ViewBuilder private var header: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            if case .project(let id) = nav.perspective, let project = store.project(id) {
+                ProjectTitleField(project: project)
+            } else {
+                Text(store.title(for: nav.perspective))
+                    .font(.display(30))
+                    .tracking(-0.6)
+                    .foregroundStyle(Paper.ink)
+            }
+            Spacer(minLength: 0)
+            if !items.isEmpty {
+                Text(countLabel)
+                    .rubricStyle()
+            }
+        }
+    }
+
+    private var countLabel: String {
+        let n = items.count
+        if case .logbook = nav.perspective {
+            return n == 1 ? "1 COMPLETADA" : "\(n) COMPLETADAS"
+        }
+        return n == 1 ? "1 ABIERTA" : "\(n) ABIERTAS"
+    }
+
+    @ViewBuilder private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(emptyTitle)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Paper.inkSoft)
+            Text("Pulsa ⌘N para añadir una tarea.")
+                .font(.system(size: 12.5))
+                .foregroundStyle(Paper.inkFaint)
+        }
+    }
+
+    private var emptyTitle: String {
+        switch nav.perspective {
+        case .inbox: "La bandeja está vacía."
+        case .today: "Nada para hoy."
+        case .logbook: "Todavía no has completado nada."
+        case .project: "Este proyecto no tiene tareas."
+        }
+    }
+
+    // MARK: - Añadir tarea
+
+    @ViewBuilder private var addButton: some View {
+        Button { nav.startNewItem() } label: {
+            HStack(spacing: 10) {
+                Text("\u{FF0B}").font(.system(size: 12))
+                Text("Añadir").font(.system(size: 13.5, weight: .medium))
+            }
+            .foregroundStyle(Paper.inkFaint)
+            .padding(.vertical, 9)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
+    }
+
+    @ViewBuilder private var draftRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 13) {
+            Circle()
+                .strokeBorder(Paper.accent.opacity(0.8), style: StrokeStyle(lineWidth: 1.6, dash: [2.5, 2.5]))
+                .frame(width: 16, height: 16)
+                .offset(y: 2)
+            TextField("Nueva tarea", text: $draftTitle)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13.5, weight: .medium))
+                .foregroundStyle(Paper.ink)
+                .focused($draftFocused)
+                .onSubmit { commitDraft(keepOpen: true) }
+                .onExitCommand { draftTitle = ""; nav.isAddingItem = false }
+        }
+        .padding(.vertical, 9)
+        .onAppear { draftFocused = true }
+    }
+
+    private func commitDraft(keepOpen: Bool = false) {
+        let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !title.isEmpty { store.addItem(title: title, in: nav.perspective) }
+        draftTitle = ""
+        if keepOpen && !title.isEmpty {
+            draftFocused = true
+        } else {
+            nav.isAddingItem = false
+        }
+    }
+}
+
+/// Título editable en la cabecera de un proyecto.
+private struct ProjectTitleField: View {
+    @Environment(Store.self) private var store
+    let project: Project
+    @State private var name = ""
+
+    var body: some View {
+        TextField("Sin título", text: $name)
+            .textFieldStyle(.plain)
+            .font(.display(30))
+            .tracking(-0.6)
+            .foregroundStyle(Paper.ink)
+            .fixedSize(horizontal: false, vertical: true)
+            .onAppear { name = project.name }
+            .onChange(of: project.id) { name = project.name }
+            .onChange(of: name) { store.rename(project, to: name) }
+    }
+}
