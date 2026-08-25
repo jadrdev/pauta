@@ -9,6 +9,17 @@ azulado.
 
 - **Verde `#10E888`** como acento único. Marca la lista activa, los contadores y
   la casilla completada.
+- **Iconos monocromos** en la barra lateral, un paso más tenues que la etiqueta,
+  en verde solo cuando la fila está activa. Nada de multicolor: los iconos de
+  colores distintos (bandeja azul, estrella amarilla, check verde) son una de las
+  señas de Things, y además romperían el acento único. Por eso «Hoy» usa un sol y
+  no una estrella, y «Registro» un archivador y no un check.
+- **Sin emojis** en las listas fijas: se renderizan distinto según el sistema, son
+  multicolor y no alinean. Para los proyectos que crea el usuario sí tendrían
+  sentido, pero eso es una función, no estilo.
+- **Dos columnas de alineación** en la barra lateral: glifos a 15 pt y texto a 41
+  (15 + 17 de columna de icono + 9 de espaciado). El rótulo de sección y el botón
+  de nuevo proyecto respetan ambas.
 - **La barra lateral va sin cabecera de marca.** El icono del Dock ya identifica
   la app; un logo dentro de su propia interfaz solo come espacio vertical. El
   lockup (`BrandMark` en `Theme.swift`) se mantiene sin usar, para un panel
@@ -146,5 +157,5 @@ Sources/Pauta/
 - Listas de comprobación y etiquetas
 - Arrastrar para reordenar
 - Sincronización entre dispositivos
-- Icono de app propio (ahora usa el genérico del sistema)
+- Emoji o símbolo elegible por proyecto
 - Renombrar el módulo Swift si algún día cambia el nombre del producto

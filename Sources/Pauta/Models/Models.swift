@@ -46,12 +46,14 @@ enum Perspective: Hashable {
         }
     }
 
+    /// Símbolos monocromos. A propósito no se usan aquí la estrella para «Hoy»
+    /// ni el check para «Registro»: son dos de las señas visuales de Things.
     var symbol: String {
         switch self {
         case .inbox: "tray"
-        case .today: "star.fill"
-        case .logbook: "checkmark.circle"
-        case .project: "circle.dashed"
+        case .today: "sun.max"
+        case .logbook: "archivebox"
+        case .project: "circle.dotted"
         }
     }
 }

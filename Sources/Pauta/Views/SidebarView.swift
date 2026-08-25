@@ -17,7 +17,9 @@ struct SidebarView: View {
             if !store.projects.isEmpty {
                 Text("PROYECTOS")
                     .rubricStyle()
-                    .padding(.horizontal, 20)
+                    // Alineado con la columna de texto de las filas: 15 + 17 + 9.
+                    .padding(.leading, 41)
+                    .padding(.trailing, 18)
                     .padding(.top, 26)
                     .padding(.bottom, 8)
 
@@ -36,12 +38,16 @@ struct SidebarView: View {
                 let project = store.addProject(name: "")
                 nav.go(to: .project(project.id))
             } label: {
-                HStack(spacing: 7) {
-                    Text("\u{FF0B}").font(.system(size: 11, weight: .bold))
+                HStack(spacing: 9) {
+                    // El «+» ocupa la columna del icono, el texto la de la etiqueta.
+                    Text("\u{FF0B}")
+                        .font(.system(size: 11, weight: .bold))
+                        .frame(width: 17, alignment: .center)
                     Text("Nuevo proyecto").font(.system(size: 12.5, weight: .medium))
                 }
                 .foregroundStyle(Paper.inkFaint)
-                .padding(.horizontal, 20)
+                .padding(.leading, 15)
+                .padding(.trailing, 18)
                 .padding(.vertical, 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
@@ -73,7 +79,13 @@ private struct SidebarRow: View {
 
     var body: some View {
         let count = store.count(for: perspective)
-        HStack(spacing: 8) {
+        HStack(spacing: 9) {
+            // Monocromo y un paso más tenue que la etiqueta: el icono ayuda a
+            // apuntar, pero el texto sigue siendo lo primero que se lee.
+            Image(systemName: perspective.symbol)
+                .font(.system(size: 12.5, weight: .medium))
+                .foregroundStyle(isSelected ? Paper.accentInk : Paper.inkFaint)
+                .frame(width: 17, alignment: .center)
             Text(label)
                 .font(.system(size: 13, weight: isSelected ? .bold : .medium))
                 .lineLimit(1)
@@ -84,7 +96,7 @@ private struct SidebarRow: View {
                     .foregroundStyle(isSelected ? Paper.accentInk : Paper.inkFaint)
             }
         }
-        .padding(.leading, 18)
+        .padding(.leading, 15)
         .padding(.trailing, 18)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
