@@ -148,6 +148,9 @@ struct Entry {
 struct PautaApp: App {
     @State private var store = Launch.demo ? Store.demo() : Store()
     @State private var nav = Navigation()
+    /// Vigila la carpeta de datos para recoger lo que llegue de otro
+    /// dispositivo mientras la app está abierta.
+    @State private var watcher: FolderWatcher?
 
     var body: some Scene {
         // Con id: el panel de la barra de menús la reabre si se cerró.
@@ -156,6 +159,14 @@ struct PautaApp: App {
                 .environment(store)
                 .environment(nav)
                 .frame(minWidth: 720, minHeight: 420)
+                .task {
+                    // Recoge lo que llegue de otro dispositivo mientras la app
+                    // está abierta: sin esto solo se leería al arrancar.
+                    guard !Launch.demo, watcher == nil else { return }
+                    watcher = FolderWatcher(url: store.storageURL) {
+                        store.reload()
+                    }
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1000, height: 680)

@@ -146,6 +146,8 @@ public final class Store {
     }
 
     public var storageLocation: String { root.path }
+    /// La carpeta de datos, para quien necesite vigilarla.
+    public var storageURL: URL { root }
 
     // MARK: - Persistencia
     //
@@ -214,6 +216,18 @@ public final class Store {
         return best
     }
 
+    /// Vuelve a leer la carpeta. Es lo que se llama cuando llegan cambios de
+    /// otro dispositivo.
+    ///
+    /// Idempotente a propósito: si lo leído coincide con lo que ya hay, no toca
+    /// nada. Sin eso, las escrituras de la propia app dispararían recargas que
+    /// refrescarían la interfaz sin motivo, y podrían interrumpir una edición en
+    /// curso.
+    public func reload() {
+        guard !inMemory else { return }
+        load()
+    }
+
     private func load() {
         let fm = FileManager.default
         pendingDownloads = requestDownloads(in: itemsDir) + requestDownloads(in: projectsDir)
@@ -233,11 +247,12 @@ public final class Store {
                 buriedSourceIDs.insert(source)
             }
         }
-        items = live.sorted(by: Item.byCreation)
+        let freshItems = live.sorted(by: Item.byCreation)
+        if freshItems != items { items = freshItems }
 
         let projectFiles = (try? fm.contentsOfDirectory(at: projectsDir,
                                                        includingPropertiesForKeys: nil)) ?? []
-        projects = projectFiles
+        let freshProjects = projectFiles
             .filter { $0.pathExtension == "json" }
             .compactMap { file in
                 let resolved = resolveConflict(at: file, as: Project.self)
@@ -247,6 +262,7 @@ public final class Store {
                 return project
             }
             .sorted(by: Project.byCreation)
+        if freshProjects != projects { projects = freshProjects }
     }
 
     /// Escritura atómica del objeto tocado, y solo de ese: reescribir todo en
@@ -287,8 +303,9 @@ public final class Store {
         // Se separan un milisegundo respetando el orden original.
         var last: Date?
         for var item in snap.items {
+            item.createdAt = Store.stamped(item.createdAt)
             if let previous = last, item.createdAt < previous.addingTimeInterval(0.001) {
-                item.createdAt = previous.addingTimeInterval(0.001)
+                item.createdAt = Store.stamped(previous.addingTimeInterval(0.001))
             }
             item.updatedAt = item.createdAt
             last = item.createdAt
@@ -296,13 +313,26 @@ public final class Store {
         }
         var lastProject: Date?
         for var project in snap.projects {
+            project.createdAt = Store.stamped(project.createdAt)
             if let previous = lastProject, project.createdAt < previous.addingTimeInterval(0.001) {
-                project.createdAt = previous.addingTimeInterval(0.001)
+                project.createdAt = Store.stamped(previous.addingTimeInterval(0.001))
             }
             project.updatedAt = project.createdAt
             lastProject = project.createdAt
             persist(project)
         }
+    }
+
+    /// Redondea al milisegundo, que es la precisión con la que se guardan las
+    /// fechas.
+    ///
+    /// Sin esto, el valor en memoria conserva la precisión completa de `Date` y
+    /// el del archivo no, así que releer devuelve algo distinto de lo que hay
+    /// cargado y **cada recarga parece un cambio**. Con el vigilante de carpeta
+    /// encendido eso refrescaría la interfaz sin motivo e interrumpiría cualquier
+    /// edición en curso.
+    static func stamped(_ date: Date = .now) -> Date {
+        Date(timeIntervalSince1970: (date.timeIntervalSince1970 * 1000).rounded() / 1000)
     }
 
     /// Fuerza que la fecha de creación sea estrictamente posterior a la de
@@ -319,11 +349,13 @@ public final class Store {
         // separadas por microsegundos son distintas en memoria pero colapsan al
         // mismo milisegundo al guardarse, y el empate reaparece al recargar.
         let minimo = 0.001
+        var created = Store.stamped(item.createdAt)
         if let last = items.map(\.createdAt).max(),
-           item.createdAt < last.addingTimeInterval(minimo) {
-            item.createdAt = last.addingTimeInterval(minimo)
+           created < last.addingTimeInterval(minimo) {
+            created = Store.stamped(last.addingTimeInterval(minimo))
         }
-        item.updatedAt = item.createdAt
+        item.createdAt = created
+        item.updatedAt = created
     }
 
     /// Aplica un cambio a una tarea, le pone fecha de modificación y la guarda.
@@ -331,14 +363,14 @@ public final class Store {
     private func mutateItem(_ id: UUID, _ change: (inout Item) -> Void) {
         guard let idx = items.firstIndex(where: { $0.id == id }) else { return }
         change(&items[idx])
-        items[idx].updatedAt = .now
+        items[idx].updatedAt = Store.stamped()
         persist(items[idx])
     }
 
     private func mutateProject(_ id: UUID, _ change: (inout Project) -> Void) {
         guard let idx = projects.firstIndex(where: { $0.id == id }) else { return }
         change(&projects[idx])
-        projects[idx].updatedAt = .now
+        projects[idx].updatedAt = Store.stamped()
         persist(projects[idx])
     }
 
@@ -479,7 +511,7 @@ public final class Store {
     public func toggleComplete(_ item: Item) {
         mutateItem(item.id) {
             $0.isCompleted.toggle()
-            $0.completedAt = $0.isCompleted ? .now : nil
+            $0.completedAt = $0.isCompleted ? Store.stamped() : nil
         }
     }
 
@@ -488,8 +520,8 @@ public final class Store {
     public func delete(_ item: Item) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         var buried = items.remove(at: idx)
-        buried.deletedAt = .now
-        buried.updatedAt = .now
+        buried.deletedAt = Store.stamped()
+        buried.updatedAt = buried.deletedAt!
         if let source = buried.sourceID { buriedSourceIDs.insert(source) }
         persist(buried)
     }
@@ -515,7 +547,14 @@ public final class Store {
 
     @discardableResult
     public func addProject(name: String) -> Project {
-        let project = Project(name: name.isEmpty ? "Nuevo proyecto" : name)
+        var project = Project(name: name.isEmpty ? "Nuevo proyecto" : name)
+        var created = Store.stamped(project.createdAt)
+        if let last = projects.map(\.createdAt).max(),
+           created < last.addingTimeInterval(0.001) {
+            created = Store.stamped(last.addingTimeInterval(0.001))
+        }
+        project.createdAt = created
+        project.updatedAt = created
         projects.append(project)
         persist(project)
         return project
@@ -537,8 +576,8 @@ public final class Store {
         }
         guard let idx = projects.firstIndex(where: { $0.id == project.id }) else { return }
         var buried = projects.remove(at: idx)
-        buried.deletedAt = .now
-        buried.updatedAt = .now
+        buried.deletedAt = Store.stamped()
+        buried.updatedAt = buried.deletedAt!
         persist(buried)
     }
 }

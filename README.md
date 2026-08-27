@@ -222,6 +222,21 @@ reciente y marca las demás como resueltas — si no se marcaran, el conflicto s
 quedaría ahí para siempre. Que la decisión salga del contenido del archivo y no de
 su fecha en disco la hace determinista: los dos dispositivos eligen lo mismo.
 
+**Refresco en vivo.** La app vigila la carpeta con FSEvents y recarga cuando algo
+cambia, así que lo que llegue de otro dispositivo aparece sin reabrirla. Se usa
+FSEvents y no `DispatchSource.makeFileSystemObjectSource`: este último solo se
+entera de altas y bajas de entradas en un directorio, no de que cambie el
+contenido de un archivo que ya existía — que es justo lo que hace iCloud al traer
+una edición remota.
+
+La recarga es **idempotente**: si lo leído coincide con lo cargado, no toca nada.
+Hace falta porque las escrituras de la propia app también disparan el vigilante,
+y una recarga que reasignara en vano refrescaría la interfaz e interrumpiría la
+edición en curso. Para que esa comparación funcione, las fechas se sellan ya
+redondeadas al milisegundo, que es la precisión con la que se guardan: si no, el
+valor en memoria nunca coincidiría con el del archivo y toda recarga parecería un
+cambio.
+
 ### Decodificación
 
 Las tareas y los proyectos se leen con un `init(from:)` escrito a mano que usa
@@ -337,9 +352,8 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
   `Store`: acabarían persistidos en `data.json` como copias que se
   desincronizan. Van como fuente aparte, mezclada en la vista. Escribir tareas
   como eventos, en cambio, es mala idea: duplica y genera conflictos
-- **Recargar al detectar cambios en la carpeta.** La sincronización ya funciona,
-  pero la app solo lee al arrancar: lo que llegue de otro dispositivo mientras
-  está abierta no se ve hasta reabrirla. Falta vigilar la carpeta y refrescar
+- **Fusionar en vez de recargar entero.** Al detectar un cambio se relee toda la
+  carpeta. Con cientos de tareas conviene releer solo lo que cambió
 - Áreas que agrupen proyectos
 - Tareas repetitivas y fechas límite
 - Listas de comprobación y etiquetas (y la elección al pegar varias líneas)

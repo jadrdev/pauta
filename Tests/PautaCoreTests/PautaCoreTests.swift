@@ -280,6 +280,52 @@ struct PersistenceTests {
         #expect(store.items.map(\.title) == ["del blob"])
     }
 
+    /// Recargar recoge lo que otro escribió en la misma carpeta: es el caso de
+    /// dos dispositivos sincronizando.
+    @Test func reloadPicksUpExternalChanges() throws {
+        let root = tempRoot()
+        let mio = Store(root: root)
+        mio.addItem(title: "la mía", in: .inbox)
+
+        // Otro «dispositivo» escribe en la misma carpeta.
+        let otro = Store(root: root)
+        otro.addItem(title: "la del otro", in: .inbox)
+
+        #expect(mio.items.map(\.title) == ["la mía"])
+        mio.reload()
+        #expect(mio.items.map(\.title) == ["la mía", "la del otro"])
+    }
+
+    /// Un borrado hecho fuera se refleja al recargar, y no reaparece.
+    @Test func reloadPicksUpExternalDeletion() throws {
+        let root = tempRoot()
+        let mio = Store(root: root)
+        let doomed = mio.addItem(title: "se borra fuera", in: .inbox)
+        mio.addItem(title: "se queda", in: .inbox)
+
+        let otro = Store(root: root)
+        otro.delete(otro.items.first { $0.id == doomed.id }!)
+
+        mio.reload()
+        #expect(mio.items.map(\.title) == ["se queda"])
+    }
+
+    /// Recargar sin cambios no debe alterar nada: las escrituras de la propia
+    /// app disparan el vigilante, y una recarga que reasigna en vano refrescaría
+    /// la interfaz e interrumpiría una edición en curso.
+    @Test func reloadWithoutChangesIsIdempotent() throws {
+        let root = tempRoot()
+        let store = Store(root: root)
+        store.addItem(title: "una", in: .inbox)
+        store.addItem(title: "otra", in: .today)
+
+        let antesItems = store.items
+        let antesProyectos = store.projects
+        store.reload()
+        #expect(store.items == antesItems)
+        #expect(store.projects == antesProyectos)
+    }
+
     @Test func inMemoryWritesNothing() throws {
         let root = tempRoot()
         let store = Store(inMemory: true, root: root)
