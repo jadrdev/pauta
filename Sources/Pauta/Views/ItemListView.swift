@@ -157,10 +157,10 @@ struct ItemListView: View {
     }
 
     private func commitDraft(keepOpen: Bool = false) {
-        let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !title.isEmpty { store.addItem(title: title, in: nav.perspective) }
+        // Un texto pegado con varias líneas crea una tarea por línea.
+        let created = store.addItems(from: draftTitle, in: nav.perspective)
         draftTitle = ""
-        if keepOpen && !title.isEmpty {
+        if keepOpen && !created.isEmpty {
             draftFocused = true
         } else {
             nav.isAddingItem = false

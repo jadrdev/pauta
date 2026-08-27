@@ -85,9 +85,8 @@ struct MenuBarView: View {
     }
 
     private func commitDraft() {
-        let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty else { return }
-        store.addItem(title: title, in: .today)
+        // Un texto pegado con varias líneas crea una tarea por línea.
+        store.addItems(from: draftTitle, in: .today)
         draftTitle = ""
     }
 }

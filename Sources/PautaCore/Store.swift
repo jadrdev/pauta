@@ -132,6 +132,26 @@ public final class Store {
 
     // MARK: - Mutaciones de tareas
 
+    /// Divide un texto (normalmente pegado) en títulos de tarea: uno por
+    /// línea, sin viñetas (`*`, `-`, `•`, `1.`, `1)`) ni espacios sobrantes.
+    /// Un texto de una sola línea devuelve un único título.
+    public static func titles(from text: String) -> [String] {
+        text.split(whereSeparator: \.isNewline).compactMap { line in
+            var s = line.trimmingCharacters(in: .whitespaces)
+            if let bullet = s.range(of: #"^([*\-•·+]|\d+[.)])\s+"#, options: .regularExpression) {
+                s.removeSubrange(bullet)
+                s = s.trimmingCharacters(in: .whitespaces)
+            }
+            return s.isEmpty ? nil : s
+        }
+    }
+
+    /// Crea una tarea por cada línea del texto, en orden.
+    @discardableResult
+    public func addItems(from text: String, in perspective: Perspective) -> [Item] {
+        Store.titles(from: text).map { addItem(title: $0, in: perspective) }
+    }
+
     /// Crea una tarea ya encajada en la perspectiva activa.
     @discardableResult
     public func addItem(title: String, in perspective: Perspective) -> Item {

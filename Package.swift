@@ -17,6 +17,12 @@ let package = Package(
             dependencies: ["PautaCore"],
             path: "Sources/Pauta",
             swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        .testTarget(
+            name: "PautaCoreTests",
+            dependencies: ["PautaCore"],
+            path: "Tests/PautaCoreTests",
+            swiftSettings: [.swiftLanguageMode(.v5)]
         )
     ]
 )
