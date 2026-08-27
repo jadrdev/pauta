@@ -239,6 +239,47 @@ struct PersistenceTests {
         #expect(reloaded.items.map(\.title) == titulos)
     }
 
+    /// Al estrenar la carpeta sincronizada, adopta lo que hubiera en la local.
+    @Test func adoptsDataFromPreviousFolder() throws {
+        let local = tempRoot(), nube = tempRoot()
+        do {
+            let store = Store(root: local)
+            store.addItem(title: "venía de local", in: .inbox)
+            store.addProject(name: "proyecto local")
+        }
+        // Dos archivos: la tarea y el proyecto.
+        #expect(Store.adoptData(from: local, to: nube) == 2)
+
+        let store = Store(root: nube)
+        #expect(store.items.map(\.title) == ["venía de local"])
+        #expect(store.projects.map(\.name) == ["proyecto local"])
+        // El origen se conserva como respaldo.
+        #expect(Store(root: local).items.count == 1)
+    }
+
+    /// No debe adoptar encima de datos que ya existen en el destino.
+    @Test func doesNotAdoptOverExistingData() throws {
+        let local = tempRoot(), nube = tempRoot()
+        do {
+            Store(root: local).addItem(title: "vieja", in: .inbox)
+            Store(root: nube).addItem(title: "la que ya estaba", in: .inbox)
+        }
+        #expect(Store.adoptData(from: local, to: nube) == 0)
+        #expect(Store(root: nube).items.map(\.title) == ["la que ya estaba"])
+    }
+
+    /// Adoptar el blob antiguo cuando el origen aún no estaba troceado.
+    @Test func adoptsLegacyBlobToo() throws {
+        let local = tempRoot(), nube = tempRoot()
+        let blob = #"{"items":[{"id":"\#(UUID().uuidString)","title":"del blob"}],"projects":[]}"#
+        try blob.write(to: local.appendingPathComponent("data.json"),
+                       atomically: true, encoding: .utf8)
+        Store.adoptData(from: local, to: nube)
+
+        let store = Store(root: nube)
+        #expect(store.items.map(\.title) == ["del blob"])
+    }
+
     @Test func inMemoryWritesNothing() throws {
         let root = tempRoot()
         let store = Store(inMemory: true, root: root)

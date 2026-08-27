@@ -58,16 +58,85 @@ public final class Store {
     /// repetida no las resucite.
     private var buriedSourceIDs: Set<String> = []
 
+    /// Archivos que iCloud tenía desalojados en la última carga. Si es mayor que
+    /// cero, faltan datos que aparecerán cuando terminen de bajar.
+    public private(set) var pendingDownloads = 0
+
+    /// Si los datos viven en iCloud Drive o solo en local.
+    public var isSynced: Bool { root == Store.iCloudRoot }
+
+    /// Carpeta de la app dentro de iCloud Drive, si iCloud Drive está activo.
+    ///
+    /// No se usa `url(forUbiquityContainerIdentifier:)`: esa vía exige
+    /// entitlements y un perfil de aprovisionamiento embebido, que no encajan con
+    /// un bundle montado a mano. iCloud Drive es una carpeta normal, y la app no
+    /// está en sandbox, así que puede escribir en ella directamente.
+    public static var iCloudRoot: URL? {
+        let drive = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs",
+                                    isDirectory: true)
+        guard FileManager.default.fileExists(atPath: drive.path) else { return nil }
+        return drive.appendingPathComponent("Pauta", isDirectory: true)
+    }
+
+    /// Carpeta local, que es también el respaldo si iCloud no está disponible.
+    public static var localRoot: URL {
+        FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Pauta", isDirectory: true)
+    }
+
+    /// iCloud si está, y si no la local. Nunca falla: sin iCloud la app sigue
+    /// funcionando exactamente como antes.
+    public static var defaultRoot: URL { iCloudRoot ?? localRoot }
+
+    /// Copia los datos de una carpeta a otra si el destino aún no tiene ninguno.
+    /// El origen se deja intacto: sirve de respaldo del paso anterior.
+    ///
+    /// Devuelve **cuántos archivos** copió, sumando tareas y proyectos.
+    @discardableResult
+    static func adoptData(from source: URL, to destination: URL) -> Int {
+        let fm = FileManager.default
+        guard source != destination else { return 0 }
+        let already = (try? fm.contentsOfDirectory(
+            at: destination.appendingPathComponent("items"),
+            includingPropertiesForKeys: nil))?.filter { $0.pathExtension == "json" } ?? []
+        guard already.isEmpty else { return 0 }
+
+        var copied = 0
+        try? fm.createDirectory(at: destination, withIntermediateDirectories: true)
+        for sub in ["items", "projects"] {
+            let from = source.appendingPathComponent(sub, isDirectory: true)
+            let to = destination.appendingPathComponent(sub, isDirectory: true)
+            guard let files = try? fm.contentsOfDirectory(at: from,
+                                                          includingPropertiesForKeys: nil)
+            else { continue }
+            try? fm.createDirectory(at: to, withIntermediateDirectories: true)
+            for file in files where file.pathExtension == "json" {
+                let target = to.appendingPathComponent(file.lastPathComponent)
+                if !fm.fileExists(atPath: target.path),
+                   (try? fm.copyItem(at: file, to: target)) != nil { copied += 1 }
+            }
+        }
+        // Y el blob antiguo, si todavía no se había troceado.
+        let blob = source.appendingPathComponent("data.json")
+        let blobTarget = destination.appendingPathComponent("data.json")
+        if copied == 0, fm.fileExists(atPath: blob.path), !fm.fileExists(atPath: blobTarget.path) {
+            try? fm.copyItem(at: blob, to: blobTarget)
+        }
+        return copied
+    }
+
     /// `root` permite apuntar a otra carpeta en los tests.
     public init(inMemory: Bool = false, root: URL? = nil) {
         self.inMemory = inMemory
-        let base = root ?? FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Pauta", isDirectory: true)
+        let base = root ?? Store.defaultRoot
         self.root = base
         self.itemsDir = base.appendingPathComponent("items", isDirectory: true)
         self.projectsDir = base.appendingPathComponent("projects", isDirectory: true)
         if !inMemory {
+            // Al estrenar la carpeta de iCloud, adopta lo que hubiera en local.
+            if root == nil { Store.adoptData(from: Store.localRoot, to: base) }
             migrateFromSingleFile()
             let fm = FileManager.default
             try? fm.createDirectory(at: itemsDir, withIntermediateDirectories: true)
@@ -95,16 +164,69 @@ public final class Store {
         projectsDir.appendingPathComponent("\(id.uuidString).json")
     }
 
+    /// Pide a iCloud que baje lo que tenga desalojado.
+    ///
+    /// Para ahorrar espacio, iCloud puede dejar un archivo sin contenido local y
+    /// sustituirlo por un marcador `.nombre.json.icloud`. Pedir la descarga es
+    /// asíncrono: esta carga no lo verá, pero la siguiente sí. Devuelve cuántos
+    /// quedaban pendientes, que es lo que hace falta para poder avisar.
+    @discardableResult
+    private func requestDownloads(in dir: URL) -> Int {
+        let fm = FileManager.default
+        guard let files = try? fm.contentsOfDirectory(at: dir,
+                                                     includingPropertiesForKeys: nil)
+        else { return 0 }
+        var pending = 0
+        for file in files where file.pathExtension == "icloud" {
+            try? fm.startDownloadingUbiquitousItem(at: file)
+            pending += 1
+        }
+        return pending
+    }
+
+    /// Resuelve un conflicto de sincronización quedándose con la versión
+    /// modificada más recientemente.
+    ///
+    /// Cuando dos dispositivos tocan el mismo archivo, iCloud guarda las
+    /// versiones en conflicto en vez de elegir. Con `updatedAt` en el propio
+    /// contenido la elección es determinista, y sin resolverlas el conflicto se
+    /// quedaría ahí para siempre.
+    private func resolveConflict<T: Timestamped>(at url: URL, as type: T.Type) -> T? {
+        guard let conflicts = NSFileVersion.unresolvedConflictVersionsOfItem(at: url),
+              !conflicts.isEmpty else { return nil }
+
+        func decode(_ from: URL) -> T? {
+            guard let data = try? Data(contentsOf: from) else { return nil }
+            return try? decoder.decode(T.self, from: data)
+        }
+
+        var best = decode(url)
+        for version in conflicts {
+            guard let candidate = decode(version.url) else { continue }
+            if best == nil || candidate.updatedAt > best!.updatedAt { best = candidate }
+        }
+        if let best, let data = try? encoder.encode(best) {
+            try? data.write(to: url, options: .atomic)
+        }
+        // Marcar resueltas: si no, iCloud las conserva y el conflicto persiste.
+        for version in conflicts { version.isResolved = true }
+        try? NSFileVersion.removeOtherVersionsOfItem(at: url)
+        return best
+    }
+
     private func load() {
         let fm = FileManager.default
+        pendingDownloads = requestDownloads(in: itemsDir) + requestDownloads(in: projectsDir)
 
         let itemFiles = (try? fm.contentsOfDirectory(at: itemsDir,
                                                     includingPropertiesForKeys: nil)) ?? []
         var live: [Item] = []
         for file in itemFiles where file.pathExtension == "json" {
             // Un archivo ilegible o corrupto se salta: no debe tumbar la carga.
-            guard let data = try? Data(contentsOf: file),
-                  let item = try? decoder.decode(Item.self, from: data) else { continue }
+            let resolved = resolveConflict(at: file, as: Item.self)
+            guard let item = resolved ?? (try? Data(contentsOf: file))
+                    .flatMap({ try? decoder.decode(Item.self, from: $0) })
+            else { continue }
             if item.deletedAt == nil {
                 live.append(item)
             } else if let source = item.sourceID {
@@ -118,8 +240,9 @@ public final class Store {
         projects = projectFiles
             .filter { $0.pathExtension == "json" }
             .compactMap { file in
-                guard let data = try? Data(contentsOf: file),
-                      let project = try? decoder.decode(Project.self, from: data),
+                let resolved = resolveConflict(at: file, as: Project.self)
+                guard let project = resolved ?? (try? Data(contentsOf: file))
+                        .flatMap({ try? decoder.decode(Project.self, from: $0) }),
                       project.deletedAt == nil else { return nil }
                 return project
             }

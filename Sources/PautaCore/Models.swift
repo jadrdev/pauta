@@ -74,6 +74,15 @@ public struct Item: Identifiable, Codable, Hashable {
     }
 }
 
+/// Lo que basta para resolver un conflicto de sincronización: quedarse con la
+/// versión modificada más recientemente.
+public protocol Timestamped: Codable {
+    var updatedAt: Date { get }
+}
+
+extension Item: Timestamped {}
+extension Project: Timestamped {}
+
 extension Item {
     /// Orden total: por creación y, cuando coincide, por identificador.
     ///

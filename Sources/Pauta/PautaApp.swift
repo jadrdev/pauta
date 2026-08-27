@@ -118,7 +118,15 @@ struct Entry {
         }
         if CommandLine.arguments.contains("--dump") {
             let store = Launch.demo ? Store.demo() : Store()
-            print(Launch.demo ? "maqueta en memoria" : "archivo: \(store.storageLocation)")
+            if Launch.demo {
+                print("maqueta en memoria")
+            } else {
+                print("carpeta: \(store.storageLocation)")
+                print("sincronizada por iCloud: \(store.isSynced ? "sí" : "no")")
+                if store.pendingDownloads > 0 {
+                    print("archivos pendientes de bajar de iCloud: \(store.pendingDownloads)")
+                }
+            }
             print("tareas: \(store.items.count)  proyectos: \(store.projects.count)")
             for perspective in Perspective.allCases {
                 let titles = store.items(for: perspective).map(\.title)

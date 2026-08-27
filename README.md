@@ -148,13 +148,23 @@ siguen funcionando.
 
 ## Dónde se guardan los datos
 
-**Un archivo JSON por objeto**, con escritura atómica:
+**Un archivo JSON por objeto**, con escritura atómica, en iCloud Drive:
 
 ```
-~/Library/Application Support/Pauta/
+~/Library/Mobile Documents/com~apple~CloudDocs/Pauta/
   items/<uuid>.json
   projects/<uuid>.json
 ```
+
+Si iCloud Drive no está activo, la app usa `~/Library/Application Support/Pauta/`
+con la misma estructura y funciona igual, solo sin sincronizar. Al estrenar la
+carpeta de iCloud adopta lo que hubiera en la local, y deja el original intacto
+como respaldo.
+
+No se usa `url(forUbiquityContainerIdentifier:)`: esa vía exige entitlements y un
+perfil de aprovisionamiento embebido, que no encajan con un bundle montado a
+mano. iCloud Drive es una carpeta normal y la app no está en sandbox, así que
+escribe en ella directamente.
 
 Copiar la carpeta es la copia de seguridad; borrarla deja la app a cero. Para ver
 el estado guardado sin abrir la interfaz:
@@ -196,6 +206,21 @@ La migración desde el `data.json` antiguo aplica lo mismo respetando el orden q
 tenía el array, porque sus fechas solo tenían segundos y casi todas empataban.
 El archivo original se conserva como respaldo; puedes borrarlo cuando compruebes
 que todo está en su sitio.
+
+### Sincronización
+
+Dos cosas que iCloud impone y la app resuelve:
+
+**Archivos desalojados.** Para ahorrar espacio, iCloud puede dejar un archivo sin
+contenido local y sustituirlo por un marcador `.nombre.json.icloud`. Al cargar, la
+app pide su descarga; es asíncrona, así que esa carga no lo verá pero la siguiente
+sí. `--dump` avisa de cuántos quedan pendientes.
+
+**Conflictos.** Cuando dos dispositivos tocan el mismo archivo, iCloud guarda las
+versiones en conflicto en vez de elegir. La app se queda con la de `updatedAt` más
+reciente y marca las demás como resueltas — si no se marcaran, el conflicto se
+quedaría ahí para siempre. Que la decisión salga del contenido del archivo y no de
+su fecha en disco la hace determinista: los dos dispositivos eligen lo mismo.
 
 ### Decodificación
 
@@ -312,10 +337,9 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
   `Store`: acabarían persistidos en `data.json` como copias que se
   desincronizan. Van como fuente aparte, mezclada en la vista. Escribir tareas
   como eventos, en cambio, es mala idea: duplica y genera conflictos
-- **Sincronizar por iCloud Drive.** El almacenamiento ya está en la forma que lo
-  soporta (un archivo por objeto, lápidas, fechas de modificación). Falta mover
-  la carpeta a `~/Library/Mobile Documents/com~apple~CloudDocs/Pauta/`, que es
-  cambiar una ruta, y manejar los archivos que iCloud deja sin descargar
+- **Recargar al detectar cambios en la carpeta.** La sincronización ya funciona,
+  pero la app solo lee al arrancar: lo que llegue de otro dispositivo mientras
+  está abierta no se ve hasta reabrirla. Falta vigilar la carpeta y refrescar
 - Áreas que agrupen proyectos
 - Tareas repetitivas y fechas límite
 - Listas de comprobación y etiquetas (y la elección al pegar varias líneas)
