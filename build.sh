@@ -13,7 +13,7 @@ echo "▸ Compilando ($CONFIG)…"
 swift build -c "$CONFIG"
 BIN="$(swift build -c "$CONFIG" --show-bin-path)/Pauta"
 
-echo "▸ Empaquetando $APP…"
+echo "▸ Empaquetando ${APP}…"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/Pauta"
