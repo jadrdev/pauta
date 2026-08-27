@@ -15,6 +15,13 @@ public struct Item: Identifiable, Codable, Hashable {
     public var isSomeday = false
     public var projectID: UUID?
     public var createdAt = Date()
+    /// Última modificación. Con un archivo por tarea, es lo que permite resolver
+    /// un conflicto entre dos dispositivos que tocaron la misma: gana la más
+    /// reciente.
+    public var updatedAt = Date()
+    /// Lápida. Borrar no elimina el archivo: lo marca. Si se eliminara, un
+    /// dispositivo que no vio el borrado resucitaría la tarea al sincronizar.
+    public var deletedAt: Date?
     /// Identificador en la fuente externa de la que se capturó, si vino de una.
     /// Evita reimportarla si el marcado en el origen falló.
     public var sourceID: String?
@@ -43,6 +50,8 @@ public struct Item: Identifiable, Codable, Hashable {
         projectID   = try c.decodeIfPresent(UUID.self,   forKey: .projectID)
         createdAt   = try c.decodeIfPresent(Date.self,   forKey: .createdAt) ?? Date()
         sourceID    = try c.decodeIfPresent(String.self, forKey: .sourceID)
+        updatedAt   = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
+        deletedAt   = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
     }
 
     /// Planificada para hoy o antes (una tarea vencida sigue estando en Hoy).
@@ -65,6 +74,21 @@ public struct Item: Identifiable, Codable, Hashable {
     }
 }
 
+extension Item {
+    /// Orden total: por creación y, cuando coincide, por identificador.
+    ///
+    /// El desempate no es cosmético. Las fechas se guardan con fracción de
+    /// segundo, pero los archivos escritos por versiones anteriores solo tienen
+    /// segundos, así que los empates existen; y `sorted` no garantiza
+    /// estabilidad. Sin un orden total, la lista se reordenaría sola entre
+    /// arranques.
+    public static func byCreation(_ a: Item, _ b: Item) -> Bool {
+        a.createdAt == b.createdAt
+            ? a.id.uuidString < b.id.uuidString
+            : a.createdAt < b.createdAt
+    }
+}
+
 // MARK: - Proyecto
 
 public struct Project: Identifiable, Codable, Hashable {
@@ -75,6 +99,8 @@ public struct Project: Identifiable, Codable, Hashable {
     public var icon: String = ""
     public var isCompleted = false
     public var createdAt = Date()
+    public var updatedAt = Date()
+    public var deletedAt: Date?
 
     public init(id: UUID = UUID(), name: String) {
         self.id = id
@@ -89,6 +115,17 @@ public struct Project: Identifiable, Codable, Hashable {
         icon        = try c.decodeIfPresent(String.self, forKey: .icon) ?? ""
         isCompleted = try c.decodeIfPresent(Bool.self,   forKey: .isCompleted) ?? false
         createdAt   = try c.decodeIfPresent(Date.self,   forKey: .createdAt) ?? Date()
+        updatedAt   = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
+        deletedAt   = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
+    }
+}
+
+extension Project {
+    /// Orden total, por el mismo motivo que en `Item`.
+    public static func byCreation(_ a: Project, _ b: Project) -> Bool {
+        a.createdAt == b.createdAt
+            ? a.id.uuidString < b.id.uuidString
+            : a.createdAt < b.createdAt
     }
 }
 

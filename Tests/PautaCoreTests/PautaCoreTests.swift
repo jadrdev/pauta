@@ -63,3 +63,187 @@ struct PerspectiveTests {
         #expect(!titles.contains("aparcada"))
     }
 }
+
+/// La persistencia: un archivo por objeto, lápidas y migración.
+@MainActor
+struct PersistenceTests {
+    /// Carpeta nueva y vacía por test, para que no se pisen entre ellos.
+    private func tempRoot() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaTests-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    @Test func roundTrip() throws {
+        let root = tempRoot()
+        do {
+            let store = Store(root: root)
+            store.addItem(title: "Comprar pan", in: .inbox)
+            store.addItem(title: "Llamar al banco", in: .today)
+            let project = store.addProject(name: "Mudanza")
+            store.setIcon(project, to: "📦")
+        }
+        let reloaded = Store(root: root)
+        #expect(reloaded.items.map(\.title) == ["Comprar pan", "Llamar al banco"])
+        #expect(reloaded.projects.map(\.name) == ["Mudanza"])
+        #expect(reloaded.projects.first?.icon == "📦")
+        #expect(reloaded.count(for: .today) == 1)
+    }
+
+    @Test func oneFilePerObject() throws {
+        let root = tempRoot()
+        let store = Store(root: root)
+        store.addItem(title: "una", in: .inbox)
+        store.addItem(title: "otra", in: .inbox)
+        store.addProject(name: "proyecto")
+
+        let items = try FileManager.default.contentsOfDirectory(
+            at: root.appendingPathComponent("items"), includingPropertiesForKeys: nil)
+        let projects = try FileManager.default.contentsOfDirectory(
+            at: root.appendingPathComponent("projects"), includingPropertiesForKeys: nil)
+        #expect(items.filter { $0.pathExtension == "json" }.count == 2)
+        #expect(projects.filter { $0.pathExtension == "json" }.count == 1)
+    }
+
+    /// Borrar deja lápida: al recargar, la tarea no vuelve.
+    @Test func deletionLeavesTombstoneAndDoesNotResurrect() throws {
+        let root = tempRoot()
+        let doomed: Item
+        do {
+            let store = Store(root: root)
+            store.addItem(title: "se queda", in: .inbox)
+            doomed = store.addItem(title: "se borra", in: .inbox)
+            store.delete(doomed)
+            #expect(store.items.map(\.title) == ["se queda"])
+        }
+        // El archivo sigue existiendo, con la lápida puesta.
+        let file = root.appendingPathComponent("items/\(doomed.id.uuidString).json")
+        #expect(FileManager.default.fileExists(atPath: file.path))
+        #expect(try String(contentsOf: file, encoding: .utf8).contains("deletedAt"))
+
+        let reloaded = Store(root: root)
+        #expect(reloaded.items.map(\.title) == ["se queda"])
+    }
+
+    /// Una tarea capturada y luego borrada no debe volver a importarse.
+    @Test func buriedCaptureIsNotReimported() throws {
+        let root = tempRoot()
+        let capture = Captured(sourceID: "recordatorio-1", title: "Comprar pilas", notes: "")
+        do {
+            let store = Store(root: root)
+            #expect(store.addCaptured([capture]) == 1)
+            store.delete(store.items[0])
+        }
+        let reloaded = Store(root: root)
+        #expect(reloaded.addCaptured([capture]) == 0)
+        #expect(reloaded.items.isEmpty)
+    }
+
+    /// El decodificador tolerante: un archivo sin los campos nuevos se lee.
+    @Test func readsFilesMissingNewerFields() throws {
+        let root = tempRoot()
+        let itemsDir = root.appendingPathComponent("items", isDirectory: true)
+        try FileManager.default.createDirectory(at: itemsDir, withIntermediateDirectories: true)
+        let id = UUID()
+        let minimal = #"{"id":"\#(id.uuidString)","title":"Del pasado"}"#
+        try minimal.write(to: itemsDir.appendingPathComponent("\(id.uuidString).json"),
+                          atomically: true, encoding: .utf8)
+
+        let store = Store(root: root)
+        #expect(store.items.map(\.title) == ["Del pasado"])
+        #expect(store.items.first?.isSomeday == false)
+        #expect(store.items.first?.deletedAt == nil)
+    }
+
+    /// Un archivo corrupto se salta y no arrastra al resto.
+    @Test func corruptFileDoesNotLoseTheRest() throws {
+        let root = tempRoot()
+        do {
+            let store = Store(root: root)
+            store.addItem(title: "sana", in: .inbox)
+        }
+        let itemsDir = root.appendingPathComponent("items", isDirectory: true)
+        try "{ esto no es json".write(to: itemsDir.appendingPathComponent("\(UUID().uuidString).json"),
+                                     atomically: true, encoding: .utf8)
+
+        let store = Store(root: root)
+        #expect(store.items.map(\.title) == ["sana"])
+    }
+
+    /// Migración desde el JSON único, dejando el original como respaldo.
+    @Test func migratesFromSingleBlob() throws {
+        let root = tempRoot()
+        let a = UUID(), b = UUID(), p = UUID()
+        let blob = """
+        {
+          "items": [
+            {"id":"\(a.uuidString)","title":"vieja uno"},
+            {"id":"\(b.uuidString)","title":"vieja dos","isCompleted":true}
+          ],
+          "projects": [{"id":"\(p.uuidString)","name":"Proyecto viejo"}]
+        }
+        """
+        let legacy = root.appendingPathComponent("data.json")
+        try blob.write(to: legacy, atomically: true, encoding: .utf8)
+
+        let store = Store(root: root)
+        #expect(Set(store.items.map(\.title)) == ["vieja uno", "vieja dos"])
+        #expect(store.projects.map(\.name) == ["Proyecto viejo"])
+        #expect(store.count(for: .completed) == 1)
+        // El blob original se conserva.
+        #expect(FileManager.default.fileExists(atPath: legacy.path))
+        // Y no se vuelve a migrar encima de lo que ya hay.
+        let again = Store(root: root)
+        #expect(again.items.count == 2)
+    }
+
+    /// Mutar una tarea no debe reescribir el archivo de las demás: con la
+    /// carpeta sincronizada, tocar archivos intactos hace trabajar de más a
+    /// iCloud y multiplica las ocasiones de conflicto.
+    @Test func mutatingOneItemLeavesTheOthersUntouched() throws {
+        let root = tempRoot()
+        let store = Store(root: root)
+        let a = store.addItem(title: "la que cambia", in: .inbox)
+        let b = store.addItem(title: "la que no", in: .inbox)
+
+        let fileB = root.appendingPathComponent("items/\(b.id.uuidString).json")
+        let antes = try Data(contentsOf: fileB)
+
+        store.toggleComplete(a)
+
+        let despues = try Data(contentsOf: fileB)
+        #expect(antes == despues)
+        // Y la que sí cambió, cambió.
+        let fileA = root.appendingPathComponent("items/\(a.id.uuidString).json")
+        #expect(try String(contentsOf: fileA, encoding: .utf8).contains("completedAt"))
+    }
+
+    /// La migración debe conservar el orden que tenía el blob, aunque sus fechas
+    /// empaten: si no, la lista del usuario aparece revuelta tras actualizar.
+    @Test func migrationPreservesOrderDespiteTiedDates() throws {
+        let root = tempRoot()
+        let titulos = ["primera", "segunda", "tercera", "cuarta", "quinta"]
+        let mismaFecha = "2026-08-23T14:20:28Z"
+        let items = titulos.map {
+            #"{"id":"\#(UUID().uuidString)","title":"\#($0)","createdAt":"\#(mismaFecha)"}"#
+        }
+        let blob = #"{"items":[\#(items.joined(separator: ","))],"projects":[]}"#
+        try blob.write(to: root.appendingPathComponent("data.json"),
+                       atomically: true, encoding: .utf8)
+
+        let store = Store(root: root)
+        #expect(store.items.map(\.title) == titulos)
+        // Y sigue igual al recargar desde los archivos ya troceados.
+        let reloaded = Store(root: root)
+        #expect(reloaded.items.map(\.title) == titulos)
+    }
+
+    @Test func inMemoryWritesNothing() throws {
+        let root = tempRoot()
+        let store = Store(inMemory: true, root: root)
+        store.addItem(title: "fantasma", in: .inbox)
+        let contents = try FileManager.default.contentsOfDirectory(atPath: root.path)
+        #expect(contents.isEmpty)
+    }
+}

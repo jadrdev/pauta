@@ -148,18 +148,56 @@ siguen funcionando.
 
 ## Dónde se guardan los datos
 
-Un único JSON legible, con escritura atómica:
+**Un archivo JSON por objeto**, con escritura atómica:
 
 ```
-~/Library/Application Support/Pauta/data.json
+~/Library/Application Support/Pauta/
+  items/<uuid>.json
+  projects/<uuid>.json
 ```
 
-Copiarlo es la copia de seguridad; borrarlo deja la app a cero. Para ver el
-estado guardado sin abrir la interfaz:
+Copiar la carpeta es la copia de seguridad; borrarla deja la app a cero. Para ver
+el estado guardado sin abrir la interfaz:
 
 ```bash
 ./build/Pauta.app/Contents/MacOS/Pauta --dump
 ```
+
+### Por qué un archivo por objeto
+
+Antes era un único `data.json` con todo. Esa forma es la peor posible para
+sincronizar: dos dispositivos que añaden **tareas distintas** escriben versiones
+incompatibles del mismo archivo, y una de las dos tareas se pierde en silencio.
+No hace falta simultaneidad, basta que uno estuviera sin conexión un rato.
+
+Con un archivo por objeto, tocar tareas distintas no genera ningún conflicto, y
+un archivo corrupto solo se lleva su propia tarea en vez de todo el almacén.
+Cada mutación escribe **solo el objeto tocado**: reescribir todo agitaría las
+fechas de modificación de archivos intactos, que es justo lo que hace trabajar de
+más a la sincronización.
+
+Borrar **no elimina el archivo: deja una lápida** (`deletedAt`). Si se eliminara,
+un dispositivo que no vio el borrado resucitaría la tarea al sincronizar.
+
+### El orden de la lista
+
+Las fechas se guardan en ISO8601, cuya precisión máxima es el **milisegundo**.
+Dos tareas creadas en el mismo milisegundo —pegar varias líneas, por ejemplo—
+tendrían la misma fecha, y como `sorted` no garantiza estabilidad y el orden de
+los archivos en el directorio es arbitrario, **la lista se reordenaría entre
+arranques**.
+
+Por eso hay dos medidas: al crear una tarea se fuerza que su fecha sea al menos
+un milisegundo posterior a la última (lo que hay que preservar es el orden, no el
+instante), y todos los ordenamientos usan `Item.byCreation`, que desempata por
+identificador para ser un orden total.
+
+La migración desde el `data.json` antiguo aplica lo mismo respetando el orden que
+tenía el array, porque sus fechas solo tenían segundos y casi todas empataban.
+El archivo original se conserva como respaldo; puedes borrarlo cuando compruebes
+que todo está en su sitio.
+
+### Decodificación
 
 Las tareas y los proyectos se leen con un `init(from:)` escrito a mano que usa
 `decodeIfPresent` para todo. No es un capricho: el `Codable` sintetizado de Swift
@@ -274,8 +312,10 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
   `Store`: acabarían persistidos en `data.json` como copias que se
   desincronizan. Van como fuente aparte, mezclada en la vista. Escribir tareas
   como eventos, en cambio, es mala idea: duplica y genera conflictos
-- Tests de la persistencia: lectura de archivos sin los campos nuevos y
-  escritura atómica. Es el código donde un fallo cuesta datos
+- **Sincronizar por iCloud Drive.** El almacenamiento ya está en la forma que lo
+  soporta (un archivo por objeto, lápidas, fechas de modificación). Falta mover
+  la carpeta a `~/Library/Mobile Documents/com~apple~CloudDocs/Pauta/`, que es
+  cambiar una ruta, y manejar los archivos que iCloud deja sin descargar
 - Áreas que agrupen proyectos
 - Tareas repetitivas y fechas límite
 - Listas de comprobación y etiquetas (y la elección al pegar varias líneas)

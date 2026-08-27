@@ -1,6 +1,22 @@
 import Foundation
 import Observation
 
+/// Formateadores de fecha, a propósito fuera de `Store`: dentro quedarían
+/// aislados al actor principal y el codificador los usa desde clausuras
+/// `Sendable`. `ISO8601DateFormatter` es seguro para formatear en paralelo.
+///
+/// La fracción de segundo importa: sin ella, dos tareas creadas en el mismo
+/// segundo quedan con la misma fecha y su orden relativo se pierde al guardar,
+/// así que pegar varias líneas y reabrir la app las reordenaría.
+private enum ISODate {
+    nonisolated(unsafe) static let precise: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    nonisolated(unsafe) static let secondsOnly = ISO8601DateFormatter()
+}
+
 /// Estado de la app + persistencia en JSON.
 @Observable
 @MainActor
@@ -8,55 +24,200 @@ public final class Store {
     public var items: [Item] = []
     public var projects: [Project] = []
 
-    private let fileURL: URL
+    private let root: URL
+    private let itemsDir: URL
+    private let projectsDir: URL
     private let encoder: JSONEncoder = {
         let e = JSONEncoder()
         e.outputFormatting = [.prettyPrinted, .sortedKeys]
-        e.dateEncodingStrategy = .iso8601
+        e.dateEncodingStrategy = .custom { date, encoder in
+            var c = encoder.singleValueContainer()
+            try c.encode(ISODate.precise.string(from: date))
+        }
         return e
     }()
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
-        d.dateDecodingStrategy = .iso8601
+        // Se acepta también el formato sin fracción, que es el que escribieron
+        // las versiones anteriores.
+        d.dateDecodingStrategy = .custom { decoder in
+            let text = try decoder.singleValueContainer().decode(String.self)
+            if let date = ISODate.precise.date(from: text) { return date }
+            if let date = ISODate.secondsOnly.date(from: text) { return date }
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: decoder.codingPath,
+                debugDescription: "fecha no reconocida: \(text)"))
+        }
         return d
     }()
-
-    private struct Snapshot: Codable {
-        var items: [Item]
-        var projects: [Project]
-    }
 
     /// En modo memoria no se lee ni se escribe en disco: sirve para maquetar.
     private let inMemory: Bool
 
-    public init(inMemory: Bool = false) {
+    /// Identificadores de origen de tareas ya borradas, para que una captura
+    /// repetida no las resucite.
+    private var buriedSourceIDs: Set<String> = []
+
+    /// `root` permite apuntar a otra carpeta en los tests.
+    public init(inMemory: Bool = false, root: URL? = nil) {
         self.inMemory = inMemory
-        let fm = FileManager.default
-        let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let dir = support.appendingPathComponent("Pauta", isDirectory: true)
-        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
-        fileURL = dir.appendingPathComponent("data.json")
-        if !inMemory { load() }
+        let base = root ?? FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Pauta", isDirectory: true)
+        self.root = base
+        self.itemsDir = base.appendingPathComponent("items", isDirectory: true)
+        self.projectsDir = base.appendingPathComponent("projects", isDirectory: true)
+        if !inMemory {
+            migrateFromSingleFile()
+            let fm = FileManager.default
+            try? fm.createDirectory(at: itemsDir, withIntermediateDirectories: true)
+            try? fm.createDirectory(at: projectsDir, withIntermediateDirectories: true)
+            load()
+        }
     }
+
+    public var storageLocation: String { root.path }
 
     // MARK: - Persistencia
+    //
+    // Un archivo por objeto en vez de un único JSON con todo. Con un solo blob,
+    // dos dispositivos que añaden tareas distintas escriben versiones
+    // incompatibles del mismo archivo y una de las dos tareas se pierde en
+    // silencio. Con un archivo por objeto, tocar tareas distintas no genera
+    // ningún conflicto, y un archivo corrupto solo se lleva su propia tarea en
+    // vez de todo el almacén.
+
+    private func url(forItem id: UUID) -> URL {
+        itemsDir.appendingPathComponent("\(id.uuidString).json")
+    }
+
+    private func url(forProject id: UUID) -> URL {
+        projectsDir.appendingPathComponent("\(id.uuidString).json")
+    }
 
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL),
+        let fm = FileManager.default
+
+        let itemFiles = (try? fm.contentsOfDirectory(at: itemsDir,
+                                                    includingPropertiesForKeys: nil)) ?? []
+        var live: [Item] = []
+        for file in itemFiles where file.pathExtension == "json" {
+            // Un archivo ilegible o corrupto se salta: no debe tumbar la carga.
+            guard let data = try? Data(contentsOf: file),
+                  let item = try? decoder.decode(Item.self, from: data) else { continue }
+            if item.deletedAt == nil {
+                live.append(item)
+            } else if let source = item.sourceID {
+                buriedSourceIDs.insert(source)
+            }
+        }
+        items = live.sorted(by: Item.byCreation)
+
+        let projectFiles = (try? fm.contentsOfDirectory(at: projectsDir,
+                                                       includingPropertiesForKeys: nil)) ?? []
+        projects = projectFiles
+            .filter { $0.pathExtension == "json" }
+            .compactMap { file in
+                guard let data = try? Data(contentsOf: file),
+                      let project = try? decoder.decode(Project.self, from: data),
+                      project.deletedAt == nil else { return nil }
+                return project
+            }
+            .sorted(by: Project.byCreation)
+    }
+
+    /// Escritura atómica del objeto tocado, y solo de ese: reescribir todo en
+    /// cada cambio agitaría las fechas de modificación de archivos intactos, que
+    /// es justo lo que hace trabajar de más a la sincronización.
+    private func persist(_ item: Item) {
+        guard !inMemory, let data = try? encoder.encode(item) else { return }
+        try? data.write(to: url(forItem: item.id), options: .atomic)
+    }
+
+    private func persist(_ project: Project) {
+        guard !inMemory, let data = try? encoder.encode(project) else { return }
+        try? data.write(to: url(forProject: project.id), options: .atomic)
+    }
+
+    /// Reparte el `data.json` de un solo blob en un archivo por objeto. El
+    /// original se deja intacto como respaldo.
+    private func migrateFromSingleFile() {
+        let fm = FileManager.default
+        let legacy = root.appendingPathComponent("data.json")
+        guard fm.fileExists(atPath: legacy.path) else { return }
+        let existing = (try? fm.contentsOfDirectory(at: itemsDir,
+                                                   includingPropertiesForKeys: nil)) ?? []
+        guard existing.filter({ $0.pathExtension == "json" }).isEmpty else { return }
+
+        struct Snapshot: Decodable {
+            var items: [Item]
+            var projects: [Project]
+        }
+        guard let data = try? Data(contentsOf: legacy),
               let snap = try? decoder.decode(Snapshot.self, from: data) else { return }
-        items = snap.items
-        projects = snap.projects
+
+        try? fm.createDirectory(at: itemsDir, withIntermediateDirectories: true)
+        try? fm.createDirectory(at: projectsDir, withIntermediateDirectories: true)
+        // El blob guardaba el orden en el propio array, y sus fechas solo tienen
+        // segundos, así que muchas empatan. Al trocearlo, el orden vendría del
+        // identificador —aleatorio— y la lista del usuario aparecería revuelta.
+        // Se separan un milisegundo respetando el orden original.
+        var last: Date?
+        for var item in snap.items {
+            if let previous = last, item.createdAt < previous.addingTimeInterval(0.001) {
+                item.createdAt = previous.addingTimeInterval(0.001)
+            }
+            item.updatedAt = item.createdAt
+            last = item.createdAt
+            persist(item)
+        }
+        var lastProject: Date?
+        for var project in snap.projects {
+            if let previous = lastProject, project.createdAt < previous.addingTimeInterval(0.001) {
+                project.createdAt = previous.addingTimeInterval(0.001)
+            }
+            project.updatedAt = project.createdAt
+            lastProject = project.createdAt
+            persist(project)
+        }
     }
 
-    private func save() {
-        guard !inMemory else { return }
-        let snap = Snapshot(items: items, projects: projects)
-        guard let data = try? encoder.encode(snap) else { return }
-        // Escritura atómica: si el proceso muere a mitad, el archivo previo sigue intacto.
-        try? data.write(to: fileURL, options: .atomic)
+    /// Fuerza que la fecha de creación sea estrictamente posterior a la de
+    /// cualquier tarea existente.
+    ///
+    /// Las fechas se guardan con precisión de milisegundo (es lo máximo que da
+    /// ISO8601), así que dos tareas creadas en el mismo milisegundo —pegar varias
+    /// líneas, por ejemplo— empatarían, y el desempate por identificador es
+    /// aleatorio: la lista se reordenaría entre arranques. Lo que hay que
+    /// preservar es el orden, no el instante exacto, y desplazar un milisegundo
+    /// no le importa a nadie.
+    private func stampCreation(_ item: inout Item) {
+        // La comparación es contra «último + 1 ms», no contra «último»: dos fechas
+        // separadas por microsegundos son distintas en memoria pero colapsan al
+        // mismo milisegundo al guardarse, y el empate reaparece al recargar.
+        let minimo = 0.001
+        if let last = items.map(\.createdAt).max(),
+           item.createdAt < last.addingTimeInterval(minimo) {
+            item.createdAt = last.addingTimeInterval(minimo)
+        }
+        item.updatedAt = item.createdAt
     }
 
-    public var storageLocation: String { fileURL.path }
+    /// Aplica un cambio a una tarea, le pone fecha de modificación y la guarda.
+    /// Centralizado para que ninguna mutación se olvide de una de las tres.
+    private func mutateItem(_ id: UUID, _ change: (inout Item) -> Void) {
+        guard let idx = items.firstIndex(where: { $0.id == id }) else { return }
+        change(&items[idx])
+        items[idx].updatedAt = .now
+        persist(items[idx])
+    }
+
+    private func mutateProject(_ id: UUID, _ change: (inout Project) -> Void) {
+        guard let idx = projects.firstIndex(where: { $0.id == id }) else { return }
+        change(&projects[idx])
+        projects[idx].updatedAt = .now
+        persist(projects[idx])
+    }
 
     // MARK: - Consultas
 
@@ -65,36 +226,39 @@ public final class Store {
         case .inbox:
             items.filter { !$0.isCompleted && $0.projectID == nil
                            && $0.when == nil && !$0.isSomeday }
-                .sorted { $0.createdAt < $1.createdAt }
+                .sorted(by: Item.byCreation)
         case .today:
             items.filter(\.isToday)
                 .sorted {
                     let a = $0.when ?? .distantPast, b = $1.when ?? .distantPast
                     // Desempate por creación: lo nuevo va al final.
-                    return a == b ? $0.createdAt < $1.createdAt : a < b
+                    return a == b ? Item.byCreation($0, $1) : a < b
                 }
         case .upcoming:
             items.filter(\.isUpcoming)
                 .sorted {
                     let a = $0.when ?? .distantFuture, b = $1.when ?? .distantFuture
-                    return a == b ? $0.createdAt < $1.createdAt : a < b
+                    return a == b ? Item.byCreation($0, $1) : a < b
                 }
         case .anytime:
             items.filter(\.isAnytime)
                 .sorted {
                     // Primero lo fechado (Hoy incluido), luego lo sin fecha.
                     let a = $0.when ?? .distantFuture, b = $1.when ?? .distantFuture
-                    return a == b ? $0.createdAt < $1.createdAt : a < b
+                    return a == b ? Item.byCreation($0, $1) : a < b
                 }
         case .someday:
             items.filter { !$0.isCompleted && $0.isSomeday }
-                .sorted { $0.createdAt < $1.createdAt }
+                .sorted(by: Item.byCreation)
         case .completed:
             items.filter(\.isCompleted)
-                .sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
+                .sorted {
+                    let a = $0.completedAt ?? .distantPast, b = $1.completedAt ?? .distantPast
+                    return a == b ? Item.byCreation($1, $0) : a > b
+                }
         case .project(let id):
             items.filter { !$0.isCompleted && $0.projectID == id }
-                .sorted { $0.createdAt < $1.createdAt }
+                .sorted(by: Item.byCreation)
         }
     }
 
@@ -160,8 +324,9 @@ public final class Store {
         case .inbox, .completed:
             break
         }
+        stampCreation(&item)
         items.append(item)
-        save()
+        persist(item)
         return item
     }
 
@@ -169,51 +334,58 @@ public final class Store {
     /// cuántas entraron: las que ya se habían importado antes se ignoran.
     @discardableResult
     public func addCaptured(_ incoming: [Captured]) -> Int {
-        let known = Set(items.compactMap(\.sourceID))
+        // Se descartan las ya importadas, incluidas las que se borraron después:
+        // volver a capturarlas las resucitaría.
+        let known = Set(items.compactMap(\.sourceID)).union(buriedSourceIDs)
         let fresh = incoming.filter { !known.contains($0.sourceID) }
         for capture in fresh {
             var item = Item(title: capture.title)
             item.notes = capture.notes
             item.sourceID = capture.sourceID
+            stampCreation(&item)
             items.append(item)
+            persist(item)
         }
-        if !fresh.isEmpty { save() }
         return fresh.count
     }
 
     public func update(_ item: Item) {
-        guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
-        items[idx] = item
-        save()
+        mutateItem(item.id) { $0 = item }
     }
 
     public func toggleComplete(_ item: Item) {
-        guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
-        items[idx].isCompleted.toggle()
-        items[idx].completedAt = items[idx].isCompleted ? .now : nil
-        save()
+        mutateItem(item.id) {
+            $0.isCompleted.toggle()
+            $0.completedAt = $0.isCompleted ? .now : nil
+        }
     }
 
+    /// Borrar deja una lápida en lugar de eliminar el archivo: si se eliminara,
+    /// un dispositivo que no vio el borrado resucitaría la tarea al sincronizar.
     public func delete(_ item: Item) {
-        items.removeAll { $0.id == item.id }
-        save()
+        guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
+        var buried = items.remove(at: idx)
+        buried.deletedAt = .now
+        buried.updatedAt = .now
+        if let source = buried.sourceID { buriedSourceIDs.insert(source) }
+        persist(buried)
     }
 
     /// Poner o quitar fecha saca la tarea de «Algún día» en ambos casos: una
     /// tarea aparcada y con fecha a la vez sería un estado contradictorio.
     public func schedule(_ item: Item, to date: Date?) {
-        guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
-        items[idx].when = date.map { Calendar.current.startOfDay(for: $0) }
-        items[idx].isSomeday = false
-        save()
+        mutateItem(item.id) {
+            $0.when = date.map { Calendar.current.startOfDay(for: $0) }
+            $0.isSomeday = false
+        }
     }
 
     /// Aparca la tarea en «Algún día», quitándole cualquier fecha.
     public func park(_ item: Item) {
-        guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
-        items[idx].isSomeday = true
-        items[idx].when = nil
-        save()
+        mutateItem(item.id) {
+            $0.isSomeday = true
+            $0.when = nil
+        }
     }
 
     // MARK: - Mutaciones de proyectos
@@ -222,30 +394,29 @@ public final class Store {
     public func addProject(name: String) -> Project {
         let project = Project(name: name.isEmpty ? "Nuevo proyecto" : name)
         projects.append(project)
-        save()
+        persist(project)
         return project
     }
 
     public func rename(_ project: Project, to name: String) {
-        guard let idx = projects.firstIndex(where: { $0.id == project.id }) else { return }
-        projects[idx].name = name
-        save()
+        mutateProject(project.id) { $0.name = name }
     }
 
     /// Cambia el emoji del proyecto. Cadena vacía = quitarlo.
     public func setIcon(_ project: Project, to icon: String) {
-        guard let idx = projects.firstIndex(where: { $0.id == project.id }) else { return }
-        projects[idx].icon = icon
-        save()
+        mutateProject(project.id) { $0.icon = icon }
     }
 
     /// Borra el proyecto y devuelve sus tareas a la bandeja de entrada.
     public func delete(_ project: Project) {
-        for idx in items.indices where items[idx].projectID == project.id {
-            items[idx].projectID = nil
+        for item in items where item.projectID == project.id {
+            mutateItem(item.id) { $0.projectID = nil }
         }
-        projects.removeAll { $0.id == project.id }
-        save()
+        guard let idx = projects.firstIndex(where: { $0.id == project.id }) else { return }
+        var buried = projects.remove(at: idx)
+        buried.deletedAt = .now
+        buried.updatedAt = .now
+        persist(buried)
     }
 }
 
