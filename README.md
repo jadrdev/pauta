@@ -81,6 +81,33 @@ swift test
 
 Los tests cubren `PautaCore`, que no depende de la interfaz.
 
+### Firma
+
+`build.sh` firma con la primera identidad «Apple Development» del llavero que no
+esté revocada, o con la que fuerces en `SIGN_ID`. Si no encuentra ninguna, cae a
+firma ad-hoc y lo avisa.
+
+No es un detalle cosmético. Con firma ad-hoc el hash del binario cambia con cada
+cambio de código, y TCC —el sistema de permisos— identifica las apps por su
+firma: cada build sería una app nueva para el sistema, así que los permisos de
+calendario, recordatorios o accesibilidad se pedirían otra vez en cada
+compilación, dejando entradas basura en Ajustes de Privacidad.
+
+Con una identidad de desarrollador el requisito designado pasa a basarse en el
+identificador y el certificado:
+
+```
+designated => identifier "dev.jadrdev.pauta" and anchor apple generic
+              and certificate leaf[subject.CN] = "Apple Development: …"
+```
+
+Comprobado: tras un cambio real de código el `cdhash` cambia y ese requisito no,
+así que los permisos concedidos sobreviven a las recompilaciones. Esto es lo que
+desbloquea las integraciones con Calendario y Recordatorios.
+
+La letra pequeña: los certificados «Apple Development» caducan (el actual, en
+mayo de 2027). Cuando caduque habrá que renovarlo y volver a conceder permisos.
+
 No hace falta abrir Xcode, pero sí tenerlo instalado: los scripts usan
 `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer` porque
 `xcode-select` de este equipo apunta a las Command Line Tools. Si algún día
@@ -210,6 +237,15 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
 
 ## Qué falta (siguiente iteración)
 
+- **Recordatorios como bandeja de entrada.** Leer una lista concreta de
+  Recordatorios y volcarla en la bandeja daría captura desde el iPhone y por
+  voz con Siri, sin construir la app de iOS. EventKit ya enlaza y la firma
+  estable está resuelta, así que es lo siguiente más rentable
+- **Eventos del calendario en Hoy**, solo lectura, para que Hoy sea el día
+  completo y no solo la lista de tareas. Los eventos no deben entrar en el
+  `Store`: acabarían persistidos en `data.json` como copias que se
+  desincronizan. Van como fuente aparte, mezclada en la vista. Escribir tareas
+  como eventos, en cambio, es mala idea: duplica y genera conflictos
 - Tests de la persistencia: lectura de archivos sin los campos nuevos y
   escritura atómica. Es el código donde un fallo cuesta datos
 - Áreas que agrupen proyectos

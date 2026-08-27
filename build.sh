@@ -41,8 +41,35 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# Firma ad-hoc: suficiente para ejecutarla en local.
-codesign --force --sign - "$APP" >/dev/null 2>&1 || echo "  (aviso: no se pudo firmar; la app aún debería abrir)"
+# Firma. Con firma ad-hoc el hash del binario cambia con cada cambio de código
+# (comprobado), y TCC identifica las apps por su firma: para el sistema cada
+# build sería una app nueva, así que los permisos de calendario, recordatorios,
+# accesibilidad, etc. se pedirían otra vez en cada compilación y dejarían
+# entradas basura en Ajustes de Privacidad. Con una identidad de desarrollador
+# el requisito designado se basa en el identificador y el equipo, no en el hash,
+# y sobrevive a las recompilaciones.
+#
+# SIGN_ID fuerza una identidad concreta. Si no, se busca la primera de Apple que
+# no esté revocada; y si no hay ninguna, se cae a ad-hoc con un aviso.
+SIGN_ID="${SIGN_ID:-}"
+if [ -z "${SIGN_ID}" ]; then
+    SIGN_ID=$(security find-identity -v -p codesigning 2>/dev/null \
+              | grep -v CSSMERR \
+              | grep -m1 '"Apple Develop' \
+              | sed 's/.*"\(.*\)".*/\1/') || true
+fi
+
+if [ -n "${SIGN_ID}" ] && codesign --force --sign "${SIGN_ID}" "${APP}" 2>/dev/null; then
+    echo "  firmado con identidad estable: ${SIGN_ID}"
+else
+    if [ -n "${SIGN_ID}" ]; then
+        echo "  aviso: no se pudo firmar con «${SIGN_ID}»; se recurre a ad-hoc"
+    else
+        echo "  aviso: sin identidad de firma en el llavero; se recurre a ad-hoc"
+    fi
+    echo "         los permisos del sistema se volverán a pedir en cada build"
+    codesign --force --sign - "${APP}" >/dev/null 2>&1 || true
+fi
 
 # Registra el bundle en LaunchServices. Sin esto, `open` puede quedarse con una
 # versión cacheada y abrir la app sin ventana cuando cambia el identificador.
