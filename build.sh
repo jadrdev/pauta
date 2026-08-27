@@ -37,6 +37,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key>    <string>14.0</string>
     <key>NSPrincipalClass</key>          <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>   <true/>
+    <!-- Sin estas cadenas, pedir acceso a Recordatorios aborta el proceso. -->
+    <key>NSRemindersFullAccessUsageDescription</key>
+    <string>Pauta lee su propia lista de Recordatorios para traer a la bandeja lo que apuntes desde el iPhone o con Siri.</string>
+    <key>NSRemindersUsageDescription</key>
+    <string>Pauta lee su propia lista de Recordatorios para traer a la bandeja lo que apuntes desde el iPhone o con Siri.</string>
 </dict>
 </plist>
 PLIST

@@ -165,6 +165,22 @@ public final class Store {
         return item
     }
 
+    /// Da de alta lo capturado en una fuente externa, en la bandeja. Devuelve
+    /// cuántas entraron: las que ya se habían importado antes se ignoran.
+    @discardableResult
+    public func addCaptured(_ incoming: [Captured]) -> Int {
+        let known = Set(items.compactMap(\.sourceID))
+        let fresh = incoming.filter { !known.contains($0.sourceID) }
+        for capture in fresh {
+            var item = Item(title: capture.title)
+            item.notes = capture.notes
+            item.sourceID = capture.sourceID
+            items.append(item)
+        }
+        if !fresh.isEmpty { save() }
+        return fresh.count
+    }
+
     public func update(_ item: Item) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[idx] = item

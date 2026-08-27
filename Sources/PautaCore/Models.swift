@@ -15,6 +15,9 @@ public struct Item: Identifiable, Codable, Hashable {
     public var isSomeday = false
     public var projectID: UUID?
     public var createdAt = Date()
+    /// Identificador en la fuente externa de la que se capturó, si vino de una.
+    /// Evita reimportarla si el marcado en el origen falló.
+    public var sourceID: String?
 
     public init(id: UUID = UUID(), title: String) {
         self.id = id
@@ -39,6 +42,7 @@ public struct Item: Identifiable, Codable, Hashable {
         isSomeday   = try c.decodeIfPresent(Bool.self,   forKey: .isSomeday) ?? false
         projectID   = try c.decodeIfPresent(UUID.self,   forKey: .projectID)
         createdAt   = try c.decodeIfPresent(Date.self,   forKey: .createdAt) ?? Date()
+        sourceID    = try c.decodeIfPresent(String.self, forKey: .sourceID)
     }
 
     /// Planificada para hoy o antes (una tarea vencida sigue estando en Hoy).

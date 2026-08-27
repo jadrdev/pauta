@@ -40,6 +40,7 @@ sería contradictorio.
 | `⌘⇧N` | Nuevo proyecto |
 | `↩` | Guardar y seguir escribiendo otra tarea |
 | `esc` | Cancelar la tarea nueva |
+| `⌘⇧R` | Importar de Recordatorios |
 | `⌘1` … `⌘6` | Bandeja / Hoy / Próximamente / Cualquier momento / Algún día / Registro |
 
 Una tarea nueva nace ya encajada en la lista donde la creas: en Hoy sale con la
@@ -57,6 +58,37 @@ tarea con lista.
 
 Cada proyecto puede llevar un emoji: se elige pulsando el círculo junto a su
 título, de una paleta corta, y sustituye a su símbolo en la barra lateral.
+
+## Captura desde Recordatorios
+
+Recordatorios de Apple sincroniza por iCloud y funciona con Siri, así que hace
+de bandeja de entrada remota: lo que apuntes en el iPhone aparece en Pauta sin
+necesidad de una app de iOS.
+
+La app usa **una lista propia llamada «Pauta»**, que crea al arrancar si no
+existe, y nunca toca tus otras listas. Al importar, cada recordatorio entra en la
+bandeja y **se marca completado en Recordatorios**, para que fluya en vez de
+acumularse. Cada tarea guarda el identificador de origen, así que si el marcado
+fallara no se duplicaría en la siguiente importación.
+
+Se importa al arrancar la app y con `⌘⇧R`. El permiso se pide la primera vez; si
+lo deniegas, la app funciona igual sin la captura remota. Ojo: **una vez
+denegado, macOS no vuelve a preguntar** y hay que activarlo a mano en Ajustes →
+Privacidad y seguridad → Recordatorios.
+
+```bash
+./build/Pauta.app/Contents/MacOS/Pauta --reminders-status
+./build/Pauta.app/Contents/MacOS/Pauta --import-reminders
+./build/Pauta.app/Contents/MacOS/Pauta --seed-reminder "Título"
+```
+
+Diagnóstico, importación manual y siembra de un recordatorio para probar la
+integración sin tocar el iPhone. Requieren que el permiso ya esté concedido: TCC
+no puede presentar su diálogo en un proceso lanzado desde el terminal, porque
+atribuye la petición al proceso responsable, que es la consola.
+
+Escribir tareas de Pauta como recordatorios, en cambio, no está previsto: duplica
+y obliga a resolver conflictos en los dos lados.
 
 ## Barra de menús
 
@@ -237,10 +269,6 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
 
 ## Qué falta (siguiente iteración)
 
-- **Recordatorios como bandeja de entrada.** Leer una lista concreta de
-  Recordatorios y volcarla en la bandeja daría captura desde el iPhone y por
-  voz con Siri, sin construir la app de iOS. EventKit ya enlaza y la firma
-  estable está resuelta, así que es lo siguiente más rentable
 - **Eventos del calendario en Hoy**, solo lectura, para que Hoy sea el día
   completo y no solo la lista de tareas. Los eventos no deben entrar en el
   `Store`: acabarían persistidos en `data.json` como copias que se

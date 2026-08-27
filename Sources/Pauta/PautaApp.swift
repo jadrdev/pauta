@@ -34,6 +34,30 @@ enum Launch {
     static var view: Perspective?
 }
 
+/// Ejecuta trabajo asíncrono desde un punto de entrada síncrono sin bloquear el
+/// hilo principal: hacerlo con un semáforo daría interbloqueo, porque el trabajo
+/// necesita ese mismo hilo. Se hace girando el bucle de eventos, que además es
+/// por donde vuelven las respuestas de permisos del sistema.
+@MainActor
+func runOnMainLoop(_ work: @escaping () async throws -> Void) {
+    // Sin NSApplication inicializada el proceso no tiene conexión con el
+    // servidor de ventanas, y TCC no puede presentar el diálogo de permisos:
+    // devuelve «denegado» sin registrar decisión ni preguntar nada. Como
+    // accesoria no aparece en el Dock, que es lo que se quiere en una
+    // herramienta de línea de comandos.
+    let app = NSApplication.shared
+    app.setActivationPolicy(.accessory)
+
+    var done = false
+    Task { @MainActor in
+        do { try await work() } catch { print("error: \(error.localizedDescription)") }
+        done = true
+    }
+    while !done {
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+    }
+}
+
 @main
 @MainActor
 struct Entry {
@@ -48,6 +72,49 @@ struct Entry {
            let n = CommandLine.arguments.dropFirst(i + 1).first.flatMap(Int.init),
            (1...Perspective.allCases.count).contains(n) {
             Launch.view = Perspective.allCases[n - 1]
+        }
+        // Importación y siembra desde la línea de comandos: permiten probar la
+        // integración con Recordatorios sin abrir la interfaz. El bucle de
+        // eventos tiene que seguir vivo, porque la concesión de permisos de TCC
+        // vuelve por él.
+        if CommandLine.arguments.contains("--reminders-status") {
+            let estado: String
+            switch RemindersInbox.authorization {
+            case .notDetermined: estado = "notDetermined (aún no se ha preguntado)"
+            case .restricted:    estado = "restricted (bloqueado por perfil o control parental)"
+            case .denied:        estado = "denied (hay que activarlo a mano en Ajustes)"
+            case .fullAccess:    estado = "fullAccess (listo)"
+            case .writeOnly:     estado = "writeOnly (insuficiente: hace falta leer)"
+            @unknown default:    estado = "desconocido"
+            }
+            print("Recordatorios: \(estado)")
+            print("lista dedicada: «\(RemindersInbox.listName)»")
+            return
+        }
+        if CommandLine.arguments.contains("--import-reminders") {
+            runOnMainLoop {
+                let inbox = RemindersInbox()
+                guard try await inbox.requestAccess() else {
+                    print("permiso de Recordatorios denegado"); return
+                }
+                let captured = try await inbox.drain()
+                let store = Store()
+                let added = store.addCaptured(captured)
+                print("recordatorios pendientes: \(captured.count)  importados: \(added)")
+            }
+            return
+        }
+        if let i = CommandLine.arguments.firstIndex(of: "--seed-reminder"),
+           let title = CommandLine.arguments.dropFirst(i + 1).first {
+            runOnMainLoop {
+                let inbox = RemindersInbox()
+                guard try await inbox.requestAccess() else {
+                    print("permiso de Recordatorios denegado"); return
+                }
+                try inbox.seedForTesting(title: title)
+                print("recordatorio creado en la lista «\(RemindersInbox.listName)»: \(title)")
+            }
+            return
         }
         if CommandLine.arguments.contains("--dump") {
             let store = Launch.demo ? Store.demo() : Store()
@@ -94,6 +161,12 @@ struct PautaApp: App {
                 }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
             }
+            CommandGroup(after: .newItem) {
+                Button("Importar de Recordatorios") {
+                    Task { await importFromReminders(into: store, nav: nav) }
+                }
+                .keyboardShortcut("r", modifiers: [.command, .shift])
+            }
             CommandGroup(after: .toolbar) {
                 // ⌘1…⌘6 en el mismo orden en que aparecen en la barra lateral.
                 ForEach(Array(Perspective.allCases.enumerated()), id: \.element) { index, perspective in
@@ -136,6 +209,8 @@ struct RootView: View {
         .tint(Paper.accentInk)
         .background(Paper.bg)
         .task {
+            // Al arrancar, para que lo apuntado en el iPhone esté ya aquí.
+            if !Launch.demo { await importFromReminders(into: store, nav: nav) }
             if let name = Launch.appearance {
                 NSApp?.appearance = NSAppearance(named: name)
             }
@@ -146,5 +221,25 @@ struct RootView: View {
                 nav.selectedItemID = store.items(for: nav.perspective).dropFirst().first?.id
             }
         }
+    }
+}
+
+/// Trae lo pendiente de la lista de Recordatorios a la bandeja.
+///
+/// Silencioso a propósito: si no hay permiso todavía, o la lista está vacía, no
+/// interrumpe. El permiso se pide la primera vez que se ejecuta, y si se deniega
+/// la app sigue funcionando igual sin la captura remota.
+@MainActor
+func importFromReminders(into store: Store, nav: Navigation) async {
+    do {
+        let inbox = RemindersInbox()
+        guard try await inbox.requestAccess() else { return }
+        let captured = try await inbox.drain()
+        guard !captured.isEmpty else { return }
+        let added = store.addCaptured(captured)
+        // Llevar a la bandeja solo si algo entró y no estabas en otra lista.
+        if added > 0, case .today = nav.perspective { nav.go(to: .inbox) }
+    } catch {
+        // La captura remota es un extra: si falla, la app sigue siendo usable.
     }
 }
