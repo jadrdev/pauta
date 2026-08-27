@@ -81,11 +81,18 @@ private struct SidebarRow: View {
         let count = store.count(for: perspective)
         HStack(spacing: 9) {
             // Monocromo y un paso más tenue que la etiqueta: el icono ayuda a
-            // apuntar, pero el texto sigue siendo lo primero que se lee.
-            Image(systemName: perspective.symbol)
-                .font(.system(size: 12.5, weight: .medium))
-                .foregroundStyle(isSelected ? Paper.accentInk : Paper.inkFaint)
-                .frame(width: 17, alignment: .center)
+            // apuntar, pero el texto sigue siendo lo primero que se lee. El
+            // emoji del proyecto, si lo tiene, ocupa el sitio del símbolo.
+            if let project, !project.icon.isEmpty {
+                Text(project.icon)
+                    .font(.system(size: 12))
+                    .frame(width: 17, alignment: .center)
+            } else {
+                Image(systemName: perspective.symbol)
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(isSelected ? Paper.accentInk : Paper.inkFaint)
+                    .frame(width: 17, alignment: .center)
+            }
             Text(label)
                 .font(.system(size: 13, weight: isSelected ? .bold : .medium))
                 .lineLimit(1)

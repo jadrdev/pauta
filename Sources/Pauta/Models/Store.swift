@@ -92,6 +92,13 @@ final class Store {
                     let a = $0.when ?? .distantFuture, b = $1.when ?? .distantFuture
                     return a == b ? $0.createdAt < $1.createdAt : a < b
                 }
+        case .anytime:
+            items.filter(\.isAnytime)
+                .sorted {
+                    // Primero lo fechado (Hoy incluido), luego lo sin fecha.
+                    let a = $0.when ?? .distantFuture, b = $1.when ?? .distantFuture
+                    return a == b ? $0.createdAt < $1.createdAt : a < b
+                }
         case .someday:
             items.filter { !$0.isCompleted && $0.isSomeday }
                 .sorted { $0.createdAt < $1.createdAt }
@@ -130,7 +137,10 @@ final class Store {
     func addItem(title: String, in perspective: Perspective) -> Item {
         var item = Item(title: title)
         switch perspective {
-        case .today:
+        // En «Cualquier momento», una tarea sin fecha ni proyecto caería a la
+        // bandeja y desaparecería de la vista; con fecha de hoy se queda donde
+        // se creó.
+        case .today, .anytime:
             item.when = Calendar.current.startOfDay(for: .now)
         case .upcoming:
             // Sin más contexto, «próximamente» más cercano es mañana.
@@ -199,6 +209,13 @@ final class Store {
         save()
     }
 
+    /// Cambia el emoji del proyecto. Cadena vacía = quitarlo.
+    func setIcon(_ project: Project, to icon: String) {
+        guard let idx = projects.firstIndex(where: { $0.id == project.id }) else { return }
+        projects[idx].icon = icon
+        save()
+    }
+
     /// Borra el proyecto y devuelve sus tareas a la bandeja de entrada.
     func delete(_ project: Project) {
         for idx in items.indices where items[idx].projectID == project.id {
@@ -217,12 +234,15 @@ extension Store {
     static func demo() -> Store {
         let store = Store(inMemory: true)
         let project = store.addProject(name: "Rediseño de la web")
+        store.setIcon(project, to: "🎨")
         store.addItem(title: "Llamar al fontanero", in: .today)
         var budget = store.addItem(title: "Revisar el presupuesto del trimestre", in: .today)
         budget.notes = "Comparar con las cifras de junio antes de enviarlo."
         store.update(budget)
         store.addItem(title: "Definir la paleta de color", in: .project(project.id))
         store.schedule(store.items.last!, to: .now)
+        // Sin fecha: solo se ve en el proyecto y en Cualquier momento.
+        store.addItem(title: "Escribir los textos de la portada", in: .project(project.id))
         store.addItem(title: "Comprar entradas del concierto", in: .inbox)
         // Dos días distintos, para que se vea el agrupado de Próximamente.
         let calendar = Calendar.current

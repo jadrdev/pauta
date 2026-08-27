@@ -52,6 +52,13 @@ struct Item: Identifiable, Codable, Hashable {
         guard let when, !isCompleted, !isSomeday else { return false }
         return Calendar.current.startOfDay(for: when) > Calendar.current.startOfDay(for: .now)
     }
+
+    /// Se puede hacer ya: ni aparcada ni planificada para el futuro. La bandeja
+    /// queda fuera a propósito: lo que hay allí todavía está sin decidir.
+    var isAnytime: Bool {
+        guard !isCompleted, !isSomeday, !isUpcoming else { return false }
+        return projectID != nil || when != nil
+    }
 }
 
 // MARK: - Proyecto
@@ -60,6 +67,8 @@ struct Project: Identifiable, Codable, Hashable {
     var id = UUID()
     var name: String
     var notes: String = ""
+    /// Emoji que identifica al proyecto en la barra lateral. Vacío = sin emoji.
+    var icon: String = ""
     var isCompleted = false
     var createdAt = Date()
 
@@ -73,6 +82,7 @@ struct Project: Identifiable, Codable, Hashable {
         id          = try c.decodeIfPresent(UUID.self,   forKey: .id) ?? UUID()
         name        = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
         notes       = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        icon        = try c.decodeIfPresent(String.self, forKey: .icon) ?? ""
         isCompleted = try c.decodeIfPresent(Bool.self,   forKey: .isCompleted) ?? false
         createdAt   = try c.decodeIfPresent(Date.self,   forKey: .createdAt) ?? Date()
     }
@@ -84,18 +94,20 @@ enum Perspective: Hashable, CaseIterable {
     case inbox
     case today
     case upcoming
+    case anytime
     case someday
     case logbook
     case project(UUID)
 
     /// Las fijas, en el orden en que se muestran. Los proyectos van aparte.
-    static var allCases: [Perspective] { [.inbox, .today, .upcoming, .someday, .logbook] }
+    static var allCases: [Perspective] { [.inbox, .today, .upcoming, .anytime, .someday, .logbook] }
 
     var title: String {
         switch self {
         case .inbox: "Bandeja"
         case .today: "Hoy"
         case .upcoming: "Próximamente"
+        case .anytime: "Cualquier momento"
         case .someday: "Algún día"
         case .logbook: "Registro"
         case .project: "Proyecto"
@@ -109,6 +121,7 @@ enum Perspective: Hashable, CaseIterable {
         case .inbox: "tray"
         case .today: "sun.max"
         case .upcoming: "calendar"
+        case .anytime: "list.bullet"
         case .someday: "shippingbox"
         case .logbook: "archivebox"
         case .project: "circle.dotted"

@@ -62,6 +62,7 @@ struct ItemListView: View {
     @ViewBuilder private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             if case .project(let id) = nav.perspective, let project = store.project(id) {
+                ProjectIconButton(project: project)
                 ProjectTitleField(project: project)
             } else {
                 Text(store.title(for: nav.perspective))
@@ -112,6 +113,7 @@ struct ItemListView: View {
         case .inbox: "La bandeja está vacía."
         case .today: "Nada para hoy."
         case .upcoming: "Nada planificado más adelante."
+        case .anytime: "Nada que hacer ahora mismo."
         case .someday: "Nada aparcado para algún día."
         case .logbook: "Todavía no has completado nada."
         case .project: "Este proyecto no tiene tareas."
@@ -161,6 +163,64 @@ struct ItemListView: View {
             draftFocused = true
         } else {
             nav.isAddingItem = false
+        }
+    }
+}
+
+/// Emoji del proyecto en la cabecera; al pulsarlo se abre un pequeño panel
+/// para elegirlo. Paleta corta y curada a propósito: entre veinte se escoge
+/// de un vistazo, en el teclado de emojis completo del sistema no.
+private struct ProjectIconButton: View {
+    @Environment(Store.self) private var store
+    let project: Project
+    @State private var showingPicker = false
+
+    private static let palette = [
+        "📌", "⭐️", "🔥", "🎯", "🏠", "💼", "📚", "🎨", "🎸", "🌱",
+        "✈️", "🛒", "💪", "🧠", "🖥️", "📷", "🧾", "🛠️", "🐾", "🎁",
+    ]
+
+    var body: some View {
+        Button { showingPicker.toggle() } label: {
+            if project.icon.isEmpty {
+                Image(systemName: "circle.dotted")
+                    .font(.system(size: 19, weight: .medium))
+                    .foregroundStyle(Paper.inkFaint)
+            } else {
+                Text(project.icon).font(.system(size: 23))
+            }
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showingPicker, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 10) {
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(30)), count: 5),
+                          spacing: 6) {
+                    ForEach(Self.palette, id: \.self) { emoji in
+                        Button {
+                            store.setIcon(project, to: emoji)
+                            showingPicker = false
+                        } label: {
+                            Text(emoji)
+                                .font(.system(size: 17))
+                                .frame(width: 30, height: 30)
+                                .background(project.icon == emoji ? Paper.accent.opacity(0.16) : .clear,
+                                            in: RoundedRectangle(cornerRadius: 6))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                if !project.icon.isEmpty {
+                    Button("Quitar emoji") {
+                        store.setIcon(project, to: "")
+                        showingPicker = false
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Paper.inkSoft)
+                }
+            }
+            .padding(12)
         }
     }
 }
