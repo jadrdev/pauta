@@ -15,8 +15,9 @@ azulado.
   señas de Things, y además romperían el acento único. Por eso «Hoy» usa un sol y
   no una estrella, y «Registro» un archivador y no un check.
 - **Sin emojis** en las listas fijas: se renderizan distinto según el sistema, son
-  multicolor y no alinean. Para los proyectos que crea el usuario sí tendrían
-  sentido, pero eso es una función, no estilo.
+  multicolor y no alinean. Los proyectos del usuario sí pueden llevar uno: se
+  elige pulsando el círculo junto al título del proyecto, de una paleta corta, y
+  sustituye al símbolo del proyecto en la barra lateral.
 - **Dos columnas de alineación** en la barra lateral: glifos a 15 pt y texto a 41
   (15 + 17 de columna de icono + 9 de espaciado). El rótulo de sección y el botón
   de nuevo proyecto respetan ambas.
@@ -97,10 +98,23 @@ siguen funcionando.
 | `⌘⇧N` | Nuevo proyecto |
 | `↩` | Guardar y seguir escribiendo otra tarea |
 | `esc` | Cancelar la tarea nueva |
-| `⌘1` … `⌘5` | Bandeja / Hoy / Próximamente / Algún día / Registro |
+| `⌘1` … `⌘6` | Bandeja / Hoy / Próximamente / Cualquier momento / Algún día / Registro |
 
 Clic en una tarea para desplegarla y editar notas, fecha o proyecto.
 Clic derecho para programarla o eliminarla.
+
+Pegar un texto de varias líneas en el campo de nueva tarea crea **una tarea por
+línea**, quitando viñetas (`*`, `-`, `•`) y numeración. Cuando existan las
+listas de comprobación, este será el punto donde elegir entre tareas sueltas o
+una sola tarea con lista.
+
+## Barra de menús
+
+El monograma junto al reloj abre un panel con las tareas de Hoy: completarlas
+con su casilla, añadir una nueva (que cae en Hoy) y reabrir la ventana
+principal, todo sin cambiar de app. Cubre casi todo lo que daría un widget sin
+necesitar extensión ni firma — WidgetKit exige un `.appex` embebido que no
+encaja con el empaquetado actual por SwiftPM y firma ad-hoc.
 
 ## Modo maqueta
 
@@ -112,7 +126,7 @@ en memoria (no escribe en disco) y permite forzar la apariencia.
 ./build/Pauta.app/Contents/MacOS/Pauta --demo --dark --view 3
 ```
 
-`--view 1…5` elige la lista de arranque, en el orden de la barra lateral.
+`--view 1…6` elige la lista de arranque, en el orden de la barra lateral.
 Combinado con `--dump` inspecciona la maqueta en vez de los datos reales.
 
 ## Listas
@@ -122,6 +136,7 @@ Combinado con `--dump` inspecciona la maqueta en vez de los datos reales.
 | Bandeja | Sin fecha, sin proyecto y sin aparcar: lo que aún no has decidido |
 | Hoy | Planificadas para hoy o antes. Una tarea vencida sigue apareciendo aquí |
 | Próximamente | Planificadas para más adelante, **agrupadas por día** |
+| Cualquier momento | Lo que se puede hacer ya: Hoy más las tareas de proyecto sin fecha. La bandeja queda fuera: lo que hay allí aún está sin decidir |
 | Algún día | Aparcadas a propósito, sin fecha |
 | Registro | Completadas, lo más reciente primero |
 
@@ -164,23 +179,26 @@ rm -rf ~/Library/Application\ Support/Cosas
 ## Estructura
 
 ```
-Sources/Pauta/
-  PautaApp.swift          punto de entrada, menús y atajos
-  Models/Models.swift     Item, Project, Perspective
-  Models/Store.swift      estado + persistencia + consultas
+Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
+  Models.swift            Item, Project, Perspective
+  Store.swift             estado + persistencia + consultas
+Sources/Pauta/            la app de macOS
+  PautaApp.swift          punto de entrada, menús, atajos y barra de menús
   Views/Theme.swift       paleta, tipografía y filetes
   Views/SidebarView.swift barra lateral
   Views/ItemListView.swift lista y cabecera
   Views/ItemRowView.swift fila, casilla y editor desplegado (Liquid Glass)
+  Views/MenuBarView.swift panel de la barra de menús
+Tests/PautaCoreTests/     tests del núcleo (swift test)
 ```
 
 ## Qué falta (siguiente iteración)
 
-- Perspectiva `Cualquier momento`
 - Áreas que agrupen proyectos
 - Tareas repetitivas y fechas límite
-- Listas de comprobación y etiquetas
+- Listas de comprobación y etiquetas (y la elección al pegar varias líneas)
 - Arrastrar para reordenar
 - Sincronización entre dispositivos
-- Emoji o símbolo elegible por proyecto
-- Renombrar el módulo Swift si algún día cambia el nombre del producto
+- Widget y app de iOS — necesitan proyecto de Xcode y cuenta de desarrollador;
+  `PautaCore` ya está extraído para ese salto
+- Renombrar los módulos Swift si algún día cambia el nombre del producto
