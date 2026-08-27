@@ -114,8 +114,9 @@ public enum Perspective: Hashable, CaseIterable {
         }
     }
 
-    /// Símbolos monocromos. A propósito no se usan aquí la estrella para «Hoy»
-    /// ni el check para «Registro»: son dos de las señas visuales de Things.
+    /// Símbolos monocromos, elegidos para no chocar con otros significados de
+    /// la interfaz: un check para «Registro» competiría con la casilla de
+    /// completar, y una estrella se lee como «favorito», no como «hoy».
     public var symbol: String {
         switch self {
         case .inbox: "tray"

@@ -36,20 +36,7 @@ public final class Store {
         let dir = support.appendingPathComponent("Pauta", isDirectory: true)
         try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         fileURL = dir.appendingPathComponent("data.json")
-        if !inMemory {
-            migrateFromOldName(fm: fm, support: support)
-            load()
-        }
-    }
-
-    /// La app se llamó «Cosas» antes de llamarse «Pauta». Si quedan datos en la
-    /// carpeta antigua y todavía no hay nada en la nueva, se copian. El archivo
-    /// original se deja intacto a modo de respaldo.
-    private func migrateFromOldName(fm: FileManager, support: URL) {
-        guard !fm.fileExists(atPath: fileURL.path) else { return }
-        let old = support.appendingPathComponent("Cosas/data.json")
-        guard fm.fileExists(atPath: old.path) else { return }
-        try? fm.copyItem(at: old, to: fileURL)
+        if !inMemory { load() }
     }
 
     // MARK: - Persistencia
@@ -83,7 +70,7 @@ public final class Store {
             items.filter(\.isToday)
                 .sorted {
                     let a = $0.when ?? .distantPast, b = $1.when ?? .distantPast
-                    // Desempate por creación: lo nuevo va al final, como en Things.
+                    // Desempate por creación: lo nuevo va al final.
                     return a == b ? $0.createdAt < $1.createdAt : a < b
                 }
         case .upcoming:
@@ -196,7 +183,7 @@ public final class Store {
         save()
     }
 
-    /// Poner o quitar fecha. Ambas cosas sacan la tarea de «Algún día»: una
+    /// Poner o quitar fecha saca la tarea de «Algún día» en ambos casos: una
     /// tarea aparcada y con fecha a la vez sería un estado contradictorio.
     public func schedule(_ item: Item, to date: Date?) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }

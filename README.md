@@ -1,23 +1,129 @@
 # Pauta
 
-Gestor de tareas para macOS. SwiftUI nativo, datos en local, sin suscripción.
+Gestor de tareas para macOS. Nativo en SwiftUI, con los datos en un archivo
+local y sin suscripción.
 
-## Identidad
+Pauta organiza el trabajo en dos ejes: **cuándo** y **de qué**. Una tarea entra
+por la bandeja sin que tengas que decidir nada más que el título. Desde ahí le
+pones fecha —y aparece en Hoy o en Próximamente—, la aparcas en Algún día, o la
+metes en un proyecto.
+
+Las listas de la barra lateral no son carpetas: son **consultas** sobre ese
+estado. Una tarea con fecha de hoy que pertenece a un proyecto sale a la vez en
+Hoy, en Cualquier momento y en su proyecto, sin duplicarse. Cambiar su fecha la
+mueve de lista sola.
+
+## Las listas
+
+| Lista | Qué contiene |
+|---|---|
+| Bandeja | Sin fecha, sin proyecto y sin aparcar: lo que aún no has decidido |
+| Hoy | Planificadas para hoy o antes. Una tarea vencida sigue apareciendo aquí |
+| Próximamente | Planificadas para más adelante, **agrupadas por día** |
+| Cualquier momento | Lo que se puede hacer ya: Hoy más las tareas de proyecto sin fecha. La bandeja queda fuera: lo que hay allí aún está sin decidir |
+| Algún día | Aparcadas a propósito, sin fecha |
+| Registro | Completadas, lo más reciente primero |
+
+Los **proyectos** aparecen debajo, cada uno con su cuenta de tareas abiertas.
+
+«Sin fecha» y «Algún día» son estados distintos, y esa distinción es el centro
+del modelo: el primero significa «todavía no lo he decidido» y deja la tarea en
+la bandeja; el segundo, «lo quiero hacer, pero no ahora». Por eso ponerle fecha
+a una tarea aparcada la saca de Algún día — estar aparcada y con fecha a la vez
+sería contradictorio.
+
+## Cómo se usa
+
+| Atajo | Acción |
+|---|---|
+| `⌘N` | Nueva tarea en la lista actual |
+| `⌘⇧N` | Nuevo proyecto |
+| `↩` | Guardar y seguir escribiendo otra tarea |
+| `esc` | Cancelar la tarea nueva |
+| `⌘1` … `⌘6` | Bandeja / Hoy / Próximamente / Cualquier momento / Algún día / Registro |
+
+Una tarea nueva nace ya encajada en la lista donde la creas: en Hoy sale con la
+fecha de hoy, en Próximamente con la de mañana, en Algún día aparcada, y dentro
+de un proyecto asignada a él.
+
+Clic en una tarea la despliega para editar título, notas, fecha y proyecto; se
+guarda mientras escribes, sin botón de guardar. Clic derecho abre las acciones
+rápidas: programar, aparcar o eliminar.
+
+Pegar un texto de varias líneas en el campo de nueva tarea crea **una tarea por
+línea**, quitando viñetas (`*`, `-`, `•`) y numeración. Cuando existan las listas
+de comprobación, este será el punto donde elegir entre tareas sueltas o una sola
+tarea con lista.
+
+Cada proyecto puede llevar un emoji: se elige pulsando el círculo junto a su
+título, de una paleta corta, y sustituye a su símbolo en la barra lateral.
+
+## Barra de menús
+
+El monograma junto al reloj abre un panel con las tareas de Hoy: completarlas
+con su casilla, añadir una nueva (que cae en Hoy) y reabrir la ventana
+principal, todo sin cambiar de app. Cubre casi todo lo que daría un widget sin
+necesitar extensión ni firma — WidgetKit exige un `.appex` embebido que no encaja
+con el empaquetado actual por SwiftPM y firma ad-hoc.
+
+## Compilar y ejecutar
+
+```bash
+./run.sh
+```
+
+Compila y abre la app. Solo `./build.sh` genera `build/Pauta.app` sin lanzarla —
+puedes arrastrarla a `/Applications` cuando te guste cómo va.
+
+```bash
+swift test
+```
+
+Los tests cubren `PautaCore`, que no depende de la interfaz.
+
+No hace falta abrir Xcode, pero sí tenerlo instalado: los scripts usan
+`DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer` porque
+`xcode-select` de este equipo apunta a las Command Line Tools. Si algún día
+cambias eso (`sudo xcode-select -s /Applications/Xcode-beta.app`), los scripts
+siguen funcionando.
+
+## Dónde se guardan los datos
+
+Un único JSON legible, con escritura atómica:
+
+```
+~/Library/Application Support/Pauta/data.json
+```
+
+Copiarlo es la copia de seguridad; borrarlo deja la app a cero. Para ver el
+estado guardado sin abrir la interfaz:
+
+```bash
+./build/Pauta.app/Contents/MacOS/Pauta --dump
+```
+
+Las tareas y los proyectos se leen con un `init(from:)` escrito a mano que usa
+`decodeIfPresent` para todo. No es un capricho: el `Codable` sintetizado de Swift
+usa `decode` para las propiedades no opcionales e **ignora sus valores por
+defecto**, así que añadir un campo nuevo haría fallar la lectura de los archivos
+ya guardados con un `keyNotFound`. Con el decodificador tolerante, los campos que
+se añadan en el futuro no rompen los datos existentes.
+
+## Diseño
 
 Monograma «P» con check verde, sans geométrica, verde de marca sobre casi negro
-azulado.
+azulado. Sigue el tema claro/oscuro del sistema.
 
 - **Verde `#10E888`** como acento único. Marca la lista activa, los contadores y
   la casilla completada.
 - **Iconos monocromos** en la barra lateral, un paso más tenues que la etiqueta,
-  en verde solo cuando la fila está activa. Nada de multicolor: los iconos de
-  colores distintos (bandeja azul, estrella amarilla, check verde) son una de las
-  señas de Things, y además romperían el acento único. Por eso «Hoy» usa un sol y
-  no una estrella, y «Registro» un archivador y no un check.
-- **Sin emojis** en las listas fijas: se renderizan distinto según el sistema, son
-  multicolor y no alinean. Los proyectos del usuario sí pueden llevar uno: se
-  elige pulsando el círculo junto al título del proyecto, de una paleta corta, y
-  sustituye al símbolo del proyecto en la barra lateral.
+  en verde solo cuando la fila está activa. El multicolor rompería el acento
+  único. Los símbolos evitan chocar con otros significados de la interfaz: un
+  check para Registro competiría con la casilla de completar, y una estrella se
+  lee como «favorito», no como «hoy» — de ahí el archivador y el sol.
+- **Sin emojis** en las listas fijas: se renderizan distinto según el sistema,
+  son multicolor y no alinean. En los proyectos del usuario sí, porque ahí la app
+  no puede adivinar un símbolo.
 - **Dos columnas de alineación** en la barra lateral: glifos a 15 pt y texto a 41
   (15 + 17 de columna de icono + 9 de espaciado). El rótulo de sección y el botón
   de nuevo proyecto respetan ambas.
@@ -32,7 +138,6 @@ azulado.
   sin necesitar dos versiones.
 - **Liquid Glass** en lo que se levanta de la página: el editor desplegado de una
   tarea. En macOS anterior a 26 cae a fondo sólido con filete.
-- Sigue el tema claro/oscuro del sistema.
 
 ### Contraste
 
@@ -59,9 +164,8 @@ python3 tools/make-icon.py ambas
 ICON=icon-claro ./build.sh
 ```
 
-Al ser un monograma y no un wordmark, el mismo arte funciona de 16 a 1024 px: no
-hace falta arte distinto por tamaño, como sí requería el logo de lettering
-anterior (guardado en `Resources/legacy/`).
+Al ser un monograma y no un wordmark, el mismo arte funciona de 16 a 1024 px sin
+necesitar versiones distintas por tamaño.
 
 ### Limitación conocida del arte actual
 
@@ -72,54 +176,13 @@ de la P y un fragmento de la línea oscura que separa el check en el diseño
 original — un detalle de tres colores que una extracción a dos no puede
 representar. A tamaño de Dock (128 px) no se ven.
 
-Con un SVG o un PNG a 1024+ con fondo transparente, se regenera todo perfecto en
+Con un SVG o un PNG a 1024+ con fondo transparente se regenera todo perfecto en
 un comando: sustituye `Resources/monogram.png` y ejecuta `make-icon.py`.
-
-## Compilar y ejecutar
-
-```bash
-./run.sh
-```
-
-Compila y abre la app. Solo `./build.sh` genera `build/Pauta.app` sin lanzarla —
-puedes arrastrarla a `/Applications` cuando te guste cómo va.
-
-No hace falta abrir Xcode, pero sí tenerlo instalado: los scripts usan
-`DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer` porque
-`xcode-select` de este equipo apunta a las Command Line Tools. Si algún día
-cambias eso (`sudo xcode-select -s /Applications/Xcode-beta.app`), los scripts
-siguen funcionando.
-
-## Atajos de teclado
-
-| Atajo | Acción |
-|---|---|
-| `⌘N` | Nueva tarea en la lista actual |
-| `⌘⇧N` | Nuevo proyecto |
-| `↩` | Guardar y seguir escribiendo otra tarea |
-| `esc` | Cancelar la tarea nueva |
-| `⌘1` … `⌘6` | Bandeja / Hoy / Próximamente / Cualquier momento / Algún día / Registro |
-
-Clic en una tarea para desplegarla y editar notas, fecha o proyecto.
-Clic derecho para programarla o eliminarla.
-
-Pegar un texto de varias líneas en el campo de nueva tarea crea **una tarea por
-línea**, quitando viñetas (`*`, `-`, `•`) y numeración. Cuando existan las
-listas de comprobación, este será el punto donde elegir entre tareas sueltas o
-una sola tarea con lista.
-
-## Barra de menús
-
-El monograma junto al reloj abre un panel con las tareas de Hoy: completarlas
-con su casilla, añadir una nueva (que cae en Hoy) y reabrir la ventana
-principal, todo sin cambiar de app. Cubre casi todo lo que daría un widget sin
-necesitar extensión ni firma — WidgetKit exige un `.appex` embebido que no
-encaja con el empaquetado actual por SwiftPM y firma ad-hoc.
 
 ## Modo maqueta
 
 Para revisar el diseño sin tocar tus datos reales: arranca con tareas de muestra
-en memoria (no escribe en disco) y permite forzar la apariencia.
+en memoria, que no se escriben en disco, y permite forzar la apariencia.
 
 ```bash
 ./build/Pauta.app/Contents/MacOS/Pauta --demo --light
@@ -128,53 +191,6 @@ en memoria (no escribe en disco) y permite forzar la apariencia.
 
 `--view 1…6` elige la lista de arranque, en el orden de la barra lateral.
 Combinado con `--dump` inspecciona la maqueta en vez de los datos reales.
-
-## Listas
-
-| Lista | Qué contiene |
-|---|---|
-| Bandeja | Sin fecha, sin proyecto y sin aparcar: lo que aún no has decidido |
-| Hoy | Planificadas para hoy o antes. Una tarea vencida sigue apareciendo aquí |
-| Próximamente | Planificadas para más adelante, **agrupadas por día** |
-| Cualquier momento | Lo que se puede hacer ya: Hoy más las tareas de proyecto sin fecha. La bandeja queda fuera: lo que hay allí aún está sin decidir |
-| Algún día | Aparcadas a propósito, sin fecha |
-| Registro | Completadas, lo más reciente primero |
-
-«Sin fecha» y «Algún día» son estados distintos: el primero significa «todavía
-no lo he decidido» y deja la tarea en la bandeja; el segundo, «lo quiero hacer,
-pero no ahora». Por eso ponerle fecha a una tarea aparcada la saca de «Algún
-día» — estar aparcada y con fecha a la vez sería contradictorio.
-
-## Cómo se guardan los datos
-
-Un único JSON legible, con escritura atómica:
-
-```
-~/Library/Application Support/Pauta/data.json
-```
-
-Copiarlo es la copia de seguridad; borrarlo deja la app a cero.
-
-Las tareas y los proyectos se leen con un `init(from:)` escrito a mano que usa
-`decodeIfPresent` para todo. No es un capricho: el `Codable` sintetizado de
-Swift usa `decode` para las propiedades no opcionales e **ignora sus valores por
-defecto**, así que añadir un campo nuevo haría fallar la lectura de los archivos
-ya guardados con un `keyNotFound`. Con el decodificador tolerante, los campos que
-se añadan en el futuro no rompen los datos existentes. Para ver el
-estado guardado sin abrir la interfaz:
-
-```bash
-./build/Pauta.app/Contents/MacOS/Pauta --dump
-```
-
-La app se llamó **Cosas** antes de llamarse Pauta. Al arrancar, si encuentra
-datos en `~/Library/Application Support/Cosas/` y la carpeta nueva está vacía,
-los copia. El archivo antiguo se deja como respaldo: cuando compruebes que todo
-está en su sitio, puedes borrar esa carpeta.
-
-```bash
-rm -rf ~/Library/Application\ Support/Cosas
-```
 
 ## Estructura
 
@@ -194,6 +210,8 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
 
 ## Qué falta (siguiente iteración)
 
+- Tests de la persistencia: lectura de archivos sin los campos nuevos y
+  escritura atómica. Es el código donde un fallo cuesta datos
 - Áreas que agrupen proyectos
 - Tareas repetitivas y fechas límite
 - Listas de comprobación y etiquetas (y la elección al pegar varias líneas)
@@ -201,4 +219,3 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
 - Sincronización entre dispositivos
 - Widget y app de iOS — necesitan proyecto de Xcode y cuenta de desarrollador;
   `PautaCore` ya está extraído para ese salto
-- Renombrar los módulos Swift si algún día cambia el nombre del producto
