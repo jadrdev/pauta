@@ -75,7 +75,8 @@ struct PautaApp: App {
     @State private var nav = Navigation()
 
     var body: some Scene {
-        WindowGroup {
+        // Con id: el panel de la barra de menús la reabre si se cerró.
+        WindowGroup(id: "main") {
             RootView()
                 .environment(store)
                 .environment(nav)
@@ -102,6 +103,19 @@ struct PautaApp: App {
                 }
             }
         }
+
+        MenuBarExtra {
+            MenuBarView()
+                .environment(store)
+        } label: {
+            if let icon = Brand.menuBar {
+                Image(nsImage: icon)
+            } else {
+                // Sin bundle (binario suelto) no hay monograma: un símbolo vale.
+                Image(systemName: "checklist")
+            }
+        }
+        .menuBarExtraStyle(.window)
     }
 }
 

@@ -72,6 +72,16 @@ enum Brand {
     static func monogram(_ scheme: ColorScheme) -> NSImage? {
         scheme == .dark ? monogramLight : monogramInk
     }
+
+    /// Monograma como plantilla para la barra de menús: el sistema lo tiñe
+    /// según el fondo, así que solo cuenta el alfa y vale la variante en tinta.
+    static let menuBar: NSImage? = {
+        guard let src = monogramInk, let img = src.copy() as? NSImage,
+              src.size.height > 0 else { return nil }
+        img.isTemplate = true
+        img.size = NSSize(width: 16 * src.size.width / src.size.height, height: 16)
+        return img
+    }()
 }
 
 /// El lockup de la identidad: monograma y wordmark.
