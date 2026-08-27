@@ -13,7 +13,7 @@ final class Navigation {
     var isAddingItem = false
 
     func startNewItem() {
-        if case .logbook = perspective { perspective = .inbox }
+        if case .completed = perspective { perspective = .inbox }
         selectedItemID = nil
         isAddingItem = true
     }

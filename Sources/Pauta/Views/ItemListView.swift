@@ -41,7 +41,7 @@ struct ItemListView: View {
 
                 if nav.isAddingItem {
                     draftRow
-                } else if nav.perspective != .logbook {
+                } else if nav.perspective != .completed {
                     addButton
                 }
             }
@@ -81,8 +81,10 @@ struct ItemListView: View {
 
     private var countLabel: String {
         let n = items.count
-        if case .logbook = nav.perspective {
-            return n == 1 ? "1 COMPLETADA" : "\(n) COMPLETADAS"
+        // El título de esa lista ya dice «Completadas»: repetirlo en el rótulo
+        // sobraría, así que ahí solo se cuenta.
+        if case .completed = nav.perspective {
+            return n == 1 ? "1 TAREA" : "\(n) TAREAS"
         }
         return n == 1 ? "1 ABIERTA" : "\(n) ABIERTAS"
     }
@@ -116,7 +118,7 @@ struct ItemListView: View {
         case .upcoming: "Nada planificado más adelante."
         case .anytime: "Nada que hacer ahora mismo."
         case .someday: "Nada aparcado para algún día."
-        case .logbook: "Todavía no has completado nada."
+        case .completed: "Todavía no has completado nada."
         case .project: "Este proyecto no tiene tareas."
         }
     }

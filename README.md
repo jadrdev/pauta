@@ -22,7 +22,7 @@ mueve de lista sola.
 | Próximamente | Planificadas para más adelante, **agrupadas por día** |
 | Cualquier momento | Lo que se puede hacer ya: Hoy más las tareas de proyecto sin fecha. La bandeja queda fuera: lo que hay allí aún está sin decidir |
 | Algún día | Aparcadas a propósito, sin fecha |
-| Registro | Completadas, lo más reciente primero |
+| Completadas | Lo hecho, lo más reciente primero |
 
 Los **proyectos** aparecen debajo, cada uno con su cuenta de tareas abiertas.
 
@@ -41,7 +41,7 @@ sería contradictorio.
 | `↩` | Guardar y seguir escribiendo otra tarea |
 | `esc` | Cancelar la tarea nueva |
 | `⌘⇧R` | Importar de Recordatorios |
-| `⌘1` … `⌘6` | Bandeja / Hoy / Próximamente / Cualquier momento / Algún día / Registro |
+| `⌘1` … `⌘6` | Bandeja / Hoy / Próximamente / Cualquier momento / Algún día / Completadas |
 
 Una tarea nueva nace ya encajada en la lista donde la creas: en Hoy sale con la
 fecha de hoy, en Próximamente con la de mañana, en Algún día aparcada, y dentro
@@ -178,7 +178,7 @@ azulado. Sigue el tema claro/oscuro del sistema.
 - **Iconos monocromos** en la barra lateral, un paso más tenues que la etiqueta,
   en verde solo cuando la fila está activa. El multicolor rompería el acento
   único. Los símbolos evitan chocar con otros significados de la interfaz: un
-  check para Registro competiría con la casilla de completar, y una estrella se
+  check para Completadas competiría con la casilla de completar, y una estrella se
   lee como «favorito», no como «hoy» — de ahí el archivador y el sol.
 - **Sin emojis** en las listas fijas: se renderizan distinto según el sistema,
   son multicolor y no alinean. En los proyectos del usuario sí, porque ahí la app

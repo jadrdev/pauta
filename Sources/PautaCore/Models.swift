@@ -100,11 +100,11 @@ public enum Perspective: Hashable, CaseIterable {
     case upcoming
     case anytime
     case someday
-    case logbook
+    case completed
     case project(UUID)
 
     /// Las fijas, en el orden en que se muestran. Los proyectos van aparte.
-    public static var allCases: [Perspective] { [.inbox, .today, .upcoming, .anytime, .someday, .logbook] }
+    public static var allCases: [Perspective] { [.inbox, .today, .upcoming, .anytime, .someday, .completed] }
 
     public var title: String {
         switch self {
@@ -113,13 +113,13 @@ public enum Perspective: Hashable, CaseIterable {
         case .upcoming: "Próximamente"
         case .anytime: "Cualquier momento"
         case .someday: "Algún día"
-        case .logbook: "Registro"
+        case .completed: "Completadas"
         case .project: "Proyecto"
         }
     }
 
     /// Símbolos monocromos, elegidos para no chocar con otros significados de
-    /// la interfaz: un check para «Registro» competiría con la casilla de
+    /// la interfaz: un check para «Completadas» competiría con la casilla de
     /// completar, y una estrella se lee como «favorito», no como «hoy».
     public var symbol: String {
         switch self {
@@ -128,14 +128,15 @@ public enum Perspective: Hashable, CaseIterable {
         case .upcoming: "calendar"
         case .anytime: "list.bullet"
         case .someday: "shippingbox"
-        case .logbook: "archivebox"
+        case .completed: "archivebox"
         case .project: "circle.dotted"
         }
     }
 
-    /// El Registro no lleva contador: crece sin parar y no es una pendiente.
+    /// La lista de completadas no lleva contador: crece sin parar y no es una
+    /// pendiente que haya que vigilar.
     public var showsCount: Bool {
-        if case .logbook = self { return false }
+        if case .completed = self { return false }
         return true
     }
 }

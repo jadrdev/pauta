@@ -89,7 +89,7 @@ public final class Store {
         case .someday:
             items.filter { !$0.isCompleted && $0.isSomeday }
                 .sorted { $0.createdAt < $1.createdAt }
-        case .logbook:
+        case .completed:
             items.filter(\.isCompleted)
                 .sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
         case .project(let id):
@@ -157,7 +157,7 @@ public final class Store {
             item.isSomeday = true
         case .project(let id):
             item.projectID = id
-        case .inbox, .logbook:
+        case .inbox, .completed:
             break
         }
         items.append(item)
