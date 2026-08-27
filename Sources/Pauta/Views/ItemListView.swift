@@ -1,4 +1,5 @@
 import SwiftUI
+import PautaCore
 
 struct ItemListView: View {
     @Environment(Store.self) private var store

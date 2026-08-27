@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Observation
+import PautaCore
 
 /// Estado de navegación: qué lista se ve, qué tarea está seleccionada
 /// y si hay una tarea nueva a medio escribir.
@@ -93,7 +94,7 @@ struct PautaApp: App {
                 .keyboardShortcut("n", modifiers: [.command, .shift])
             }
             CommandGroup(after: .toolbar) {
-                // ⌘1…⌘5 en el mismo orden en que aparecen en la barra lateral.
+                // ⌘1…⌘6 en el mismo orden en que aparecen en la barra lateral.
                 ForEach(Array(Perspective.allCases.enumerated()), id: \.element) { index, perspective in
                     Button(perspective.title) { nav.go(to: perspective) }
                         .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")),

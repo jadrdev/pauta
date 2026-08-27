@@ -4,9 +4,9 @@ import Observation
 /// Estado de la app + persistencia en JSON.
 @Observable
 @MainActor
-final class Store {
-    var items: [Item] = []
-    var projects: [Project] = []
+public final class Store {
+    public var items: [Item] = []
+    public var projects: [Project] = []
 
     private let fileURL: URL
     private let encoder: JSONEncoder = {
@@ -29,7 +29,7 @@ final class Store {
     /// En modo memoria no se lee ni se escribe en disco: sirve para maquetar.
     private let inMemory: Bool
 
-    init(inMemory: Bool = false) {
+    public init(inMemory: Bool = false) {
         self.inMemory = inMemory
         let fm = FileManager.default
         let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -69,11 +69,11 @@ final class Store {
         try? data.write(to: fileURL, options: .atomic)
     }
 
-    var storageLocation: String { fileURL.path }
+    public var storageLocation: String { fileURL.path }
 
     // MARK: - Consultas
 
-    func items(for perspective: Perspective) -> [Item] {
+    public func items(for perspective: Perspective) -> [Item] {
         switch perspective {
         case .inbox:
             items.filter { !$0.isCompleted && $0.projectID == nil
@@ -111,11 +111,11 @@ final class Store {
         }
     }
 
-    func count(for perspective: Perspective) -> Int { items(for: perspective).count }
+    public func count(for perspective: Perspective) -> Int { items(for: perspective).count }
 
     /// Las tareas de «Próximamente» agrupadas por día, en orden. Sin agrupar,
     /// una lista de fechas mezcladas no dice de un vistazo qué cae cada día.
-    func upcomingByDay() -> [(day: Date, items: [Item])] {
+    public func upcomingByDay() -> [(day: Date, items: [Item])] {
         let calendar = Calendar.current
         let grouped = Dictionary(grouping: items(for: .upcoming)) { item in
             calendar.startOfDay(for: item.when ?? .distantFuture)
@@ -123,9 +123,9 @@ final class Store {
         return grouped.keys.sorted().map { ($0, grouped[$0] ?? []) }
     }
 
-    func project(_ id: UUID) -> Project? { projects.first { $0.id == id } }
+    public func project(_ id: UUID) -> Project? { projects.first { $0.id == id } }
 
-    func title(for perspective: Perspective) -> String {
+    public func title(for perspective: Perspective) -> String {
         if case .project(let id) = perspective { return project(id)?.name ?? "Proyecto" }
         return perspective.title
     }
@@ -134,7 +134,7 @@ final class Store {
 
     /// Crea una tarea ya encajada en la perspectiva activa.
     @discardableResult
-    func addItem(title: String, in perspective: Perspective) -> Item {
+    public func addItem(title: String, in perspective: Perspective) -> Item {
         var item = Item(title: title)
         switch perspective {
         // En «Cualquier momento», una tarea sin fecha ni proyecto caería a la
@@ -158,27 +158,27 @@ final class Store {
         return item
     }
 
-    func update(_ item: Item) {
+    public func update(_ item: Item) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[idx] = item
         save()
     }
 
-    func toggleComplete(_ item: Item) {
+    public func toggleComplete(_ item: Item) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[idx].isCompleted.toggle()
         items[idx].completedAt = items[idx].isCompleted ? .now : nil
         save()
     }
 
-    func delete(_ item: Item) {
+    public func delete(_ item: Item) {
         items.removeAll { $0.id == item.id }
         save()
     }
 
     /// Poner o quitar fecha. Ambas cosas sacan la tarea de «Algún día»: una
     /// tarea aparcada y con fecha a la vez sería un estado contradictorio.
-    func schedule(_ item: Item, to date: Date?) {
+    public func schedule(_ item: Item, to date: Date?) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[idx].when = date.map { Calendar.current.startOfDay(for: $0) }
         items[idx].isSomeday = false
@@ -186,7 +186,7 @@ final class Store {
     }
 
     /// Aparca la tarea en «Algún día», quitándole cualquier fecha.
-    func park(_ item: Item) {
+    public func park(_ item: Item) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[idx].isSomeday = true
         items[idx].when = nil
@@ -196,28 +196,28 @@ final class Store {
     // MARK: - Mutaciones de proyectos
 
     @discardableResult
-    func addProject(name: String) -> Project {
+    public func addProject(name: String) -> Project {
         let project = Project(name: name.isEmpty ? "Nuevo proyecto" : name)
         projects.append(project)
         save()
         return project
     }
 
-    func rename(_ project: Project, to name: String) {
+    public func rename(_ project: Project, to name: String) {
         guard let idx = projects.firstIndex(where: { $0.id == project.id }) else { return }
         projects[idx].name = name
         save()
     }
 
     /// Cambia el emoji del proyecto. Cadena vacía = quitarlo.
-    func setIcon(_ project: Project, to icon: String) {
+    public func setIcon(_ project: Project, to icon: String) {
         guard let idx = projects.firstIndex(where: { $0.id == project.id }) else { return }
         projects[idx].icon = icon
         save()
     }
 
     /// Borra el proyecto y devuelve sus tareas a la bandeja de entrada.
-    func delete(_ project: Project) {
+    public func delete(_ project: Project) {
         for idx in items.indices where items[idx].projectID == project.id {
             items[idx].projectID = nil
         }
@@ -231,7 +231,7 @@ final class Store {
 
 extension Store {
     /// Datos de muestra en memoria para revisar el diseño (`--demo`).
-    static func demo() -> Store {
+    public static func demo() -> Store {
         let store = Store(inMemory: true)
         let project = store.addProject(name: "Rediseño de la web")
         store.setIcon(project, to: "🎨")

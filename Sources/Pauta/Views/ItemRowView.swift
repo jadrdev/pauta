@@ -1,4 +1,5 @@
 import SwiftUI
+import PautaCore
 
 /// Panel que flota sobre la página: Liquid Glass en macOS 26+, papel con
 /// filete en versiones anteriores.
