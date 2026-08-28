@@ -22,6 +22,14 @@ public struct Item: Identifiable, Codable, Hashable {
     /// Lápida. Borrar no elimina el archivo: lo marca. Si se eliminara, un
     /// dispositivo que no vio el borrado resucitaría la tarea al sincronizar.
     public var deletedAt: Date?
+    /// Prioridad manual. Una sola posición para toda la app, no una por lista:
+    /// las listas son consultas sobre la misma tarea, así que su prioridad es
+    /// intrínseca y todas la respetan.
+    ///
+    /// Es `Double` para poder insertar entre dos vecinas sacando el punto medio,
+    /// y así reordenar toca **un solo archivo** en vez de reescribirlos todos —
+    /// que con la carpeta sincronizada importa mucho.
+    public var position: Double = 0
     /// Identificador en la fuente externa de la que se capturó, si vino de una.
     /// Evita reimportarla si el marcado en el origen falló.
     public var sourceID: String?
@@ -52,6 +60,7 @@ public struct Item: Identifiable, Codable, Hashable {
         sourceID    = try c.decodeIfPresent(String.self, forKey: .sourceID)
         updatedAt   = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
         deletedAt   = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
+        position    = try c.decodeIfPresent(Double.self, forKey: .position) ?? 0
     }
 
     /// Planificada para hoy o antes (una tarea vencida sigue estando en Hoy).
@@ -95,6 +104,11 @@ extension Item {
         a.createdAt == b.createdAt
             ? a.id.uuidString < b.id.uuidString
             : a.createdAt < b.createdAt
+    }
+
+    /// Orden manual, con la creación como desempate para que siga siendo total.
+    public static func byPosition(_ a: Item, _ b: Item) -> Bool {
+        a.position == b.position ? byCreation(a, b) : a.position < b.position
     }
 }
 

@@ -147,6 +147,79 @@ struct MoveTests {
     }
 }
 
+/// El orden manual: prioridad arrastrando.
+@MainActor
+struct OrderingTests {
+    private func tempRoot() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaOrden-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    @Test func newItemsGoToTheEnd() {
+        let s = Store(inMemory: true)
+        s.addItem(title: "a", in: .inbox)
+        s.addItem(title: "b", in: .inbox)
+        s.addItem(title: "c", in: .inbox)
+        #expect(s.items(for: .inbox).map(\.title) == ["a", "b", "c"])
+    }
+
+    @Test func placingBeforeMovesIt() {
+        let s = Store(inMemory: true)
+        s.addItem(title: "a", in: .inbox)
+        s.addItem(title: "b", in: .inbox)
+        let c = s.addItem(title: "c", in: .inbox)
+        s.place(c, before: s.items(for: .inbox)[0], in: .inbox)
+        #expect(s.items(for: .inbox).map(\.title) == ["c", "a", "b"])
+    }
+
+    @Test func placingWithoutTargetSendsItToTheEnd() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "a", in: .inbox)
+        s.addItem(title: "b", in: .inbox)
+        s.place(a, before: nil, in: .inbox)
+        #expect(s.items(for: .inbox).map(\.title) == ["b", "a"])
+    }
+
+    /// Reordenar debe escribir un solo archivo: con la carpeta sincronizada,
+    /// reasignar posiciones a toda la lista sería tráfico por nada.
+    @Test func reorderingWritesOnlyOneFile() throws {
+        let root = tempRoot()
+        let s = Store(root: root)
+        s.addItem(title: "a", in: .inbox)
+        let b = s.addItem(title: "b", in: .inbox)
+        s.addItem(title: "c", in: .inbox)
+
+        let fileA = root.appendingPathComponent("items/\(s.items(for: .inbox)[0].id.uuidString).json")
+        let antes = try Data(contentsOf: fileA)
+        s.place(b, before: nil, in: .inbox)
+        #expect(try Data(contentsOf: fileA) == antes)
+        #expect(s.items(for: .inbox).map(\.title) == ["a", "c", "b"])
+    }
+
+    /// Datos anteriores al campo valen todas 0; hay que poder reordenarlos.
+    @Test func canReorderDataSavedBeforePositionsExisted() throws {
+        let root = tempRoot()
+        let itemsDir = root.appendingPathComponent("items", isDirectory: true)
+        try FileManager.default.createDirectory(at: itemsDir, withIntermediateDirectories: true)
+        for (i, titulo) in ["a", "b", "c"].enumerated() {
+            let id = UUID()
+            let fecha = "2026-08-2\(i)T10:00:00Z"
+            let json = #"{"id":"\#(id.uuidString)","title":"\#(titulo)","createdAt":"\#(fecha)"}"#
+            try json.write(to: itemsDir.appendingPathComponent("\(id.uuidString).json"),
+                           atomically: true, encoding: .utf8)
+        }
+        let s = Store(root: root)
+        #expect(s.items(for: .inbox).map(\.title) == ["a", "b", "c"])
+        let c = s.items(for: .inbox)[2]
+        s.place(c, before: s.items(for: .inbox)[0], in: .inbox)
+        #expect(s.items(for: .inbox).map(\.title) == ["c", "a", "b"])
+        // Y sobrevive a recargar.
+        #expect(Store(root: root).items(for: .inbox).map(\.title) == ["c", "a", "b"])
+    }
+}
+
 /// La persistencia: un archivo por objeto, lápidas y migración.
 @MainActor
 struct PersistenceTests {

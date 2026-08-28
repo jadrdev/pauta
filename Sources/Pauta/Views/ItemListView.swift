@@ -6,6 +6,7 @@ struct ItemListView: View {
     @Environment(Navigation.self) private var nav
 
     @State private var draftTitle = ""
+    @State private var isEndDropTarget = false
     @FocusState private var draftFocused: Bool
 
     private var items: [Item] { store.items(for: nav.perspective) }
@@ -126,6 +127,25 @@ struct ItemListView: View {
     // MARK: - Añadir tarea
 
     @ViewBuilder private var addButton: some View {
+        addButtonLabel
+            // Soltar aquí manda la tarea al final de la lista.
+            .dropDestination(for: String.self) { payload, _ in
+                let arrastradas = payload
+                    .compactMap(UUID.init(uuidString:))
+                    .compactMap { id in store.items.first { $0.id == id } }
+                for dragged in arrastradas {
+                    store.place(dragged, before: nil, in: nav.perspective)
+                }
+                return !arrastradas.isEmpty
+            } isTargeted: { isEndDropTarget = $0 }
+            .overlay(alignment: .top) {
+                if isEndDropTarget {
+                    Rectangle().fill(Paper.accent).frame(height: 2)
+                }
+            }
+    }
+
+    @ViewBuilder private var addButtonLabel: some View {
         Button { nav.startNewItem() } label: {
             HStack(spacing: 10) {
                 Text("\u{FF0B}").font(.system(size: 12))

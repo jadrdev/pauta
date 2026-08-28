@@ -142,6 +142,7 @@ public final class Store {
             try? fm.createDirectory(at: itemsDir, withIntermediateDirectories: true)
             try? fm.createDirectory(at: projectsDir, withIntermediateDirectories: true)
             load()
+            normalizePositionsIfNeeded()
         }
     }
 
@@ -302,12 +303,15 @@ public final class Store {
         // identificador —aleatorio— y la lista del usuario aparecería revuelta.
         // Se separan un milisegundo respetando el orden original.
         var last: Date?
+        var orden = 1
         for var item in snap.items {
             item.createdAt = Store.stamped(item.createdAt)
             if let previous = last, item.createdAt < previous.addingTimeInterval(0.001) {
                 item.createdAt = Store.stamped(previous.addingTimeInterval(0.001))
             }
             item.updatedAt = item.createdAt
+            item.position = Double(orden)
+            orden += 1
             last = item.createdAt
             persist(item)
         }
@@ -356,6 +360,8 @@ public final class Store {
         }
         item.createdAt = created
         item.updatedAt = created
+        // Lo nuevo va al final de la prioridad.
+        item.position = (items.map(\.position).max() ?? 0) + 1
     }
 
     /// Aplica un cambio a una tarea, le pone fecha de modificación y la guarda.
@@ -381,30 +387,22 @@ public final class Store {
         case .inbox:
             items.filter { !$0.isCompleted && $0.projectID == nil
                            && $0.when == nil && !$0.isSomeday }
-                .sorted(by: Item.byCreation)
+                .sorted(by: Item.byPosition)
         case .today:
-            items.filter(\.isToday)
-                .sorted {
-                    let a = $0.when ?? .distantPast, b = $1.when ?? .distantPast
-                    // Desempate por creación: lo nuevo va al final.
-                    return a == b ? Item.byCreation($0, $1) : a < b
-                }
+            // Aquí manda el orden manual: es la lista que se prioriza a diario.
+            items.filter(\.isToday).sorted(by: Item.byPosition)
         case .upcoming:
+            // El día manda; dentro de cada día, el orden manual.
             items.filter(\.isUpcoming)
                 .sorted {
                     let a = $0.when ?? .distantFuture, b = $1.when ?? .distantFuture
-                    return a == b ? Item.byCreation($0, $1) : a < b
+                    return a == b ? Item.byPosition($0, $1) : a < b
                 }
         case .anytime:
-            items.filter(\.isAnytime)
-                .sorted {
-                    // Primero lo fechado (Hoy incluido), luego lo sin fecha.
-                    let a = $0.when ?? .distantFuture, b = $1.when ?? .distantFuture
-                    return a == b ? Item.byCreation($0, $1) : a < b
-                }
+            items.filter(\.isAnytime).sorted(by: Item.byPosition)
         case .someday:
             items.filter { !$0.isCompleted && $0.isSomeday }
-                .sorted(by: Item.byCreation)
+                .sorted(by: Item.byPosition)
         case .completed:
             items.filter(\.isCompleted)
                 .sorted {
@@ -413,7 +411,7 @@ public final class Store {
                 }
         case .project(let id):
             items.filter { !$0.isCompleted && $0.projectID == id }
-                .sorted(by: Item.byCreation)
+                .sorted(by: Item.byPosition)
         }
     }
 
@@ -533,6 +531,40 @@ public final class Store {
             $0.when = date.map { Calendar.current.startOfDay(for: $0) }
             $0.isSomeday = false
         }
+    }
+
+    /// Da posiciones distintas a todas las tareas si hay empates.
+    ///
+    /// Las tareas guardadas antes de que existiera el campo valen todas 0, y
+    /// entre dos ceros no hay punto medio: sin esto el primer arrastre no movería
+    /// nada. Se numeran respetando el orden que ya tenían, y se hace una sola vez
+    /// porque después las posiciones ya son distintas.
+    func normalizePositionsIfNeeded() {
+        guard Set(items.map(\.position)).count != items.count else { return }
+        for (i, item) in items.sorted(by: Item.byPosition).enumerated() {
+            mutateItem(item.id) { $0.position = Double(i + 1) }
+        }
+    }
+
+    /// Coloca `item` justo antes de `other`, o al final si `other` es `nil`.
+    ///
+    /// La posición sale del punto medio entre las dos vecinas, así que reordenar
+    /// **escribe un solo archivo**. Reasignar posiciones correlativas a toda la
+    /// lista sería más simple de leer, pero reescribiría decenas de archivos por
+    /// cada arrastre, y con la carpeta sincronizada eso es tráfico y ocasiones de
+    /// conflicto por nada.
+    public func place(_ item: Item, before other: Item?, in perspective: Perspective) {
+        let lista = items(for: perspective).filter { $0.id != item.id }
+        guard !lista.isEmpty else { return }
+
+        let nueva: Double
+        if let other, let idx = lista.firstIndex(where: { $0.id == other.id }) {
+            let anterior = idx > 0 ? lista[idx - 1].position : lista[idx].position - 2
+            nueva = (anterior + lista[idx].position) / 2
+        } else {
+            nueva = (lista.map(\.position).max() ?? 0) + 1
+        }
+        mutateItem(item.id) { $0.position = nueva }
     }
 
     /// Mueve la tarea a la lista indicada, aplicando lo que esa lista significa.

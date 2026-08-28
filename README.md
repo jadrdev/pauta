@@ -51,6 +51,23 @@ Clic en una tarea la despliega para editar título, notas, fecha y proyecto; se
 guarda mientras escribes, sin botón de guardar. Clic derecho abre las acciones
 rápidas: programar, aparcar o eliminar.
 
+**Arrastrar** hace dos cosas según dónde sueltes:
+
+- Sobre una **lista de la barra lateral**, mueve la tarea a esa lista. Como las
+  listas son consultas y no carpetas, mover es cambiar lo que hace que la tarea
+  caiga ahí: a `Hoy` le pone la fecha de hoy, a `Algún día` la aparca, a la
+  bandeja le quita fecha y proyecto. Dos detalles: a `Próximamente` se respeta una
+  fecha futura que ya tuviera en vez de adelantarla a mañana, y arrastrar una
+  completada a una lista de pendientes la reabre — si no, iría a un sitio donde no
+  se ve y parecería perdida.
+- Sobre **otra tarea**, la coloca justo antes: es la prioridad manual. Una línea
+  marca dónde va a caer. Soltar sobre «Añadir» la manda al final.
+
+La prioridad es **una sola para toda la app**, no una por lista: las listas son
+consultas sobre la misma tarea, así que su prioridad es intrínseca y todas la
+respetan. En `Próximamente` manda el día, y el orden manual solo ordena dentro de
+cada día.
+
 Pegar un texto de varias líneas en el campo de nueva tarea crea **una tarea por
 línea**, quitando viñetas (`*`, `-`, `•`) y numeración. Cuando existan las listas
 de comprobación, este será el punto donde elegir entre tareas sueltas o una sola
@@ -352,6 +369,8 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
   `Store`: acabarían persistidos en `data.json` como copias que se
   desincronizan. Van como fuente aparte, mezclada en la vista. Escribir tareas
   como eventos, en cambio, es mala idea: duplica y genera conflictos
+- **Arrastrar entre días en `Próximamente`.** Ahora soltar sobre una tarea de otro
+  día cambia la prioridad pero no la fecha, así que parece que no pasa nada
 - **Fusionar en vez de recargar entero.** Al detectar un cambio se relee toda la
   carpeta. Con cientos de tareas conviene releer solo lo que cambió
 - Áreas que agrupen proyectos

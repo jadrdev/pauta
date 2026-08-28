@@ -64,6 +64,7 @@ struct ItemRowView: View {
     @State private var title = ""
     @State private var notes = ""
     @State private var hovering = false
+    @State private var isDropTarget = false
     @FocusState private var titleFocused: Bool
 
     private var isSelected: Bool { nav.selectedItemID == item.id }
@@ -105,6 +106,23 @@ struct ItemRowView: View {
         // Se arrastra el identificador, no la tarea entera: quien recibe la
         // busca en el almacén, que es la única fuente de verdad.
         .draggable(item.id.uuidString)
+        // Soltar sobre una fila coloca lo arrastrado justo antes de ella.
+        .dropDestination(for: String.self) { payload, _ in
+            let arrastradas = payload
+                .compactMap(UUID.init(uuidString:))
+                .compactMap { id in store.items.first { $0.id == id } }
+                .filter { $0.id != item.id }
+            for dragged in arrastradas {
+                store.place(dragged, before: item, in: nav.perspective)
+            }
+            return !arrastradas.isEmpty
+        } isTargeted: { isDropTarget = $0 }
+        // Línea de inserción: hace falta ver dónde va a caer, no solo que cae.
+        .overlay(alignment: .top) {
+            if isDropTarget {
+                Rectangle().fill(Paper.accent).frame(height: 2)
+            }
+        }
         .onHover { hovering = $0 }
         .onTapGesture { select() }
         // El estado de edición se rellena desde el item en cuanto la fila se
