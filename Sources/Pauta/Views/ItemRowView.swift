@@ -431,24 +431,187 @@ struct SelectorDeFecha: View {
     let alElegir: (Date) -> Void
 
     @State private var fecha: Date
+    @State private var mes: Date
+
+    private let cal = Calendar.autoupdatingCurrent
+    /// Ancho de celda y alto de fila. De aquí sale el ancho del panel.
+    private static let celda: CGFloat = 36
+    private static let fila: CGFloat = 32
 
     init(inicial: Date, accion: String = "Programar", alElegir: @escaping (Date) -> Void) {
         self.inicial = inicial
         self.accion = accion
         self.alElegir = alElegir
         _fecha = State(initialValue: inicial)
+        _mes = State(initialValue: Calendar.autoupdatingCurrent.inicioDeMes(inicial))
     }
 
     var body: some View {
-        VStack(spacing: 10) {
-            DatePicker("", selection: $fecha, displayedComponents: .date)
-                .datePickerStyle(.graphical)
-                .labelsHidden()
-            Button(accion) { alElegir(fecha) }
-                .buttonStyle(.borderedProminent)
-                .tint(Paper.accentInk)
+        VStack(alignment: .leading, spacing: 12) {
+            cabecera
+            VStack(spacing: 1) {
+                HStack(spacing: 0) {
+                    ForEach(Array(simbolos.enumerated()), id: \.offset) { _, dia in
+                        Text(dia).rubricStyle().frame(width: Self.celda)
+                    }
+                }
+                .padding(.bottom, 4)
+                // Siempre seis filas: si el mes ocupara cinco, el panel
+                // encogería al cambiar de mes y los botones bailarían.
+                ForEach(0..<6, id: \.self) { fila in
+                    HStack(spacing: 0) {
+                        ForEach(0..<7, id: \.self) { columna in
+                            celda(dias[fila * 7 + columna])
+                        }
+                    }
+                }
+            }
+            boton
         }
-        .padding(14)
-        .frame(width: 280)
+        .padding(16)
+        .frame(width: Self.celda * 7 + 32)
+    }
+
+    // MARK: - Partes
+
+    private var cabecera: some View {
+        HStack(spacing: 2) {
+            Text(tituloDelMes)
+                .font(.display(15))
+                .foregroundStyle(Paper.ink)
+            Spacer(minLength: 8)
+            // Volver a hoy solo se ofrece cuando sirve de algo.
+            if !cal.isDate(mes, equalTo: .now, toGranularity: .month) {
+                Button { mes = cal.inicioDeMes(.now) } label: {
+                    Text("HOY").rubricStyle(Paper.accentInk)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 4)
+            }
+            flecha("chevron.left", -1)
+            flecha("chevron.right", 1)
+        }
+    }
+
+    private func flecha(_ icono: String, _ meses: Int) -> some View {
+        Button {
+            if let otro = cal.date(byAdding: .month, value: meses, to: mes) { mes = otro }
+        } label: {
+            Image(systemName: icono)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Paper.inkSoft)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func celda(_ dia: Date) -> some View {
+        DiaCelda(dia: dia,
+                 ancho: Self.celda,
+                 alto: Self.fila,
+                 delMes: cal.isDate(dia, equalTo: mes, toGranularity: .month),
+                 elegido: cal.isDate(dia, inSameDayAs: fecha),
+                 hoy: cal.isDateInToday(dia)) {
+            fecha = dia
+            // Pinchar un día de relleno lleva a su mes: si no, el día elegido
+            // quedaría fuera de la rejilla y no se vería marcado.
+            if !cal.isDate(dia, equalTo: mes, toGranularity: .month) {
+                mes = cal.inicioDeMes(dia)
+            }
+        }
+    }
+
+    private var boton: some View {
+        Button { alElegir(fecha) } label: {
+            Text(accion)
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundStyle(Paper.onAccent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Paper.accent, in: RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 2)
+    }
+
+    // MARK: - Cuentas
+
+    /// Iniciales de los días, girados para empezar por el primer día de la
+    /// semana del idioma: en español el lunes, en inglés el domingo.
+    private var simbolos: [String] {
+        let todos = cal.veryShortStandaloneWeekdaySymbols
+        return (0..<7).map { todos[(cal.firstWeekday - 1 + $0) % 7].uppercased() }
+    }
+
+    /// Las 42 casillas de la rejilla, con los días de relleno de los meses
+    /// vecinos a los lados.
+    private var dias: [Date] {
+        let primero = cal.inicioDeMes(mes)
+        let hueco = (cal.component(.weekday, from: primero) - cal.firstWeekday + 7) % 7
+        let arranque = cal.date(byAdding: .day, value: -hueco, to: primero) ?? primero
+        return (0..<42).map {
+            cal.date(byAdding: .day, value: $0, to: arranque) ?? arranque
+        }
+    }
+
+    private var tituloDelMes: String {
+        let nombre = mes.formatted(.dateTime.month(.wide))
+        return nombre.prefix(1).uppercased() + nombre.dropFirst()
+            + " " + mes.formatted(.dateTime.year())
+    }
+}
+
+/// Un día de la rejilla. Vive aparte por el estado del cursor encima.
+private struct DiaCelda: View {
+    let dia: Date
+    let ancho: CGFloat
+    let alto: CGFloat
+    let delMes: Bool
+    let elegido: Bool
+    let hoy: Bool
+    let alPulsar: () -> Void
+
+    @State private var encima = false
+
+    var body: some View {
+        Button(action: alPulsar) {
+            Text("\(Calendar.autoupdatingCurrent.component(.day, from: dia))")
+                .font(.system(size: 12.5, weight: elegido || hoy ? .semibold : .regular))
+                .foregroundStyle(tinta)
+                .frame(width: ancho - 6, height: alto - 4)
+                .background { fondo }
+                // El área sensible es la casilla entera, no solo el número: se
+                // pincha sin apuntar.
+                .frame(width: ancho, height: alto)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { encima = $0 }
+    }
+
+    @ViewBuilder private var fondo: some View {
+        let forma = RoundedRectangle(cornerRadius: 7)
+        if elegido {
+            forma.fill(Paper.accent)
+        } else if encima {
+            forma.fill(Paper.hairline)
+        } else if hoy {
+            // Hoy va perfilado, no relleno: el relleno es de lo elegido, y dos
+            // rellenos a la vez se confundirían.
+            forma.strokeBorder(Paper.accent.opacity(0.55), lineWidth: 1.2)
+        }
+    }
+
+    private var tinta: Color {
+        if elegido { return Paper.onAccent }
+        if hoy { return Paper.accentInk }
+        return delMes ? Paper.ink : Paper.inkFaint.opacity(0.45)
+    }
+}
+
+private extension Calendar {
+    func inicioDeMes(_ fecha: Date) -> Date {
+        date(from: dateComponents([.year, .month], from: fecha)) ?? startOfDay(for: fecha)
     }
 }

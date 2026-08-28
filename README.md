@@ -56,7 +56,11 @@ de un proyecto asignada a él.
 Clic en una tarea la despliega para editar título, notas, fecha, repetición y
 proyecto; se guarda mientras escribes, sin botón de guardar. El menú de fecha
 tiene atajos para hoy, mañana y la semana que viene, y **«Otra fecha…» abre un
-calendario** para cualquier día. Clic derecho abre las acciones
+calendario** para cualquier día. El calendario es propio y no el `DatePicker`
+gráfico del sistema, que traía su caja, su tipografía y su azul, y aquí se veía
+diminuto y prestado. Este usa la paleta y los rótulos del resto de la interfaz,
+marca hoy con un perfil y el día elegido con relleno, y siempre dibuja seis
+semanas para que el panel no encoja al cambiar de mes. Clic derecho abre las acciones
 rápidas: programar, aparcar o eliminar.
 
 **Arrastrar** hace dos cosas según dónde sueltes:
