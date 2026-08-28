@@ -27,10 +27,7 @@ struct ItemListView: View {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if case .upcoming = nav.perspective {
                         ForEach(store.upcomingByDay(), id: \.day) { group in
-                            Text(dayLabel(group.day).uppercased())
-                                .rubricStyle()
-                                .padding(.top, 18)
-                                .padding(.bottom, 6)
+                            DayHeader(label: dayLabel(group.day), items: group.items)
                             ForEach(group.items) { ItemRowView(item: $0) }
                         }
                     } else {
@@ -187,6 +184,44 @@ struct ItemListView: View {
         } else {
             nav.isAddingItem = false
         }
+    }
+}
+
+/// Cabecera de un día en «Próximamente». Además de rotular, recibe: soltar
+/// encima manda la tarea a ese día, la primera. Sin ella, cambiar de día
+/// arrastrando obligaría a acertar sobre una fila concreta, y al primer día de
+/// la lista no se llegaría nunca por arriba.
+private struct DayHeader: View {
+    @Environment(Store.self) private var store
+    let label: String
+    let items: [Item]
+    @State private var isTargeted = false
+
+    var body: some View {
+        Text(label.uppercased())
+            .rubricStyle()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 18)
+            .padding(.bottom, 6)
+            .contentShape(Rectangle())
+            .dropDestination(for: String.self) { payload, _ in
+                guard let primera = items.first else { return false }
+                let arrastradas = payload
+                    .compactMap(UUID.init(uuidString:))
+                    .compactMap { id in store.items.first { $0.id == id } }
+                    .filter { $0.id != primera.id }
+                for dragged in arrastradas {
+                    store.place(dragged, before: primera, in: .upcoming)
+                }
+                return !arrastradas.isEmpty
+            } isTargeted: { isTargeted = $0 }
+            // La línea va abajo: lo que se suelta cae entre el rótulo y la
+            // primera tarea del día, no encima del rótulo.
+            .overlay(alignment: .bottom) {
+                if isTargeted {
+                    Rectangle().fill(Paper.accent).frame(height: 2)
+                }
+            }
     }
 }
 

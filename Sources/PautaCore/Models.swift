@@ -139,6 +139,9 @@ public struct Item: Identifiable, Codable, Hashable {
         return Calendar.current.startOfDay(for: when) <= Calendar.current.startOfDay(for: .now)
     }
 
+    /// El día para el que está planificada, sin hora.
+    public var day: Date? { when.map { Calendar.current.startOfDay(for: $0) } }
+
     /// Planificada para un día posterior a hoy.
     public var isUpcoming: Bool {
         guard let when, !isCompleted, !isSomeday else { return false }

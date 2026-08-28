@@ -492,6 +492,99 @@ struct OrderingTests {
     }
 }
 
+/// Arrastrar en «Próximamente», donde soltar dice también en qué día.
+@MainActor
+struct UpcomingDropTests {
+    private func dia(_ n: Int) -> Date {
+        let cal = Calendar.current
+        return cal.startOfDay(for: cal.date(byAdding: .day, value: n, to: .now)!)
+    }
+
+    @Test func droppingOnAnotherDayChangesTheDate() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "a", in: .inbox)
+        let b = s.addItem(title: "b", in: .inbox)
+        s.schedule(a, to: dia(1))
+        s.schedule(b, to: dia(3))
+
+        s.place(a, before: s.items(for: .upcoming).first { $0.title == "b" }, in: .upcoming)
+        #expect(s.items(for: .upcoming).first { $0.title == "a" }?.day == dia(3))
+    }
+
+    @Test func andItLandsExactlyWhereYouDroppedIt() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "a", in: .inbox)
+        let b = s.addItem(title: "b", in: .inbox)
+        let c = s.addItem(title: "c", in: .inbox)
+        s.schedule(a, to: dia(1))
+        s.schedule(b, to: dia(3))
+        s.schedule(c, to: dia(3))
+
+        s.place(a, before: s.items(for: .upcoming).first { $0.title == "c" }, in: .upcoming)
+        #expect(s.items(for: .upcoming).map(\.title) == ["b", "a", "c"])
+    }
+
+    /// Las posiciones son globales y el orden de la lista lo manda la fecha, así
+    /// que la fila de encima de la primera tarea de un día es de otro día. Si el
+    /// punto medio se calculara con ella, soltar sobre la primera de un día
+    /// podría dejar la tarea detrás.
+    @Test func neighboursAreTakenFromTheTargetDayOnly() {
+        let s = Store(inMemory: true)
+        // x se crea primero, así que tiene la posición más baja pese a caer el
+        // último día: es justo el caso que rompía la cuenta.
+        let x = s.addItem(title: "x", in: .inbox)
+        let y = s.addItem(title: "y", in: .inbox)
+        let z = s.addItem(title: "z", in: .inbox)
+        s.schedule(x, to: dia(3))
+        s.schedule(y, to: dia(1))
+        s.schedule(z, to: dia(5))
+        #expect(s.items(for: .upcoming).map(\.title) == ["y", "x", "z"])
+
+        s.place(z, before: s.items(for: .upcoming).first { $0.title == "x" }, in: .upcoming)
+        #expect(s.items(for: .upcoming).map(\.title) == ["y", "z", "x"])
+    }
+
+    /// En las listas sin agrupar soltar sigue siendo solo prioridad: cambiarles
+    /// la fecha las sacaría de la lista que estás mirando.
+    @Test func droppingInsideTodayLeavesDatesAlone() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "a", in: .inbox)
+        let b = s.addItem(title: "b", in: .inbox)
+        s.schedule(a, to: dia(0))
+        s.schedule(b, to: dia(-2))
+
+        s.place(a, before: s.items(for: .today).first { $0.title == "b" }, in: .today)
+        #expect(s.items(for: .today).map(\.title) == ["a", "b"])
+        #expect(s.items(for: .today).first { $0.title == "a" }?.day == dia(0))
+    }
+
+    /// Soltar en el hueco del final no señala ningún día: es prioridad y nada más.
+    @Test func droppingAtTheEndKeepsTheDay() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "a", in: .inbox)
+        let b = s.addItem(title: "b", in: .inbox)
+        s.schedule(a, to: dia(1))
+        s.schedule(b, to: dia(3))
+
+        s.place(a, before: nil, in: .upcoming)
+        #expect(s.items(for: .upcoming).first { $0.title == "a" }?.day == dia(1))
+    }
+
+    /// Aparcada en «Algún día» y con fecha a la vez sería contradictorio.
+    @Test func aParkedTaskDroppedOnADayComesBack() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "a", in: .inbox)
+        let b = s.addItem(title: "b", in: .inbox)
+        s.move(a, to: .someday)
+        s.schedule(b, to: dia(3))
+
+        s.place(a, before: s.items(for: .upcoming).first { $0.title == "b" }, in: .upcoming)
+        let movida = s.items.first { $0.title == "a" }
+        #expect(movida?.isSomeday == false)
+        #expect(movida?.day == dia(3))
+    }
+}
+
 /// La persistencia: un archivo por objeto, lápidas y migración.
 @MainActor
 struct PersistenceTests {

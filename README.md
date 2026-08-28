@@ -70,6 +70,11 @@ rápidas: programar, aparcar o eliminar.
   se ve y parecería perdida.
 - Sobre **otra tarea**, la coloca justo antes: es la prioridad manual. Una línea
   marca dónde va a caer. Soltar sobre «Añadir» la manda al final.
+- Sobre una tarea **de otro día en `Próximamente`**, además le pone ese día. Esa
+  lista está agrupada por fecha, así que la fila que señalas dice dos cosas y no
+  una, y cambiar solo la prioridad hacía que el gesto pareciera no hacer nada:
+  la tarea se quedaba donde estaba. También se puede soltar sobre el **rótulo del
+  día**, que la manda a la cabeza de ese día.
 
 La prioridad es **una sola para toda la app**, no una por lista: las listas son
 consultas sobre la misma tarea, así que su prioridad es intrínseca y todas la
@@ -434,8 +439,6 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
   calendario de verdad. Van como fuente aparte, mezclada solo en la vista.
   Escribir tareas como eventos, en cambio, es mala idea: duplica y genera
   conflictos
-- **Arrastrar entre días en `Próximamente`.** Ahora soltar sobre una tarea de otro
-  día cambia la prioridad pero no la fecha, así que parece que no pasa nada
 - **Fusionar en vez de recargar entero.** Al detectar un cambio se relee toda la
   carpeta. Con cientos de tareas conviene releer solo lo que cambió
 - Áreas que agrupen proyectos

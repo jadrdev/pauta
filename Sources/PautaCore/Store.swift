@@ -646,7 +646,22 @@ public final class Store {
     /// cada arrastre, y con la carpeta sincronizada eso es tráfico y ocasiones de
     /// conflicto por nada.
     public func place(_ item: Item, before other: Item?, in perspective: Perspective) {
-        let lista = items(for: perspective).filter { $0.id != item.id }
+        // «Próximamente» está agrupada por día, así que la fila sobre la que
+        // sueltas dice dos cosas y no una: la prioridad **y** el día. Aplicar
+        // solo la primera era lo que hacía que el gesto pareciera no hacer nada:
+        // la tarea se quedaba donde estaba, en su día de antes.
+        let destino: Date? = {
+            guard case .upcoming = perspective, let other else { return nil }
+            return other.day
+        }()
+
+        var lista = items(for: perspective).filter { $0.id != item.id }
+        // Las posiciones son globales, no por día, y el orden de la lista lo
+        // marca primero la fecha. La vecina de arriba de la primera tarea de un
+        // día es la última del día anterior, cuya posición no tiene por qué ser
+        // menor: el punto medio con ella caería en cualquier sitio. Los vecinos
+        // que cuentan son los del día de destino.
+        if let destino { lista = lista.filter { $0.day == destino } }
         guard !lista.isEmpty else { return }
 
         let nueva: Double
@@ -656,7 +671,13 @@ public final class Store {
         } else {
             nueva = (lista.map(\.position).max() ?? 0) + 1
         }
-        mutateItem(item.id) { $0.position = nueva }
+        mutateItem(item.id) {
+            if let destino, destino != $0.day {
+                $0.when = destino
+                $0.isSomeday = false
+            }
+            $0.position = nueva
+        }
     }
 
     /// Mueve la tarea a la lista indicada, aplicando lo que esa lista significa.
