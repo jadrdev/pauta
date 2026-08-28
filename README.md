@@ -212,6 +212,15 @@ más a la sincronización.
 Borrar **no elimina el archivo: deja una lápida** (`deletedAt`). Si se eliminara,
 un dispositivo que no vio el borrado resucitaría la tarea al sincronizar.
 
+Esa protección caduca: pasados **30 días** todos los dispositivos han
+sincronizado y la lápida ya no protege de nada, así que su archivo se borra al
+arrancar. Sin eso se acumularían para siempre, leyéndose en cada carga. El precio
+es que un dispositivo apagado más de un mes podría resucitar lo que borraste.
+
+Las **completadas no se borran nunca**: son tu historial, y eliminarlas solas
+sería perder datos sin haberlo pedido. Si algún día molestan, lo suyo es un
+comando manual, no una purga automática.
+
 ### El orden de la lista
 
 Las fechas se guardan en ISO8601, cuya precisión máxima es el **milisegundo**.

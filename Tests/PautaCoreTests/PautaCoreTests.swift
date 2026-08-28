@@ -147,6 +147,62 @@ struct MoveTests {
     }
 }
 
+/// La purga de lápidas: dejan de proteger cuando todos los dispositivos ya han
+/// visto el borrado, y a partir de ahí solo estorban.
+@MainActor
+struct TombstoneTests {
+    private func tempRoot() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaLapidas-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    private func archivos(_ root: URL) -> Int {
+        ((try? FileManager.default.contentsOfDirectory(
+            at: root.appendingPathComponent("items"), includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.pathExtension == "json" }.count
+    }
+
+    @Test func removesTombstonesPastRetention() throws {
+        let root = tempRoot()
+        let store = Store(root: root)
+        store.addItem(title: "se queda", in: .inbox)
+        let vieja = store.addItem(title: "borrada hace mucho", in: .inbox)
+        store.delete(vieja)
+        #expect(archivos(root) == 2)
+
+        // 40 días después.
+        let futuro = Date().addingTimeInterval(40 * 24 * 3600)
+        #expect(store.purgeOldTombstones(now: futuro) == 1)
+        #expect(archivos(root) == 1)
+        #expect(Store(root: root).items.map(\.title) == ["se queda"])
+    }
+
+    /// Una lápida reciente no se toca: es justo cuando hace falta.
+    @Test func keepsRecentTombstones() throws {
+        let root = tempRoot()
+        let store = Store(root: root)
+        let borrada = store.addItem(title: "recién borrada", in: .inbox)
+        store.delete(borrada)
+        #expect(store.purgeOldTombstones() == 0)
+        #expect(archivos(root) == 1)
+    }
+
+    /// Las tareas vivas nunca se tocan, por antiguas que sean.
+    @Test func neverTouchesLiveItems() throws {
+        let root = tempRoot()
+        let store = Store(root: root)
+        store.addItem(title: "viva y vieja", in: .inbox)
+        store.toggleComplete(store.items[0])
+        let futuro = Date().addingTimeInterval(365 * 24 * 3600)
+        #expect(store.purgeOldTombstones(now: futuro) == 0)
+        #expect(archivos(root) == 1)
+        // Las completadas se conservan: son historial, no basura.
+        #expect(Store(root: root).count(for: .completed) == 1)
+    }
+}
+
 /// El orden manual: prioridad arrastrando.
 @MainActor
 struct OrderingTests {

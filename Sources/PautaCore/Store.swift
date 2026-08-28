@@ -17,6 +17,20 @@ private enum ISODate {
     nonisolated(unsafe) static let secondsOnly = ISO8601DateFormatter()
 }
 
+/// Cuánto se conservan las lápidas antes de borrar su archivo.
+///
+/// Fuera de `Store` a propósito: dentro quedaría aislada al actor principal y se
+/// usa como valor por defecto de un parámetro, que no lo está.
+///
+/// Treinta días es un compromiso. Da margen de sobra para que un dispositivo
+/// apagado o sin conexión sincronice y se entere del borrado, sin que los
+/// archivos se acumulen para siempre. Un dispositivo que pase más de ese tiempo
+/// desconectado podría resucitar lo que borraste: es el precio de no guardar
+/// lápidas eternas.
+public enum Retention {
+    public static let tombstones: TimeInterval = 30 * 24 * 3600
+}
+
 /// Estado de la app + persistencia en JSON.
 @Observable
 @MainActor
@@ -143,6 +157,7 @@ public final class Store {
             try? fm.createDirectory(at: projectsDir, withIntermediateDirectories: true)
             load()
             normalizePositionsIfNeeded()
+            purgeOldTombstones()
         }
     }
 
@@ -531,6 +546,38 @@ public final class Store {
             $0.when = date.map { Calendar.current.startOfDay(for: $0) }
             $0.isSomeday = false
         }
+    }
+
+    /// Borra los archivos de lo eliminado hace más de `retention`.
+    ///
+    /// La lápida existe solo para que un dispositivo que no vio el borrado no
+    /// resucite la tarea al sincronizar. Cumplido ese plazo ya no protege de
+    /// nada: es un archivo que se lee en cada carga y ocupa sitio en iCloud.
+    ///
+    /// Devuelve cuántos archivos borró.
+    @discardableResult
+    func purgeOldTombstones(olderThan retention: TimeInterval = Retention.tombstones,
+                            now: Date = .now) -> Int {
+        guard !inMemory else { return 0 }
+        let fm = FileManager.default
+        let limite = now.addingTimeInterval(-retention)
+        var borrados = 0
+
+        func purge<T: Decodable>(_ dir: URL, as type: T.Type,
+                                 deletedAt: (T) -> Date?) {
+            guard let files = try? fm.contentsOfDirectory(at: dir,
+                                                          includingPropertiesForKeys: nil)
+            else { return }
+            for file in files where file.pathExtension == "json" {
+                guard let data = try? Data(contentsOf: file),
+                      let objeto = try? decoder.decode(T.self, from: data),
+                      let fecha = deletedAt(objeto), fecha < limite else { continue }
+                if (try? fm.removeItem(at: file)) != nil { borrados += 1 }
+            }
+        }
+        purge(itemsDir, as: Item.self) { $0.deletedAt }
+        purge(projectsDir, as: Project.self) { $0.deletedAt }
+        return borrados
     }
 
     /// Da posiciones distintas a todas las tareas si hay empates.
