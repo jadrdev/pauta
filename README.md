@@ -430,16 +430,16 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
 
 - **Eventos del calendario en Hoy**, solo lectura, para que Hoy sea el día
   completo y no solo la lista de tareas. Los eventos no deben entrar en el
-  `Store`: acabarían persistidos en `data.json` como copias que se
-  desincronizan. Van como fuente aparte, mezclada en la vista. Escribir tareas
-  como eventos, en cambio, es mala idea: duplica y genera conflictos
+  `Store`: acabarían escritos en la carpeta como copias que se desincronizan del
+  calendario de verdad. Van como fuente aparte, mezclada solo en la vista.
+  Escribir tareas como eventos, en cambio, es mala idea: duplica y genera
+  conflictos
 - **Arrastrar entre días en `Próximamente`.** Ahora soltar sobre una tarea de otro
   día cambia la prioridad pero no la fecha, así que parece que no pasa nada
 - **Fusionar en vez de recargar entero.** Al detectar un cambio se relee toda la
   carpeta. Con cientos de tareas conviene releer solo lo que cambió
 - Áreas que agrupen proyectos
 - Listas de comprobación y etiquetas (y la elección al pegar varias líneas)
-- Arrastrar para reordenar
-- Sincronización entre dispositivos
-- Widget y app de iOS — necesitan proyecto de Xcode y cuenta de desarrollador;
-  `PautaCore` ya está extraído para ese salto
+- Widget y app de iOS — necesitan proyecto de Xcode y cuenta de desarrollador.
+  `PautaCore` ya está extraído para ese salto, y la sincronización ya está
+  hecha: la misma carpeta de iCloud le sirve a un iPhone sin tocar nada
