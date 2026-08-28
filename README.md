@@ -147,6 +147,21 @@ completar tarde una tarea semanal no debe desplazarle el día para siempre.
 Y descompletar retira la sucesora si nadie la ha tocado, porque marcar y desmarcar
 acumularía copias. Por eso cada sucesora recuerda de cuál nació.
 
+### Desde cuándo y hasta cuándo
+
+**El inicio no es un campo aparte: es la fecha de la tarea.** Una semanal puesta
+para el 1 de septiembre empieza ahí. Guardarlo dos veces solo daría ocasión de que
+los dos valores discreparan, así que en una tarea repetitiva la fecha se muestra
+como «Desde el 1 sept», que es lo que ya significaba.
+
+**El fin sí es un campo**, y es opcional: `recurrenceEnd`, con `nil` para lo que
+no acaba nunca, que es el caso normal. Cuando la siguiente repetición caería más
+allá de esa fecha, la última se completa y no nace ninguna más. Las sucesoras
+heredan el fin — si no, la serie volvería a ser infinita en la segunda vuelta.
+
+Quitar la repetición borra también su fin: un «hasta» sin repetición no significa
+nada.
+
 ## Barra de menús
 
 El monograma junto al reloj abre un panel con las tareas de Hoy: completarlas

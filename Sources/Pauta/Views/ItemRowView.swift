@@ -67,6 +67,7 @@ struct ItemRowView: View {
     @State private var isDropTarget = false
     @State private var eligiendoFecha = false
     @State private var eligiendoLimite = false
+    @State private var eligiendoFin = false
     @FocusState private var titleFocused: Bool
 
     private var isSelected: Bool { nav.selectedItemID == item.id }
@@ -278,8 +279,13 @@ struct ItemRowView: View {
                     ForEach(Recurrence.allCases, id: \.self) { cada in
                         Button(cada.title) { store.setRecurrence(item, to: cada) }
                     }
+                    if item.recurrence != nil {
+                        Divider()
+                        Button("No acaba nunca") { store.setRecurrenceEnd(item, to: nil) }
+                        Button("Acabar en una fecha…") { eligiendoFin = true }
+                    }
                 } label: {
-                    Text((item.recurrence?.title ?? "No repite").uppercased())
+                    Text(repeticionLabel.uppercased())
                         .rubricStyle()
                 }
                 .menuStyle(.borderlessButton)
@@ -289,6 +295,13 @@ struct ItemRowView: View {
                 // colorean su etiqueta con el tint e ignoran el estilo de primer
                 // plano. Sin repetición va apagado; con ella, en verde.
                 .tint(item.recurrence == nil ? Paper.inkSoft : Paper.accentInk)
+                .popover(isPresented: $eligiendoFin, arrowEdge: .bottom) {
+                    SelectorDeFecha(inicial: item.recurrenceEnd ?? item.when ?? Date(),
+                                    accion: "Acabar aquí") { fecha in
+                        store.setRecurrenceEnd(item, to: fecha)
+                        eligiendoFin = false
+                    }
+                }
 
                 Menu {
                     Button("Bandeja") { move(to: nil) }
@@ -311,24 +324,43 @@ struct ItemRowView: View {
                     nav.selectedItemID = nil
                     store.delete(item)
                 } label: {
-                    Text("ELIMINAR")
-                        .font(.rubric)
-                        .tracking(1.1)
-                        .foregroundStyle(Paper.accentInk)
+                    // Icono y no texto: con cinco controles en fila, «ELIMINAR»
+                    // partía la línea en dos. Y una papelera dice «destructivo»
+                    // mejor que una palabra del color del acento.
+                    Image(systemName: "trash")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Paper.inkSoft)
                 }
                 .buttonStyle(.plain)
+                .help("Eliminar tarea")
             }
         }
         .padding(.leading, 29)
         .padding(.top, 11)
     }
 
+    /// En una tarea repetitiva la fecha **es** el inicio de la serie, así que se
+    /// dice con esas palabras en vez de inventar un campo aparte que diría lo
+    /// mismo y podría discrepar.
     private var whenLabel: String {
         if item.isSomeday { return "Algún día" }
         guard let when = item.when else { return "Sin fecha" }
+        if item.recurrence != nil {
+            let cal = Calendar.current
+            if cal.isDateInToday(when) { return "Desde hoy" }
+            if cal.isDateInTomorrow(when) { return "Desde mañana" }
+            return "Desde \(when.formatted(.dateTime.day().month(.abbreviated)))"
+        }
         if Calendar.current.isDateInToday(when) { return "Hoy" }
         if Calendar.current.isDateInTomorrow(when) { return "Mañana" }
         return when.formatted(.dateTime.day().month(.abbreviated))
+    }
+
+    /// «Cada semana», o «Cada semana → 30 nov» cuando tiene fin.
+    private var repeticionLabel: String {
+        guard let recurrence = item.recurrence else { return "No repite" }
+        guard let fin = item.recurrenceEnd else { return recurrence.title }
+        return "\(recurrence.title) → \(fin.formatted(.dateTime.day().month(.abbreviated)))"
     }
 
     /// Corto a propósito: en el editor hay cuatro menús en fila y las etiquetas
@@ -395,12 +427,14 @@ private struct SelectedPanel: ViewModifier {
 /// Calendario para elegir una fecha cualquiera.
 struct SelectorDeFecha: View {
     let inicial: Date
+    let accion: String
     let alElegir: (Date) -> Void
 
     @State private var fecha: Date
 
-    init(inicial: Date, alElegir: @escaping (Date) -> Void) {
+    init(inicial: Date, accion: String = "Programar", alElegir: @escaping (Date) -> Void) {
         self.inicial = inicial
+        self.accion = accion
         self.alElegir = alElegir
         _fecha = State(initialValue: inicial)
     }
@@ -410,7 +444,7 @@ struct SelectorDeFecha: View {
             DatePicker("", selection: $fecha, displayedComponents: .date)
                 .datePickerStyle(.graphical)
                 .labelsHidden()
-            Button("Programar") { alElegir(fecha) }
+            Button(accion) { alElegir(fecha) }
                 .buttonStyle(.borderedProminent)
                 .tint(Paper.accentInk)
         }

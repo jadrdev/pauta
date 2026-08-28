@@ -544,11 +544,18 @@ public final class Store {
         // Se cuenta desde la fecha que tenía, no desde hoy: si completas tarde
         // una tarea semanal, la siguiente sigue cayendo en su día.
         let base = item.when ?? Store.stamped()
+        let proxima = recurrence.next(after: base)
+        // Pasado el fin, la última repetición se completa y no nace ninguna más.
+        if let fin = item.recurrenceEnd,
+           Calendar.current.startOfDay(for: proxima)
+            > Calendar.current.startOfDay(for: fin) { return }
+
         var siguiente = Item(title: item.title)
         siguiente.notes = item.notes
         siguiente.projectID = item.projectID
-        siguiente.when = recurrence.next(after: base)
+        siguiente.when = proxima
         siguiente.recurrence = recurrence
+        siguiente.recurrenceEnd = item.recurrenceEnd
         siguiente.spawnedFrom = item.id
         stampCreation(&siguiente)
         siguiente.position = item.position
@@ -721,9 +728,20 @@ public final class Store {
         }
     }
 
-    /// Fija o quita la repetición.
+    /// Fija o quita la repetición. Quitarla borra también su fecha de fin: un
+    /// «hasta» sin repetición no significa nada.
     public func setRecurrence(_ item: Item, to recurrence: Recurrence?) {
-        mutateItem(item.id) { $0.recurrence = recurrence }
+        mutateItem(item.id) {
+            $0.recurrence = recurrence
+            if recurrence == nil { $0.recurrenceEnd = nil }
+        }
+    }
+
+    /// Hasta cuándo se repite. `nil` = no acaba nunca.
+    public func setRecurrenceEnd(_ item: Item, to date: Date?) {
+        mutateItem(item.id) {
+            $0.recurrenceEnd = date.map { Calendar.current.startOfDay(for: $0) }
+        }
     }
 
     /// Aparca la tarea en «Algún día», quitándole cualquier fecha.
@@ -799,6 +817,11 @@ extension Store {
         store.schedule(taxes, to: calendar.date(byAdding: .day, value: 4, to: .now))
         let flights = store.addItem(title: "Buscar vuelos de septiembre", in: .upcoming)
         store.schedule(flights, to: calendar.date(byAdding: .day, value: 4, to: .now))
+        // Una repetitiva con principio y fin.
+        let riego = store.addItem(title: "Regar las plantas", in: .today)
+        store.setRecurrence(riego, to: .semanal)
+        store.setRecurrenceEnd(store.items.last!,
+                               to: calendar.date(byAdding: .day, value: 60, to: .now))
         // Fechas límite en sus tres estados: vencida, hoy y futura.
         let vencida = store.addItem(title: "Renovar el pasaporte", in: .today)
         store.setDeadline(vencida, to: calendar.date(byAdding: .day, value: -2, to: .now))

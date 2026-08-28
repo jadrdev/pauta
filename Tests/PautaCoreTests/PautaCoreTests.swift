@@ -295,6 +295,64 @@ struct RecurrenceTests {
         #expect(s.items.count == 1)
     }
 
+    /// Con fecha de fin, la serie para: la última se completa y no nace otra.
+    @Test func recurrenceStopsAtItsEndDate() {
+        let s = Store(inMemory: true)
+        let cal = Calendar.current
+        var tarea = s.addItem(title: "Diaria hasta mañana", in: .today)
+        tarea.recurrence = .diaria
+        tarea.when = cal.startOfDay(for: .now)
+        tarea.recurrenceEnd = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: .now))
+        s.update(tarea)
+
+        // Primera: la siguiente cae mañana, que aún entra.
+        s.toggleComplete(s.items[0])
+        #expect(s.items.filter { !$0.isCompleted }.count == 1)
+
+        // Segunda: la siguiente caería pasado mañana, ya fuera de plazo.
+        s.toggleComplete(s.items.first { !$0.isCompleted }!)
+        #expect(s.items.filter { !$0.isCompleted }.isEmpty)
+        #expect(s.count(for: .completed) == 2)
+    }
+
+    /// La sucesora hereda el fin: si no, la serie sería infinita a la segunda.
+    @Test func theSuccessorInheritsTheEndDate() {
+        let s = Store(inMemory: true)
+        let fin = Calendar.current.date(byAdding: .day, value: 30, to: .now)!
+        var tarea = s.addItem(title: "Semanal", in: .today)
+        tarea.recurrence = .semanal
+        tarea.recurrenceEnd = Calendar.current.startOfDay(for: fin)
+        s.update(tarea)
+
+        s.toggleComplete(s.items[0])
+        let siguiente = s.items.first { !$0.isCompleted }
+        #expect(siguiente?.recurrenceEnd == Calendar.current.startOfDay(for: fin))
+    }
+
+    /// Sin fecha de fin no acaba nunca, que es el caso normal.
+    @Test func withoutAnEndDateItNeverStops() {
+        let s = Store(inMemory: true)
+        var tarea = s.addItem(title: "Para siempre", in: .today)
+        tarea.recurrence = .diaria
+        s.update(tarea)
+        for _ in 1...5 {
+            s.toggleComplete(s.items.first { !$0.isCompleted }!)
+        }
+        #expect(s.items.filter { !$0.isCompleted }.count == 1)
+        #expect(s.count(for: .completed) == 5)
+    }
+
+    /// Quitar la repetición borra su fin: un «hasta» suelto no significa nada.
+    @Test func removingRecurrenceClearsItsEnd() {
+        let s = Store(inMemory: true)
+        let t = s.addItem(title: "x", in: .today)
+        s.setRecurrence(t, to: .semanal)
+        s.setRecurrenceEnd(s.items[0], to: Date())
+        #expect(s.items[0].recurrenceEnd != nil)
+        s.setRecurrence(s.items[0], to: nil)
+        #expect(s.items[0].recurrenceEnd == nil)
+    }
+
     @Test func nextDatesAreCorrect() {
         let cal = Calendar.current
         let base = cal.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))

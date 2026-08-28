@@ -63,7 +63,13 @@ public struct Item: Identifiable, Codable, Hashable {
     /// cosas distintas y mezclarlas obliga a elegir entre planificar y avisar.
     public var deadline: Date?
     /// Cada cuánto se repite, si se repite.
+    ///
+    /// El **inicio** no es un campo aparte: es `when`, la fecha de la tarea. Una
+    /// semanal puesta para el 1 de septiembre empieza ahí. Guardarlo dos veces
+    /// solo daría ocasión de que discreparan.
     public var recurrence: Recurrence?
+    /// Último día en que puede caer una repetición. `nil` = no acaba nunca.
+    public var recurrenceEnd: Date?
     /// Si esta tarea nació al completarse otra repetitiva, cuál era.
     ///
     /// Sirve para deshacer: si descompletas la original, la sucesora que generó
@@ -102,6 +108,7 @@ public struct Item: Identifiable, Codable, Hashable {
         position    = try c.decodeIfPresent(Double.self, forKey: .position) ?? 0
         deadline    = try c.decodeIfPresent(Date.self,   forKey: .deadline)
         recurrence  = try c.decodeIfPresent(Recurrence.self, forKey: .recurrence)
+        recurrenceEnd = try c.decodeIfPresent(Date.self, forKey: .recurrenceEnd)
         spawnedFrom = try c.decodeIfPresent(UUID.self,   forKey: .spawnedFrom)
     }
 

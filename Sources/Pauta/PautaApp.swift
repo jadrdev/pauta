@@ -247,7 +247,10 @@ struct RootView: View {
             if Launch.demo {
                 nav.perspective = Launch.view ?? .today
                 // Abre una tarea para que se vea el editor desplegado.
-                nav.selectedItemID = store.items(for: nav.perspective).dropFirst().first?.id
+                // Prefiere una repetitiva: es la fila con más que enseñar.
+                let visibles = store.items(for: nav.perspective)
+                nav.selectedItemID = visibles.first { $0.recurrence != nil }?.id
+                    ?? visibles.dropFirst().first?.id
             }
         }
     }
