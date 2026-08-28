@@ -151,10 +151,14 @@ struct PautaApp: App {
     /// Vigila la carpeta de datos para recoger lo que llegue de otro
     /// dispositivo mientras la app está abierta.
     @State private var watcher: FolderWatcher?
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        // Con id: el panel de la barra de menús la reabre si se cerró.
-        WindowGroup(id: "main") {
+        // `Window` y no `WindowGroup`: esta app es de una sola ventana, y con
+        // WindowGroup cada `openWindow(id:)` abría una nueva en vez de traer la
+        // que ya había. El id permite reabrirla desde el menú y desde el panel
+        // de la barra de menús cuando se ha cerrado.
+        Window("Pauta", id: "main") {
             RootView()
                 .environment(store)
                 .environment(nav)
@@ -179,6 +183,12 @@ struct PautaApp: App {
                     nav.go(to: .project(project.id))
                 }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
+            }
+            // Sin esto, cerrar la ventana deja la app sin forma de volver salvo el
+            // panel de la barra de menús: quien no lo conozca se queda fuera.
+            CommandGroup(after: .windowList) {
+                Button("Ventana principal") { openWindow(id: "main") }
+                    .keyboardShortcut("0", modifiers: .command)
             }
             CommandGroup(after: .newItem) {
                 Button("Importar de Recordatorios") {
