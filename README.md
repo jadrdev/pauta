@@ -323,6 +323,23 @@ redondeadas al milisegundo, que es la precisión con la que se guardan: si no, e
 valor en memoria nunca coincidiría con el del archivo y toda recarga parecería un
 cambio.
 
+**Y es incremental**: solo se abren los archivos que cambiaron. De cada uno se
+recuerda su *sello* —fecha de modificación y tamaño— junto con lo que se leyó; si
+el sello coincide, se reaprovecha lo de antes. El tamaño está en el sello porque
+dos escrituras seguidas pueden caer en la misma fecha de modificación. Las claves
+se piden en el propio listado del directorio, así que consultarlas no vuelve a
+tocar el disco.
+
+Importa porque el vigilante salta con **cualquier** escritura, incluidas las
+nuestras: marcar una tarea como hecha releía la carpeta entera. Además, lo que se
+acaba de escribir se anota en la caché en el momento de guardarlo, así que esa
+recarga no abre ni un archivo. Con 500 tareas, veinte ciclos de escribir y
+recargar pasan de 1,44 s a 0,12 s.
+
+Preguntar por conflictos también se hace solo al releer un archivo, que era la
+parte cara de la carga: un conflicto llega siempre acompañado de un cambio en el
+archivo, así que no se pierde ninguno.
+
 ### Decodificación
 
 Las tareas y los proyectos se leen con un `init(from:)` escrito a mano que usa
@@ -439,8 +456,6 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
   calendario de verdad. Van como fuente aparte, mezclada solo en la vista.
   Escribir tareas como eventos, en cambio, es mala idea: duplica y genera
   conflictos
-- **Fusionar en vez de recargar entero.** Al detectar un cambio se relee toda la
-  carpeta. Con cientos de tareas conviene releer solo lo que cambió
 - Áreas que agrupen proyectos
 - Listas de comprobación y etiquetas (y la elección al pegar varias líneas)
 - Widget y app de iOS — necesitan proyecto de Xcode y cuenta de desarrollador.

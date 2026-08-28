@@ -855,3 +855,92 @@ struct PersistenceTests {
         #expect(contents.isEmpty)
     }
 }
+
+/// La recarga incremental: releer solo lo que cambió.
+///
+/// Se comprueba por la puerta de atrás: se estropea el contenido de un archivo
+/// **sin tocar su sello** —misma fecha de modificación y mismo tamaño—. Si la
+/// tarea sigue entera, es que nadie volvió a abrirlo.
+@MainActor
+struct IncrementalLoadTests {
+    private func tempRoot() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaIncr-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    private func archivo(_ root: URL, _ id: UUID) -> URL {
+        root.appendingPathComponent("items/\(id.uuidString).json")
+    }
+
+    /// Una fecha redonda, puesta a mano. Conservar la real leyéndola y
+    /// volviéndola a escribir no sirve: `Date` es un `Double` de segundos y no
+    /// representa exactamente los nanosegundos del archivo, así que la fecha
+    /// vuelve distinta unas veces sí y otras no, y el test sale intermitente.
+    private static let fechaFija = Date(timeIntervalSince1970: 1_700_000_000)
+
+    private func fija(_ file: URL) throws {
+        try FileManager.default.setAttributes([.modificationDate: Self.fechaFija],
+                                              ofItemAtPath: file.path)
+    }
+
+    @Test func unchangedFilesAreNotReadAgain() throws {
+        let root = tempRoot()
+        let store = Store(root: root)
+        let a = store.addItem(title: "intacta", in: .inbox)
+        let file = archivo(root, a.id)
+        let bytes = try Data(contentsOf: file).count
+
+        try fija(file)
+        // Dos caminos para llenar la caché: quien escribió el archivo y quien
+        // solo lo leyó. Los dos tienen que quedar sellados igual.
+        store.reload()
+        let otro = Store(root: root)
+
+        try Data(repeating: 0x78, count: bytes).write(to: file)
+        try fija(file)
+
+        store.reload()
+        otro.reload()
+        #expect(store.items(for: .inbox).map(\.title) == ["intacta"])
+        #expect(otro.items(for: .inbox).map(\.title) == ["intacta"])
+
+        // Y uno que estrena caché sí lo abre, y lo encuentra ilegible: la
+        // basura estaba escrita de verdad.
+        #expect(Store(root: root).items.isEmpty)
+    }
+
+    /// El tamaño forma parte del sello porque dos escrituras seguidas pueden
+    /// caer en la misma fecha de modificación.
+    @Test func aChangeOfSizeIsEnoughToReread() throws {
+        let root = tempRoot()
+        let store = Store(root: root)
+        let a = store.addItem(title: "vieja", in: .inbox)
+        let file = archivo(root, a.id)
+        let bytes = try Data(contentsOf: file).count
+
+        try fija(file)
+        store.reload()
+
+        let json = #"{"id":"\#(a.id.uuidString)","title":"nueva","createdAt":"2026-01-01T00:00:00Z"}"#
+        #expect(Data(json.utf8).count != bytes)
+        try Data(json.utf8).write(to: file)
+        try fija(file)
+
+        store.reload()
+        #expect(store.items(for: .inbox).map(\.title) == ["nueva"])
+    }
+
+    /// Un archivo que desaparece sale de la caché aunque nunca se relea.
+    @Test func aDeletedFileLeavesTheCache() throws {
+        let root = tempRoot()
+        let store = Store(root: root)
+        let a = store.addItem(title: "efímera", in: .inbox)
+        store.addItem(title: "queda", in: .inbox)
+
+        try FileManager.default.removeItem(at: archivo(root, a.id))
+        store.reload()
+        #expect(store.items(for: .inbox).map(\.title) == ["queda"])
+    }
+}

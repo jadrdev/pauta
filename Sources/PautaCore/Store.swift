@@ -72,6 +72,10 @@ public final class Store {
     /// repetida no las resucite.
     private var buriedSourceIDs: Set<String> = []
 
+    /// Lo leído de cada archivo en la última carga, por nombre de archivo.
+    private var itemCache: [String: Cached<Item>] = [:]
+    private var projectCache: [String: Cached<Project>] = [:]
+
     /// Archivos que iCloud tenía desalojados en la última carga. Si es mayor que
     /// cero, faltan datos que aparecerán cuando terminen de bajar.
     public private(set) var pendingDownloads = 0
@@ -244,19 +248,78 @@ public final class Store {
         load()
     }
 
+    /// Sello de un archivo: fecha de modificación y tamaño. Con eso basta para
+    /// saber si cambió sin volver a abrirlo.
+    private struct FileStamp: Equatable {
+        var modified: Date
+        var size: Int
+    }
+
+    /// Lo ya leído de un archivo y el sello que tenía al leerlo. `value` en
+    /// `nil` recuerda que estaba ilegible, para no reintentarlo en cada recarga.
+    private struct Cached<T> {
+        var stamp: FileStamp?
+        var value: T?
+    }
+
+    private static let stampKeys: Set<URLResourceKey> = [
+        .contentModificationDateKey, .fileSizeKey,
+    ]
+
+    private func stamp(of file: URL) -> FileStamp? {
+        guard let values = try? file.resourceValues(forKeys: Store.stampKeys),
+              let modified = values.contentModificationDate,
+              let size = values.fileSize
+        else { return nil }
+        return FileStamp(modified: modified, size: size)
+    }
+
+    /// Lee una carpeta reaprovechando lo que ya se había leído.
+    ///
+    /// Antes cada recarga decodificaba todos los archivos. Como la carpeta la
+    /// vigila un observador que salta con cualquier escritura —incluidas las
+    /// nuestras—, marcar una tarea como hecha releía la lista entera. Ahora se
+    /// compara el sello con el de la última lectura y solo se abre lo que
+    /// cambió; el resto sale del diccionario.
+    ///
+    /// Un archivo sin sello legible se relee siempre: ante la duda, leer de más
+    /// es correcto y leer de menos no.
+    private func loadObjects<T: Timestamped>(in dir: URL,
+                                             cache: inout [String: Cached<T>]) -> [T] {
+        // Las claves se piden en el listado: así el sistema las trae de una vez
+        // y consultarlas archivo a archivo no vuelve a tocar el disco.
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: dir, includingPropertiesForKeys: Array(Store.stampKeys))) ?? []
+
+        var fresh: [String: Cached<T>] = [:]
+        fresh.reserveCapacity(files.count)
+        for file in files where file.pathExtension == "json" {
+            let nombre = file.lastPathComponent
+            let sello = stamp(of: file)
+            if let sello, let conocido = cache[nombre], conocido.stamp == sello {
+                fresh[nombre] = conocido
+                continue
+            }
+            // Preguntar por conflictos solo al releer. Hacerlo por cada archivo
+            // en cada recarga era la parte cara, y un conflicto llega siempre
+            // acompañado de un cambio en el archivo.
+            //
+            // Un archivo corrupto se salta: no debe tumbar la carga.
+            let valor = resolveConflict(at: file, as: T.self)
+                ?? (try? Data(contentsOf: file))
+                    .flatMap { try? decoder.decode(T.self, from: $0) }
+            fresh[nombre] = Cached(stamp: sello, value: valor)
+        }
+        // Sustituir el diccionario entero da de baja lo que ya no está.
+        cache = fresh
+        return fresh.values.compactMap(\.value)
+    }
+
     private func load() {
-        let fm = FileManager.default
         pendingDownloads = requestDownloads(in: itemsDir) + requestDownloads(in: projectsDir)
 
-        let itemFiles = (try? fm.contentsOfDirectory(at: itemsDir,
-                                                    includingPropertiesForKeys: nil)) ?? []
         var live: [Item] = []
-        for file in itemFiles where file.pathExtension == "json" {
-            // Un archivo ilegible o corrupto se salta: no debe tumbar la carga.
-            let resolved = resolveConflict(at: file, as: Item.self)
-            guard let item = resolved ?? (try? Data(contentsOf: file))
-                    .flatMap({ try? decoder.decode(Item.self, from: $0) })
-            else { continue }
+        for item in loadObjects(in: itemsDir, cache: &itemCache) {
             if item.deletedAt == nil {
                 live.append(item)
             } else if let source = item.sourceID {
@@ -266,17 +329,8 @@ public final class Store {
         let freshItems = live.sorted(by: Item.byCreation)
         if freshItems != items { items = freshItems }
 
-        let projectFiles = (try? fm.contentsOfDirectory(at: projectsDir,
-                                                       includingPropertiesForKeys: nil)) ?? []
-        let freshProjects = projectFiles
-            .filter { $0.pathExtension == "json" }
-            .compactMap { file in
-                let resolved = resolveConflict(at: file, as: Project.self)
-                guard let project = resolved ?? (try? Data(contentsOf: file))
-                        .flatMap({ try? decoder.decode(Project.self, from: $0) }),
-                      project.deletedAt == nil else { return nil }
-                return project
-            }
+        let freshProjects = loadObjects(in: projectsDir, cache: &projectCache)
+            .filter { $0.deletedAt == nil }
             .sorted(by: Project.byCreation)
         if freshProjects != projects { projects = freshProjects }
     }
@@ -286,12 +340,18 @@ public final class Store {
     /// es justo lo que hace trabajar de más a la sincronización.
     private func persist(_ item: Item) {
         guard !inMemory, let data = try? encoder.encode(item) else { return }
-        try? data.write(to: url(forItem: item.id), options: .atomic)
+        let file = url(forItem: item.id)
+        try? data.write(to: file, options: .atomic)
+        // Lo que acabamos de escribir ya lo tenemos en memoria: anotarlo evita
+        // que la recarga que dispara nuestra propia escritura lo lea otra vez.
+        itemCache[file.lastPathComponent] = Cached(stamp: stamp(of: file), value: item)
     }
 
     private func persist(_ project: Project) {
         guard !inMemory, let data = try? encoder.encode(project) else { return }
-        try? data.write(to: url(forProject: project.id), options: .atomic)
+        let file = url(forProject: project.id)
+        try? data.write(to: file, options: .atomic)
+        projectCache[file.lastPathComponent] = Cached(stamp: stamp(of: file), value: project)
     }
 
     /// Reparte el `data.json` de un solo blob en un archivo por objeto. El
