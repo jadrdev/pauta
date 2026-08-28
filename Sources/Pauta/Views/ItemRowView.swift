@@ -148,12 +148,28 @@ struct ItemRowView: View {
                     .font(.system(size: 9))
                     .foregroundStyle(Paper.inkFaint)
             }
+            // Distintivo de proyecto: con el emoji del proyecto, si lo tiene, y
+            // sobre una pastilla tenue. Sin ella, en una ventana ancha el nombre
+            // queda tan lejos del título que cuesta asociarlos — y con dos tareas
+            // que se llaman igual es lo único que las distingue.
             if let projectID = item.projectID,
                let project = store.project(projectID),
                !isProjectPerspective(projectID) {
-                Text(project.name.isEmpty ? "Sin título" : project.name)
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(Paper.inkFaint)
+                HStack(spacing: 4) {
+                    if !project.icon.isEmpty {
+                        Text(project.icon).font(.system(size: 10))
+                    }
+                    Text(project.name.isEmpty ? "Sin título" : project.name)
+                        .font(.system(size: 11, weight: .medium))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(Paper.inkSoft)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule().fill(Paper.ink.opacity(0.07))
+                )
+                .overlay(Capsule().strokeBorder(Paper.hairline, lineWidth: 1))
             }
             // En Próximamente la lista ya va agrupada por día, así que repetir la
             // fecha en cada fila solo añade ruido.

@@ -26,6 +26,12 @@ mueve de lista sola.
 
 Los **proyectos** aparecen debajo, cada uno con su cuenta de tareas abiertas.
 
+Una tarea de proyecto sin fecha sale en `Cualquier momento` a propósito: meterla
+en un proyecto ya es decidir que se va a hacer, solo falta cuándo. Fuera de su
+propio proyecto, cada tarea lleva el nombre del proyecto —con su emoji— en una
+pastilla a la derecha, que es lo que permite distinguir dos tareas que se llamen
+igual.
+
 «Sin fecha» y «Algún día» son estados distintos, y esa distinción es el centro
 del modelo: el primero significa «todavía no lo he decidido» y deja la tarea en
 la bandeja; el segundo, «lo quiero hacer, pero no ahora». Por eso ponerle fecha
