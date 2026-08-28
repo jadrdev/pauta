@@ -535,6 +535,67 @@ public final class Store {
         }
     }
 
+    /// Mueve la tarea a la lista indicada, aplicando lo que esa lista significa.
+    ///
+    /// Las listas son consultas, no carpetas: «mover» es cambiar los campos que
+    /// hacen que la tarea caiga en esa consulta. Vive aquí y no en la vista para
+    /// que la semántica sea una sola y se pueda probar.
+    public func move(_ item: Item, to perspective: Perspective) {
+        switch perspective {
+        case .inbox:
+            // La bandeja es lo que no tiene nada decidido: ni fecha, ni proyecto.
+            mutateItem(item.id) {
+                $0.when = nil
+                $0.isSomeday = false
+                $0.projectID = nil
+                $0.isCompleted = false
+                $0.completedAt = nil
+            }
+        case .today:
+            mutateItem(item.id) {
+                $0.when = Calendar.current.startOfDay(for: .now)
+                $0.isSomeday = false
+                $0.isCompleted = false
+                $0.completedAt = nil
+            }
+        case .upcoming:
+            // Si ya tenía fecha futura se respeta; si no, mañana.
+            let manana = Calendar.current.startOfDay(
+                for: Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now)
+            mutateItem(item.id) {
+                let actual = $0.when.map { Calendar.current.startOfDay(for: $0) }
+                $0.when = (actual.map { $0 > Calendar.current.startOfDay(for: .now) } == true)
+                    ? actual : manana
+                $0.isSomeday = false
+                $0.isCompleted = false
+                $0.completedAt = nil
+            }
+        case .anytime:
+            // Se puede hacer ya, pero sin día asignado. Conserva el proyecto.
+            mutateItem(item.id) {
+                $0.when = nil
+                $0.isSomeday = false
+                $0.isCompleted = false
+                $0.completedAt = nil
+            }
+        case .someday:
+            mutateItem(item.id) {
+                $0.isSomeday = true
+                $0.when = nil
+                $0.isCompleted = false
+                $0.completedAt = nil
+            }
+        case .completed:
+            mutateItem(item.id) {
+                guard !$0.isCompleted else { return }
+                $0.isCompleted = true
+                $0.completedAt = Store.stamped()
+            }
+        case .project(let id):
+            mutateItem(item.id) { $0.projectID = id }
+        }
+    }
+
     /// Aparca la tarea en «Algún día», quitándole cualquier fecha.
     public func park(_ item: Item) {
         mutateItem(item.id) {

@@ -64,6 +64,89 @@ struct PerspectiveTests {
     }
 }
 
+/// Mover una tarea de lista: «mover» es cambiar los campos que la hacen caer en
+/// esa consulta, porque las listas no son carpetas.
+@MainActor
+struct MoveTests {
+    private func store() -> Store { Store(inMemory: true) }
+
+    @Test func toTodayGivesItTodaysDate() {
+        let s = store()
+        let item = s.addItem(title: "x", in: .someday)
+        s.move(item, to: .today)
+        #expect(s.count(for: .today) == 1)
+        #expect(s.count(for: .someday) == 0)
+    }
+
+    @Test func toUpcomingUsesTomorrowWhenUndated() {
+        let s = store()
+        let item = s.addItem(title: "x", in: .inbox)
+        s.move(item, to: .upcoming)
+        #expect(s.count(for: .upcoming) == 1)
+    }
+
+    /// Si ya estaba planificada para más adelante, mover a Próximamente no debe
+    /// adelantarla a mañana.
+    @Test func toUpcomingKeepsAnExistingFutureDate() {
+        let s = store()
+        let item = s.addItem(title: "x", in: .inbox)
+        let enUnaSemana = Calendar.current.date(byAdding: .day, value: 7, to: .now)!
+        s.schedule(item, to: enUnaSemana)
+        s.move(s.items[0], to: .upcoming)
+        let esperado = Calendar.current.startOfDay(for: enUnaSemana)
+        #expect(s.items[0].when == esperado)
+    }
+
+    @Test func toSomedayParksAndClearsDate() {
+        let s = store()
+        let item = s.addItem(title: "x", in: .today)
+        s.move(item, to: .someday)
+        #expect(s.items[0].isSomeday)
+        #expect(s.items[0].when == nil)
+        #expect(s.count(for: .today) == 0)
+    }
+
+    /// A la bandeja se va sin nada decidido: ni fecha, ni aparcado, ni proyecto.
+    @Test func toInboxClearsEverything() {
+        let s = store()
+        let p = s.addProject(name: "proyecto")
+        let item = s.addItem(title: "x", in: .project(p.id))
+        s.schedule(item, to: .now)
+        s.move(s.items[0], to: .inbox)
+        #expect(s.count(for: .inbox) == 1)
+        #expect(s.items[0].projectID == nil)
+        #expect(s.items[0].when == nil)
+    }
+
+    @Test func toProjectAssignsItKeepingTheDate() {
+        let s = store()
+        let p = s.addProject(name: "proyecto")
+        let item = s.addItem(title: "x", in: .today)
+        s.move(item, to: .project(p.id))
+        #expect(s.items[0].projectID == p.id)
+        #expect(s.count(for: .today) == 1)
+    }
+
+    /// Mover una completada a una lista de pendientes la reabre: si no, se
+    /// movería a un sitio donde no aparece y parecería que se ha perdido.
+    @Test func movingACompletedTaskReopensIt() {
+        let s = store()
+        let item = s.addItem(title: "x", in: .inbox)
+        s.toggleComplete(item)
+        #expect(s.count(for: .completed) == 1)
+        s.move(s.items[0], to: .today)
+        #expect(s.count(for: .completed) == 0)
+        #expect(s.count(for: .today) == 1)
+    }
+
+    @Test func toCompletedMarksItDone() {
+        let s = store()
+        let item = s.addItem(title: "x", in: .today)
+        s.move(item, to: .completed)
+        #expect(s.count(for: .completed) == 1)
+    }
+}
+
 /// La persistencia: un archivo por objeto, lápidas y migración.
 @MainActor
 struct PersistenceTests {

@@ -102,6 +102,9 @@ struct ItemRowView: View {
         .modifier(SelectedPanel(isSelected: isSelected))
         .padding(.horizontal, isSelected ? -14 : 0)
         .contentShape(Rectangle())
+        // Se arrastra el identificador, no la tarea entera: quien recibe la
+        // busca en el almacén, que es la única fuente de verdad.
+        .draggable(item.id.uuidString)
         .onHover { hovering = $0 }
         .onTapGesture { select() }
         // El estado de edición se rellena desde el item en cuanto la fila se

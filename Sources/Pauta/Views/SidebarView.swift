@@ -75,6 +75,7 @@ private struct SidebarRow: View {
     var project: Project?
 
     @State private var hovering = false
+    @State private var isDropTarget = false
 
     private var isSelected: Bool { nav.perspective == perspective }
 
@@ -118,6 +119,14 @@ private struct SidebarRow: View {
                 .frame(width: 3)
         }
         .contentShape(Rectangle())
+        // Soltar una tarea aquí la mueve a esta lista.
+        .dropDestination(for: String.self) { payload, _ in
+            let arrastradas = payload
+                .compactMap(UUID.init(uuidString:))
+                .compactMap { id in store.items.first { $0.id == id } }
+            for item in arrastradas { store.move(item, to: perspective) }
+            return !arrastradas.isEmpty
+        } isTargeted: { isDropTarget = $0 }
         .onHover { hovering = $0 }
         .onTapGesture { nav.go(to: perspective) }
         .contextMenu {
@@ -131,7 +140,10 @@ private struct SidebarRow: View {
     }
 
     @ViewBuilder private var background: some View {
-        if isSelected {
+        if isDropTarget {
+            // Más marcado que la selección: hay que ver dónde va a caer.
+            Paper.accent.opacity(0.30)
+        } else if isSelected {
             Paper.accent.opacity(0.16)
         } else if hovering {
             Paper.ink.opacity(0.045)
