@@ -39,6 +39,9 @@ enum Paper {
     /// Verde para texto. El puro sobre fondo claro da contraste 1.56, así que
     /// en tema claro se oscurece a un verde profundo.
     static let accentInk = Color.dyn(0x097D49, 0x10E888)
+    /// Aviso: fecha límite vencida o de hoy. Calculado para pasar AA sobre los
+    /// cuatro fondos, igual que los grises — el rojo puro se queda en 3.89.
+    static let warning  = Color.dyn(0xC13E34, 0xE2493D)
     /// Lo que va encima del verde: el negro de marca.
     static let onAccent = Color.dyn(0x080C10, 0x080C10)
 }

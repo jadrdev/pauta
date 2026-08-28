@@ -713,6 +713,14 @@ public final class Store {
         }
     }
 
+    /// Fija o quita la fecha límite. Es independiente de `when`: se puede tener
+    /// una entrega el viernes y no haber decidido aún cuándo ponerse.
+    public func setDeadline(_ item: Item, to date: Date?) {
+        mutateItem(item.id) {
+            $0.deadline = date.map { Calendar.current.startOfDay(for: $0) }
+        }
+    }
+
     /// Fija o quita la repetición.
     public func setRecurrence(_ item: Item, to recurrence: Recurrence?) {
         mutateItem(item.id) { $0.recurrence = recurrence }
@@ -791,6 +799,13 @@ extension Store {
         store.schedule(taxes, to: calendar.date(byAdding: .day, value: 4, to: .now))
         let flights = store.addItem(title: "Buscar vuelos de septiembre", in: .upcoming)
         store.schedule(flights, to: calendar.date(byAdding: .day, value: 4, to: .now))
+        // Fechas límite en sus tres estados: vencida, hoy y futura.
+        let vencida = store.addItem(title: "Renovar el pasaporte", in: .today)
+        store.setDeadline(vencida, to: calendar.date(byAdding: .day, value: -2, to: .now))
+        let hoyLimite = store.addItem(title: "Enviar la factura de agosto", in: .today)
+        store.setDeadline(hoyLimite, to: .now)
+        let futura = store.addItem(title: "Preparar la declaración", in: .inbox)
+        store.setDeadline(futura, to: calendar.date(byAdding: .day, value: 12, to: .now))
         store.addItem(title: "Aprender a tocar el bajo", in: .someday)
         store.addItem(title: "Rehacer la estantería del salón", in: .someday)
         let done = store.addItem(title: "Reservar mesa para el viernes", in: .inbox)

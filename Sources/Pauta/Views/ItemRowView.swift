@@ -66,6 +66,7 @@ struct ItemRowView: View {
     @State private var hovering = false
     @State private var isDropTarget = false
     @State private var eligiendoFecha = false
+    @State private var eligiendoLimite = false
     @FocusState private var titleFocused: Bool
 
     private var isSelected: Bool { nav.selectedItemID == item.id }
@@ -144,6 +145,15 @@ struct ItemRowView: View {
     /// Indicadores a la derecha: notas, proyecto y fecha, en texto tenue.
     @ViewBuilder private var badges: some View {
         HStack(spacing: 12) {
+            if let deadline = item.deadline, !item.isCompleted {
+                HStack(spacing: 3) {
+                    Image(systemName: item.isOverdue ? "exclamationmark.triangle.fill" : "flag.fill")
+                        .font(.system(size: 8.5))
+                    Text(deadline.formatted(.dateTime.day().month(.abbreviated)))
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(item.deadlineIsDue ? Paper.warning : Paper.inkFaint)
+            }
             if item.recurrence != nil {
                 Image(systemName: "repeat")
                     .font(.system(size: 9, weight: .semibold))
@@ -236,13 +246,40 @@ struct ItemRowView: View {
                 }
 
                 Menu {
+                    Button("Sin fecha límite") { store.setDeadline(item, to: nil) }
+                    Divider()
+                    Button("Hoy") { store.setDeadline(item, to: .now) }
+                    Button("Mañana") {
+                        store.setDeadline(item, to: Calendar.current.date(byAdding: .day, value: 1, to: .now))
+                    }
+                    Button("En una semana") {
+                        store.setDeadline(item, to: Calendar.current.date(byAdding: .day, value: 7, to: .now))
+                    }
+                    Button("Otra fecha…") { eligiendoLimite = true }
+                } label: {
+                    Text(limiteLabel.uppercased()).rubricStyle()
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                // En rojo solo cuando ya aprieta: si todas las fechas límite
+                // gritaran, ninguna diría nada.
+                .tint(item.deadlineIsDue ? Paper.warning : Paper.inkSoft)
+                .popover(isPresented: $eligiendoLimite, arrowEdge: .bottom) {
+                    SelectorDeFecha(inicial: item.deadline ?? Date()) { fecha in
+                        store.setDeadline(item, to: fecha)
+                        eligiendoLimite = false
+                    }
+                }
+
+                Menu {
                     Button("No se repite") { store.setRecurrence(item, to: nil) }
                     Divider()
                     ForEach(Recurrence.allCases, id: \.self) { cada in
                         Button(cada.title) { store.setRecurrence(item, to: cada) }
                     }
                 } label: {
-                    Text((item.recurrence?.title ?? "No se repite").uppercased())
+                    Text((item.recurrence?.title ?? "No repite").uppercased())
                         .rubricStyle()
                 }
                 .menuStyle(.borderlessButton)
@@ -292,6 +329,16 @@ struct ItemRowView: View {
         if Calendar.current.isDateInToday(when) { return "Hoy" }
         if Calendar.current.isDateInTomorrow(when) { return "Mañana" }
         return when.formatted(.dateTime.day().month(.abbreviated))
+    }
+
+    /// Corto a propósito: en el editor hay cuatro menús en fila y las etiquetas
+    /// largas en mayúsculas lo convierten en un muro.
+    private var limiteLabel: String {
+        guard let deadline = item.deadline else { return "Sin límite" }
+        let cal = Calendar.current
+        if cal.isDateInToday(deadline) { return "Vence hoy" }
+        if cal.isDateInTomorrow(deadline) { return "Vence mañana" }
+        return "Vence \(deadline.formatted(.dateTime.day().month(.abbreviated)))"
     }
 
     private var projectLabel: String {

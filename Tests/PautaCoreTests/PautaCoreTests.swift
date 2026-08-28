@@ -147,6 +147,83 @@ struct MoveTests {
     }
 }
 
+/// Fechas límite: cuándo tiene que estar, distinto de cuándo pienso ponerme.
+@MainActor
+struct DeadlineTests {
+    private func fecha(_ dias: Int) -> Date {
+        Calendar.current.date(byAdding: .day, value: dias, to: .now)!
+    }
+
+    /// Es independiente de la planificación: se puede tener entrega el viernes
+    /// sin haber decidido cuándo ponerse.
+    @Test func deadlineIsIndependentOfScheduling() {
+        let s = Store(inMemory: true)
+        let t = s.addItem(title: "Entregar informe", in: .inbox)
+        s.setDeadline(t, to: fecha(5))
+        #expect(s.items[0].when == nil)
+        #expect(s.items[0].deadline != nil)
+        // Sigue en la bandeja: tener entrega no es haberla planificado.
+        #expect(s.count(for: .inbox) == 1)
+    }
+
+    /// Una entrega que vence arrastra la tarea a Hoy aunque no estuviera
+    /// planificada: si no saliera el día que toca, no serviría de nada.
+    @Test func aDueDeadlinePullsTheTaskIntoToday() {
+        let s = Store(inMemory: true)
+        let t = s.addItem(title: "Entregar hoy", in: .inbox)
+        #expect(s.count(for: .today) == 0)
+        s.setDeadline(t, to: .now)
+        #expect(s.count(for: .today) == 1)
+    }
+
+    @Test func anOverdueDeadlineAlsoPullsItIn() {
+        let s = Store(inMemory: true)
+        let t = s.addItem(title: "Se pasó", in: .inbox)
+        s.setDeadline(t, to: fecha(-3))
+        #expect(s.count(for: .today) == 1)
+        #expect(s.items[0].isOverdue)
+        #expect(s.items[0].deadlineIsDue)
+    }
+
+    /// Una entrega futura no adelanta nada.
+    @Test func aFutureDeadlineDoesNotPullItIn() {
+        let s = Store(inMemory: true)
+        let t = s.addItem(title: "Para la semana que viene", in: .inbox)
+        s.setDeadline(t, to: fecha(7))
+        #expect(s.count(for: .today) == 0)
+        #expect(!s.items[0].isOverdue)
+        #expect(!s.items[0].deadlineIsDue)
+    }
+
+    /// Lo aparcado se respeta: aparcarlo fue una decisión explícita.
+    @Test func parkedTasksStayParkedEvenIfOverdue() {
+        let s = Store(inMemory: true)
+        let t = s.addItem(title: "Aparcada con entrega", in: .someday)
+        s.setDeadline(t, to: fecha(-2))
+        #expect(s.count(for: .today) == 0)
+        #expect(s.count(for: .someday) == 1)
+    }
+
+    /// Completar apaga el aviso: ya no hay nada que entregar.
+    @Test func completingClearsTheUrgency() {
+        let s = Store(inMemory: true)
+        let t = s.addItem(title: "Entregada", in: .inbox)
+        s.setDeadline(t, to: fecha(-1))
+        s.toggleComplete(s.items[0])
+        #expect(!s.items[0].isOverdue)
+        #expect(s.count(for: .today) == 0)
+    }
+
+    @Test func clearingTheDeadlineRemovesItFromToday() {
+        let s = Store(inMemory: true)
+        let t = s.addItem(title: "x", in: .inbox)
+        s.setDeadline(t, to: .now)
+        #expect(s.count(for: .today) == 1)
+        s.setDeadline(s.items[0], to: nil)
+        #expect(s.count(for: .today) == 0)
+    }
+}
+
 /// Tareas repetitivas: al completar una nace la siguiente, y la completada se
 /// queda en el historial.
 @MainActor

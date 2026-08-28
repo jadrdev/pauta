@@ -57,6 +57,11 @@ public struct Item: Identifiable, Codable, Hashable {
     /// y así reordenar toca **un solo archivo** en vez de reescribirlos todos —
     /// que con la carpeta sincronizada importa mucho.
     public var position: Double = 0
+    /// Fecha de entrega, distinta de `when`.
+    ///
+    /// `when` es cuándo pienso ponerme; `deadline` es cuándo tiene que estar. Son
+    /// cosas distintas y mezclarlas obliga a elegir entre planificar y avisar.
+    public var deadline: Date?
     /// Cada cuánto se repite, si se repite.
     public var recurrence: Recurrence?
     /// Si esta tarea nació al completarse otra repetitiva, cuál era.
@@ -95,13 +100,35 @@ public struct Item: Identifiable, Codable, Hashable {
         updatedAt   = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
         deletedAt   = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
         position    = try c.decodeIfPresent(Double.self, forKey: .position) ?? 0
+        deadline    = try c.decodeIfPresent(Date.self,   forKey: .deadline)
         recurrence  = try c.decodeIfPresent(Recurrence.self, forKey: .recurrence)
         spawnedFrom = try c.decodeIfPresent(UUID.self,   forKey: .spawnedFrom)
     }
 
-    /// Planificada para hoy o antes (una tarea vencida sigue estando en Hoy).
+    /// Su fecha límite es hoy o ya pasó.
+    public var deadlineIsDue: Bool {
+        guard let deadline, !isCompleted else { return false }
+        return Calendar.current.startOfDay(for: deadline)
+            <= Calendar.current.startOfDay(for: .now)
+    }
+
+    /// La fecha límite ya pasó: no es «para hoy», es tarde.
+    public var isOverdue: Bool {
+        guard let deadline, !isCompleted else { return false }
+        return Calendar.current.startOfDay(for: deadline)
+            < Calendar.current.startOfDay(for: .now)
+    }
+
+    /// Planificada para hoy o antes, o con la fecha límite encima.
+    ///
+    /// Una fecha límite que vence arrastra la tarea a Hoy aunque no estuviera
+    /// planificada: si no saliera a la superficie el día que toca, no serviría de
+    /// nada. Lo aparcado en «Algún día» sí se respeta, porque aparcarlo fue una
+    /// decisión explícita.
     public var isToday: Bool {
-        guard let when, !isCompleted, !isSomeday else { return false }
+        guard !isCompleted, !isSomeday else { return false }
+        if deadlineIsDue { return true }
+        guard let when else { return false }
         return Calendar.current.startOfDay(for: when) <= Calendar.current.startOfDay(for: .now)
     }
 

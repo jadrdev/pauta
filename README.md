@@ -18,7 +18,7 @@ mueve de lista sola.
 | Lista | Qué contiene |
 |---|---|
 | Bandeja | Sin fecha, sin proyecto y sin aparcar: lo que aún no has decidido |
-| Hoy | Planificadas para hoy o antes. Una tarea vencida sigue apareciendo aquí |
+| Hoy | Planificadas para hoy o antes, más lo que tenga la **fecha límite encima**. Una tarea vencida sigue apareciendo aquí |
 | Próximamente | Planificadas para más adelante, **agrupadas por día** |
 | Cualquier momento | Lo que se puede hacer ya: Hoy más las tareas de proyecto sin fecha. La bandeja queda fuera: lo que hay allí aún está sin decidir |
 | Algún día | Aparcadas a propósito, sin fecha |
@@ -114,6 +114,22 @@ atribuye la petición al proceso responsable, que es la consola.
 
 Escribir tareas de Pauta como recordatorios, en cambio, no está previsto: duplica
 y obliga a resolver conflictos en los dos lados.
+
+## Fechas límite
+
+Una cosa es **cuándo pienso ponerme** (la fecha de planificación) y otra **cuándo
+tiene que estar** (la fecha límite). Son campos distintos: se puede tener una
+entrega el viernes sin haber decidido aún qué día ponerse, y esa tarea se queda en
+la bandeja hasta que lo decidas.
+
+Pero una fecha límite que no avisa no sirve de nada, así que **cuando vence
+arrastra la tarea a `Hoy`** aunque no estuviera planificada. Lo aparcado en `Algún
+día` se respeta: aparcarlo fue una decisión explícita.
+
+En la lista, la fecha límite se muestra a la derecha: apagada mientras queda
+margen, y en rojo con un triángulo cuando es hoy o ya pasó. En rojo solo cuando
+aprieta — si todas gritaran, ninguna diría nada. Al completar la tarea el aviso se
+apaga: ya no hay nada que entregar.
 
 ## Tareas repetitivas
 
@@ -407,7 +423,6 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
 - **Fusionar en vez de recargar entero.** Al detectar un cambio se relee toda la
   carpeta. Con cientos de tareas conviene releer solo lo que cambió
 - Áreas que agrupen proyectos
-- Fechas límite, distintas de la fecha de planificación
 - Listas de comprobación y etiquetas (y la elección al pegar varias líneas)
 - Arrastrar para reordenar
 - Sincronización entre dispositivos
