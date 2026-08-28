@@ -53,8 +53,10 @@ Una tarea nueva nace ya encajada en la lista donde la creas: en Hoy sale con la
 fecha de hoy, en Próximamente con la de mañana, en Algún día aparcada, y dentro
 de un proyecto asignada a él.
 
-Clic en una tarea la despliega para editar título, notas, fecha y proyecto; se
-guarda mientras escribes, sin botón de guardar. Clic derecho abre las acciones
+Clic en una tarea la despliega para editar título, notas, fecha, repetición y
+proyecto; se guarda mientras escribes, sin botón de guardar. El menú de fecha
+tiene atajos para hoy, mañana y la semana que viene, y **«Otra fecha…» abre un
+calendario** para cualquier día. Clic derecho abre las acciones
 rápidas: programar, aparcar o eliminar.
 
 **Arrastrar** hace dos cosas según dónde sueltes:
@@ -112,6 +114,22 @@ atribuye la petición al proceso responsable, que es la consola.
 
 Escribir tareas de Pauta como recordatorios, en cambio, no está previsto: duplica
 y obliga a resolver conflictos en los dos lados.
+
+## Tareas repetitivas
+
+Una tarea puede repetirse cada día, semana, mes o año. Al **completarla**, la
+completada se queda en el historial y **nace la siguiente** con la fecha
+avanzada, heredando notas y proyecto.
+
+Esa es la decisión que importa: la alternativa —mover la misma tarea hacia
+adelante— dejaría sin rastro de lo hecho, que es justo lo que uno quiere ver de
+una rutina.
+
+La siguiente fecha se cuenta **desde el día que tenía asignado, no desde hoy**:
+completar tarde una tarea semanal no debe desplazarle el día para siempre.
+
+Y descompletar retira la sucesora si nadie la ha tocado, porque marcar y desmarcar
+acumularía copias. Por eso cada sucesora recuerda de cuál nació.
 
 ## Barra de menús
 
@@ -389,7 +407,7 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
 - **Fusionar en vez de recargar entero.** Al detectar un cambio se relee toda la
   carpeta. Con cientos de tareas conviene releer solo lo que cambió
 - Áreas que agrupen proyectos
-- Tareas repetitivas y fechas límite
+- Fechas límite, distintas de la fecha de planificación
 - Listas de comprobación y etiquetas (y la elección al pegar varias líneas)
 - Arrastrar para reordenar
 - Sincronización entre dispositivos

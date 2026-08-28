@@ -147,6 +147,87 @@ struct MoveTests {
     }
 }
 
+/// Tareas repetitivas: al completar una nace la siguiente, y la completada se
+/// queda en el historial.
+@MainActor
+struct RecurrenceTests {
+    @Test func completingSpawnsTheNextOne() {
+        let s = Store(inMemory: true)
+        var tarea = s.addItem(title: "Sacar la basura", in: .today)
+        tarea.recurrence = .diaria
+        s.update(tarea)
+
+        s.toggleComplete(s.items[0])
+        #expect(s.count(for: .completed) == 1)
+        #expect(s.count(for: .today) == 0)   // la siguiente es mañana
+        #expect(s.count(for: .upcoming) == 1)
+        #expect(s.items(for: .upcoming)[0].recurrence == .diaria)
+    }
+
+    /// La sucesora hereda notas y proyecto: es la misma rutina otra vez.
+    @Test func theSuccessorInheritsNotesAndProject() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Casa")
+        var tarea = s.addItem(title: "Regar las plantas", in: .project(p.id))
+        tarea.notes = "Las del balcón también"
+        tarea.recurrence = .semanal
+        tarea.when = Calendar.current.startOfDay(for: .now)
+        s.update(tarea)
+
+        s.toggleComplete(s.items[0])
+        let siguiente = s.items.first { !$0.isCompleted }
+        #expect(siguiente?.notes == "Las del balcón también")
+        #expect(siguiente?.projectID == p.id)
+    }
+
+    /// Se cuenta desde la fecha que tenía, no desde hoy: completar tarde una
+    /// tarea semanal no debe desplazar su día para siempre.
+    @Test func theNextDateCountsFromTheScheduledDayNotToday() {
+        let s = Store(inMemory: true)
+        let hace3 = Calendar.current.date(byAdding: .day, value: -3, to: .now)!
+        var tarea = s.addItem(title: "Semanal", in: .inbox)
+        tarea.recurrence = .semanal
+        s.update(tarea)
+        s.schedule(s.items[0], to: hace3)
+
+        s.toggleComplete(s.items[0])
+        let siguiente = s.items.first { !$0.isCompleted }
+        let esperado = Recurrence.semanal.next(after: Calendar.current.startOfDay(for: hace3))
+        #expect(siguiente?.when == esperado)
+    }
+
+    /// Marcar y desmarcar no debe dejar copias acumuladas.
+    @Test func uncompletingRetiresTheSpawnedSuccessor() {
+        let s = Store(inMemory: true)
+        var tarea = s.addItem(title: "Repetitiva", in: .today)
+        tarea.recurrence = .diaria
+        s.update(tarea)
+
+        s.toggleComplete(s.items[0])
+        #expect(s.items.filter { !$0.isCompleted }.count == 1)
+        s.toggleComplete(s.items.first { $0.isCompleted }!)
+        #expect(s.items.filter { !$0.isCompleted }.count == 1)
+        #expect(s.count(for: .completed) == 0)
+    }
+
+    /// Una tarea sin repetición no genera nada.
+    @Test func nonRecurringTasksSpawnNothing() {
+        let s = Store(inMemory: true)
+        let tarea = s.addItem(title: "Normal", in: .today)
+        s.toggleComplete(tarea)
+        #expect(s.items.count == 1)
+    }
+
+    @Test func nextDatesAreCorrect() {
+        let cal = Calendar.current
+        let base = cal.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))
+        #expect(Recurrence.diaria.next(after: base) == cal.date(byAdding: .day, value: 1, to: base))
+        #expect(Recurrence.semanal.next(after: base) == cal.date(byAdding: .weekOfYear, value: 1, to: base))
+        #expect(Recurrence.mensual.next(after: base) == cal.date(byAdding: .month, value: 1, to: base))
+        #expect(Recurrence.anual.next(after: base) == cal.date(byAdding: .year, value: 1, to: base))
+    }
+}
+
 /// La purga de lápidas: dejan de proteger cuando todos los dispositivos ya han
 /// visto el borrado, y a partir de ahí solo estorban.
 @MainActor

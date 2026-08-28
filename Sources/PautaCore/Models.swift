@@ -1,5 +1,32 @@
 import Foundation
 
+/// Cada cuánto se repite una tarea.
+public enum Recurrence: String, Codable, CaseIterable, Sendable {
+    case diaria, semanal, mensual, anual
+
+    public var title: String {
+        switch self {
+        case .diaria: "Cada día"
+        case .semanal: "Cada semana"
+        case .mensual: "Cada mes"
+        case .anual: "Cada año"
+        }
+    }
+
+    /// La siguiente fecha a partir de una dada.
+    public func next(after date: Date, calendar: Calendar = .current) -> Date {
+        let componente: Calendar.Component
+        switch self {
+        case .diaria: componente = .day
+        case .semanal: componente = .weekOfYear
+        case .mensual: componente = .month
+        case .anual: componente = .year
+        }
+        return calendar.startOfDay(
+            for: calendar.date(byAdding: componente, value: 1, to: date) ?? date)
+    }
+}
+
 // MARK: - Tarea
 
 public struct Item: Identifiable, Codable, Hashable {
@@ -30,6 +57,13 @@ public struct Item: Identifiable, Codable, Hashable {
     /// y así reordenar toca **un solo archivo** en vez de reescribirlos todos —
     /// que con la carpeta sincronizada importa mucho.
     public var position: Double = 0
+    /// Cada cuánto se repite, si se repite.
+    public var recurrence: Recurrence?
+    /// Si esta tarea nació al completarse otra repetitiva, cuál era.
+    ///
+    /// Sirve para deshacer: si descompletas la original, la sucesora que generó
+    /// se retira, en vez de quedarse ahí duplicando el trabajo.
+    public var spawnedFrom: UUID?
     /// Identificador en la fuente externa de la que se capturó, si vino de una.
     /// Evita reimportarla si el marcado en el origen falló.
     public var sourceID: String?
@@ -61,6 +95,8 @@ public struct Item: Identifiable, Codable, Hashable {
         updatedAt   = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
         deletedAt   = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
         position    = try c.decodeIfPresent(Double.self, forKey: .position) ?? 0
+        recurrence  = try c.decodeIfPresent(Recurrence.self, forKey: .recurrence)
+        spawnedFrom = try c.decodeIfPresent(UUID.self,   forKey: .spawnedFrom)
     }
 
     /// Planificada para hoy o antes (una tarea vencida sigue estando en Hoy).

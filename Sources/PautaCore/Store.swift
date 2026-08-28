@@ -522,10 +522,48 @@ public final class Store {
     }
 
     public func toggleComplete(_ item: Item) {
+        let completandoAhora = !item.isCompleted
         mutateItem(item.id) {
             $0.isCompleted.toggle()
             $0.completedAt = $0.isCompleted ? Store.stamped() : nil
         }
+        if completandoAhora {
+            spawnNextOccurrence(of: item)
+        } else {
+            retireSpawnedSuccessor(of: item)
+        }
+    }
+
+    /// Al completar una tarea repetitiva, crea la siguiente.
+    ///
+    /// La completada se queda en el historial y nace una sucesora con la fecha
+    /// avanzada. La alternativa —mover la misma tarea hacia adelante— dejaría sin
+    /// rastro de lo hecho, que es justo lo que uno quiere ver de una rutina.
+    private func spawnNextOccurrence(of item: Item) {
+        guard let recurrence = item.recurrence else { return }
+        // Se cuenta desde la fecha que tenía, no desde hoy: si completas tarde
+        // una tarea semanal, la siguiente sigue cayendo en su día.
+        let base = item.when ?? Store.stamped()
+        var siguiente = Item(title: item.title)
+        siguiente.notes = item.notes
+        siguiente.projectID = item.projectID
+        siguiente.when = recurrence.next(after: base)
+        siguiente.recurrence = recurrence
+        siguiente.spawnedFrom = item.id
+        stampCreation(&siguiente)
+        siguiente.position = item.position
+        items.append(siguiente)
+        persist(siguiente)
+    }
+
+    /// Al descompletar, retira la sucesora que se generó si nadie la ha tocado.
+    ///
+    /// Sin esto, marcar y desmarcar una repetitiva dejaría copias acumuladas.
+    private func retireSpawnedSuccessor(of item: Item) {
+        guard let sucesora = items.first(where: {
+            $0.spawnedFrom == item.id && !$0.isCompleted
+        }) else { return }
+        delete(sucesora)
     }
 
     /// Borrar deja una lápida en lugar de eliminar el archivo: si se eliminara,
@@ -673,6 +711,11 @@ public final class Store {
         case .project(let id):
             mutateItem(item.id) { $0.projectID = id }
         }
+    }
+
+    /// Fija o quita la repetición.
+    public func setRecurrence(_ item: Item, to recurrence: Recurrence?) {
+        mutateItem(item.id) { $0.recurrence = recurrence }
     }
 
     /// Aparca la tarea en «Algún día», quitándole cualquier fecha.

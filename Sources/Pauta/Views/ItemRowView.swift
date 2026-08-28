@@ -65,6 +65,7 @@ struct ItemRowView: View {
     @State private var notes = ""
     @State private var hovering = false
     @State private var isDropTarget = false
+    @State private var eligiendoFecha = false
     @FocusState private var titleFocused: Bool
 
     private var isSelected: Bool { nav.selectedItemID == item.id }
@@ -143,6 +144,11 @@ struct ItemRowView: View {
     /// Indicadores a la derecha: notas, proyecto y fecha, en texto tenue.
     @ViewBuilder private var badges: some View {
         HStack(spacing: 12) {
+            if item.recurrence != nil {
+                Image(systemName: "repeat")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Paper.inkFaint)
+            }
             if !item.notes.isEmpty {
                 Image(systemName: "text.alignleft")
                     .font(.system(size: 9))
@@ -210,6 +216,7 @@ struct ItemRowView: View {
                     Button("Próxima semana") {
                         store.schedule(item, to: Calendar.current.date(byAdding: .day, value: 7, to: .now))
                     }
+                    Button("Otra fecha…") { eligiendoFecha = true }
                     Divider()
                     Button("Algún día") { store.park(item) }
                     Button("Sin fecha") { store.schedule(item, to: nil) }
@@ -219,6 +226,32 @@ struct ItemRowView: View {
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .fixedSize()
+                // Sin esto no había forma de programar nada más allá de la
+                // semana que viene: los atajos cubren lo frecuente, no todo.
+                .popover(isPresented: $eligiendoFecha, arrowEdge: .bottom) {
+                    SelectorDeFecha(inicial: item.when ?? Date()) { fecha in
+                        store.schedule(item, to: fecha)
+                        eligiendoFecha = false
+                    }
+                }
+
+                Menu {
+                    Button("No se repite") { store.setRecurrence(item, to: nil) }
+                    Divider()
+                    ForEach(Recurrence.allCases, id: \.self) { cada in
+                        Button(cada.title) { store.setRecurrence(item, to: cada) }
+                    }
+                } label: {
+                    Text((item.recurrence?.title ?? "No se repite").uppercased())
+                        .rubricStyle()
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                // Con `tint` y no con `foregroundStyle`: los Menu sin borde
+                // colorean su etiqueta con el tint e ignoran el estilo de primer
+                // plano. Sin repetición va apagado; con ella, en verde.
+                .tint(item.recurrence == nil ? Paper.inkSoft : Paper.accentInk)
 
                 Menu {
                     Button("Bandeja") { move(to: nil) }
@@ -227,11 +260,13 @@ struct ItemRowView: View {
                         Button(project.name.isEmpty ? "Sin título" : project.name) { move(to: project.id) }
                     }
                 } label: {
-                    Text(projectLabel.uppercased()).rubricStyle(Paper.inkSoft)
+                    Text(projectLabel.uppercased()).rubricStyle()
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .fixedSize()
+                // El proyecto es contexto, no acción: apagado.
+                .tint(Paper.inkSoft)
 
                 Spacer()
 
@@ -307,5 +342,32 @@ private struct SelectedPanel: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+/// Calendario para elegir una fecha cualquiera.
+struct SelectorDeFecha: View {
+    let inicial: Date
+    let alElegir: (Date) -> Void
+
+    @State private var fecha: Date
+
+    init(inicial: Date, alElegir: @escaping (Date) -> Void) {
+        self.inicial = inicial
+        self.alElegir = alElegir
+        _fecha = State(initialValue: inicial)
+    }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            DatePicker("", selection: $fecha, displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+            Button("Programar") { alElegir(fecha) }
+                .buttonStyle(.borderedProminent)
+                .tint(Paper.accentInk)
+        }
+        .padding(14)
+        .frame(width: 280)
     }
 }
