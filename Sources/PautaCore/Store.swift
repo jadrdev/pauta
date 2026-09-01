@@ -519,7 +519,22 @@ public final class Store {
                 .sorted(by: Item.byPosition)
         case .area(let id):
             itemsInArea(id)
+        case .tag(let name):
+            items.filter { !$0.isCompleted && $0.hasTag(name) }
+                .sorted(by: Item.byPosition)
         }
+    }
+
+    /// Las etiquetas en uso, en orden alfabético del idioma.
+    ///
+    /// Salen de las tareas y no de una lista aparte: una etiqueta existe
+    /// mientras algo la lleve, y así no quedan etiquetas huérfanas que limpiar.
+    public var allTags: [String] {
+        var vistas: [String: String] = [:]
+        for item in items where !item.isCompleted {
+            for tag in item.tags { vistas[tag.lowercased()] = tag }
+        }
+        return vistas.values.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
     /// Un área no tiene tareas propias: enseña las de sus proyectos.
@@ -579,6 +594,17 @@ public final class Store {
         Store.titles(from: text).map { addItem(title: $0, in: perspective) }
     }
 
+    /// La otra lectura del mismo texto: una sola tarea, y el resto de líneas
+    /// como sus pasos. La primera línea hace de título.
+    @discardableResult
+    public func addItemWithChecklist(from text: String, in perspective: Perspective) -> Item? {
+        let titulos = Store.titles(from: text)
+        guard let primera = titulos.first else { return nil }
+        let item = addItem(title: primera, in: perspective)
+        for paso in titulos.dropFirst() { addStep(to: item, title: paso) }
+        return items.first { $0.id == item.id }
+    }
+
     /// Crea una tarea ya encajada en la perspectiva activa.
     @discardableResult
     public func addItem(title: String, in perspective: Perspective) -> Item {
@@ -597,6 +623,9 @@ public final class Store {
             item.isSomeday = true
         case .project(let id):
             item.projectID = id
+        // Creada dentro de una etiqueta, nace con ella puesta.
+        case .tag(let name):
+            item.tags = [name]
         // Un área no puede recibir una tarea: no sabría a qué proyecto colgarla.
         // La interfaz ni siquiera ofrece añadir estando en una.
         case .inbox, .completed, .area:
@@ -862,6 +891,10 @@ public final class Store {
             mutateItem(item.id) { $0.projectID = id }
         case .area:
             break
+        // Soltar una tarea sobre una etiqueta se la pone; no le quita las demás,
+        // que para eso no son excluyentes.
+        case .tag(let name):
+            addTag(item, name)
         }
     }
 
@@ -973,6 +1006,89 @@ public final class Store {
         mutateProject(project.id) { $0.icon = icon }
     }
 
+    // MARK: - Listas de comprobación
+
+    /// Añade un paso al final de la lista de la tarea.
+    @discardableResult
+    public func addStep(to item: Item, title: String) -> ChecklistStep? {
+        let limpio = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !limpio.isEmpty else { return nil }
+        let paso = ChecklistStep(title: limpio)
+        mutateItem(item.id) { $0.checklist.append(paso) }
+        return paso
+    }
+
+    public func toggleStep(_ item: Item, _ stepID: UUID) {
+        mutateItem(item.id) {
+            guard let i = $0.checklist.firstIndex(where: { $0.id == stepID }) else { return }
+            $0.checklist[i].isCompleted.toggle()
+        }
+    }
+
+    /// Cambia el texto de un paso. Dejarlo en blanco lo borra: un paso sin texto
+    /// no dice nada y solo estorba.
+    public func renameStep(_ item: Item, _ stepID: UUID, to title: String) {
+        let limpio = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if limpio.isEmpty { deleteStep(item, stepID); return }
+        mutateItem(item.id) {
+            guard let i = $0.checklist.firstIndex(where: { $0.id == stepID }) else { return }
+            $0.checklist[i].title = limpio
+        }
+    }
+
+    public func deleteStep(_ item: Item, _ stepID: UUID) {
+        mutateItem(item.id) { $0.checklist.removeAll { $0.id == stepID } }
+    }
+
+    // MARK: - Etiquetas
+
+    /// Pone una etiqueta. Sin repetir y sin distinguir mayúsculas: «Casa» y
+    /// «casa» son la misma, y dos veces la misma no dice nada dos veces.
+    public func addTag(_ item: Item, _ name: String) {
+        let limpio = Store.normalize(tag: name)
+        guard !limpio.isEmpty else { return }
+        mutateItem(item.id) {
+            guard !$0.hasTag(limpio) else { return }
+            $0.tags.append(limpio)
+        }
+    }
+
+    public func removeTag(_ item: Item, _ name: String) {
+        mutateItem(item.id) {
+            $0.tags.removeAll { $0.caseInsensitiveCompare(name) == .orderedSame }
+        }
+    }
+
+    /// Cambia el nombre de una etiqueta en todas las tareas que la lleven.
+    ///
+    /// Es el precio de que una etiqueta sea solo su nombre: renombrar toca cada
+    /// tarea. A cambio no hay entidad que mantener viva ni etiquetas huérfanas.
+    public func renameTag(_ old: String, to new: String) {
+        let limpio = Store.normalize(tag: new)
+        guard !limpio.isEmpty else { return }
+        for item in items where item.hasTag(old) {
+            mutateItem(item.id) {
+                $0.tags = $0.tags.map {
+                    $0.caseInsensitiveCompare(old) == .orderedSame ? limpio : $0
+                }
+                // Si ya llevaba la de destino, renombrar la dejaría dos veces.
+                var vistas = Set<String>()
+                $0.tags = $0.tags.filter { vistas.insert($0.lowercased()).inserted }
+            }
+        }
+    }
+
+    public func deleteTag(_ name: String) {
+        for item in items where item.hasTag(name) { removeTag(item, name) }
+    }
+
+    /// Una etiqueta es una palabra: sin espacios sobrantes ni saltos de línea.
+    static func normalize(tag: String) -> String {
+        tag.trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
+    }
+
     /// Mete el proyecto en un área, o lo saca de todas si es `nil`.
     public func move(_ project: Project, toArea areaID: UUID?) {
         mutateProject(project.id) { $0.areaID = areaID }
@@ -1065,6 +1181,15 @@ extension Store {
         // Sin fecha: solo se ve en el proyecto y en Cualquier momento.
         store.addItem(title: "Escribir los textos de la portada", in: .project(project.id))
         store.addItem(title: "Comprar entradas del concierto", in: .inbox)
+        // Una lista de comprobación y unas etiquetas, para que se vean.
+        for paso in ["Cerrar junio", "Pedir facturas", "Enviar a gestoría"] {
+            store.addStep(to: budget, title: paso)
+        }
+        store.toggleStep(budget, store.items.first { $0.id == budget.id }!.checklist[0].id)
+        store.addTag(budget, "trabajo")
+        store.addTag(store.items.first { $0.title == "Llamar al fontanero" }!, "casa")
+        store.addTag(store.items.first { $0.title == "Llamar al fontanero" }!, "recados")
+        store.addTag(store.items.first { $0.title == "Comprar entradas del concierto" }!, "ocio")
         // Dos días distintos, para que se vea el agrupado de Próximamente.
         let calendar = Calendar.current
         let dentist = store.addItem(title: "Cita con el dentista", in: .upcoming)

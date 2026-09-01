@@ -6,6 +6,7 @@ struct ItemListView: View {
     @Environment(Navigation.self) private var nav
 
     @State private var draftTitle = ""
+    @State private var pegado: String?
     @State private var isEndDropTarget = false
     @FocusState private var draftFocused: Bool
 
@@ -37,7 +38,9 @@ struct ItemListView: View {
                     }
                 }
 
-                if nav.isAddingItem {
+                if let pegado {
+                    eleccionDePegado(pegado)
+                } else if nav.isAddingItem {
                     draftRow
                 } else if nav.perspective.acceptsNewItems {
                     addButton
@@ -137,6 +140,7 @@ struct ItemListView: View {
         case .completed: "Todavía no has completado nada."
         case .project: "Este proyecto no tiene tareas."
         case .area: "Los proyectos de esta área no tienen nada pendiente."
+        case .tag: "Nada lleva esta etiqueta."
         }
     }
 
@@ -195,7 +199,14 @@ struct ItemListView: View {
     }
 
     private func commitDraft(keepOpen: Bool = false) {
-        // Un texto pegado con varias líneas crea una tarea por línea.
+        // Con varias líneas hay dos lecturas razonables —varias tareas, o una
+        // con pasos— y ninguna es obviamente la buena, así que se pregunta en
+        // vez de decidir por el usuario.
+        if Store.titles(from: draftTitle).count > 1 {
+            pegado = draftTitle
+            draftTitle = ""
+            return
+        }
         let created = store.addItems(from: draftTitle, in: nav.perspective)
         draftTitle = ""
         if keepOpen && !created.isEmpty {
@@ -203,6 +214,55 @@ struct ItemListView: View {
         } else {
             nav.isAddingItem = false
         }
+    }
+
+    @ViewBuilder private func eleccionDePegado(_ texto: String) -> some View {
+        let titulos = Store.titles(from: texto)
+        VStack(alignment: .leading, spacing: 9) {
+            Text("HAS PEGADO \(titulos.count) LÍNEAS").rubricStyle()
+            Text(titulos.first ?? "")
+                .font(.system(size: 13.5, weight: .medium))
+                .foregroundStyle(Paper.ink)
+                .lineLimit(1)
+            HStack(spacing: 8) {
+                botonDeEleccion("\(titulos.count) tareas", destacado: true) {
+                    store.addItems(from: texto, in: nav.perspective)
+                    cerrarEleccion()
+                }
+                botonDeEleccion("Una tarea con \(titulos.count - 1) pasos") {
+                    store.addItemWithChecklist(from: texto, in: nav.perspective)
+                    cerrarEleccion()
+                }
+                Button("Cancelar") { cerrarEleccion() }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(Paper.inkFaint)
+            }
+        }
+        .padding(.vertical, 10)
+    }
+
+    private func botonDeEleccion(_ titulo: String,
+                                 destacado: Bool = false,
+                                 accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            Text(titulo)
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundStyle(destacado ? Paper.onAccent : Paper.ink)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(destacado ? AnyShapeStyle(Paper.accent)
+                                      : AnyShapeStyle(Paper.ink.opacity(0.07)),
+                            in: RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(destacado ? .clear : Paper.hairline))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func cerrarEleccion() {
+        pegado = nil
+        nav.isAddingItem = false
     }
 }
 

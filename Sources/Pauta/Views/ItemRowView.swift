@@ -68,6 +68,8 @@ struct ItemRowView: View {
     @State private var eligiendoFecha = false
     @State private var eligiendoLimite = false
     @State private var eligiendoFin = false
+    @State private var pasoNuevo = ""
+    @State private var poniendoEtiqueta = false
     @FocusState private var titleFocused: Bool
 
     private var isSelected: Bool { nav.selectedItemID == item.id }
@@ -143,6 +145,44 @@ struct ItemRowView: View {
         }
     }
 
+    /// Las etiquetas que la tarea lleva y no se dan por sabidas en esta lista.
+    private var etiquetasVisibles: [String] {
+        if case .tag(let actual) = nav.perspective {
+            return item.tags.filter { $0.caseInsensitiveCompare(actual) != .orderedSame }
+        }
+        return item.tags
+    }
+
+    @ViewBuilder private var etiquetas: some View {
+        HStack(spacing: 6) {
+            ForEach(item.tags, id: \.self) { tag in
+                EtiquetaChip(nombre: tag) { store.removeTag(item, tag) }
+            }
+            Menu {
+                // Las que ya existen primero: reutilizar una etiqueta vale más
+                // que inventarse otra parecida.
+                ForEach(store.allTags.filter { !item.hasTag($0) }, id: \.self) { tag in
+                    Button(tag) { store.addTag(item, tag) }
+                }
+                if !store.allTags.filter({ !item.hasTag($0) }).isEmpty { Divider() }
+                Button("Nueva etiqueta…") { poniendoEtiqueta = true }
+            } label: {
+                Text(item.tags.isEmpty ? "+ ETIQUETA" : "+").rubricStyle()
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .tint(Paper.inkSoft)
+            .popover(isPresented: $poniendoEtiqueta, arrowEdge: .bottom) {
+                CampoEmergente(titulo: "Nueva etiqueta", accion: "Poner") { nombre in
+                    store.addTag(item, nombre)
+                    poniendoEtiqueta = false
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
     /// Indicadores a la derecha: notas, proyecto y fecha, en texto tenue.
     @ViewBuilder private var badges: some View {
         HStack(spacing: 12) {
@@ -164,6 +204,27 @@ struct ItemRowView: View {
                 Image(systemName: "text.alignleft")
                     .font(.system(size: 9))
                     .foregroundStyle(Paper.inkFaint)
+            }
+            if !item.checklist.isEmpty {
+                HStack(spacing: 3) {
+                    Image(systemName: "checklist").font(.system(size: 9))
+                    Text("\(item.checklistDone)/\(item.checklist.count)")
+                        .font(.system(size: 11, weight: .medium).monospacedDigit())
+                }
+                // En verde solo cuando está entera: si no, es una cuenta más.
+                .foregroundStyle(item.checklistDone == item.checklist.count
+                                 ? Paper.accentInk : Paper.inkFaint)
+            }
+            // Las etiquetas de la lista que estás mirando no se repiten en cada
+            // fila: ahí ya se sabe que todas la llevan.
+            if !etiquetasVisibles.isEmpty {
+                HStack(spacing: 3) {
+                    Image(systemName: "tag").font(.system(size: 9))
+                    Text(etiquetasVisibles.joined(separator: ", "))
+                        .font(.system(size: 11, weight: .medium))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(Paper.inkFaint)
             }
             // Distintivo de proyecto: con el emoji del proyecto, si lo tiene, y
             // sobre una pastilla tenue. Sin ella, en una ventana ancha el nombre
@@ -217,6 +278,36 @@ struct ItemRowView: View {
                 .font(.system(size: 12.5))
                 .foregroundStyle(Paper.inkSoft)
                 .lineLimit(1...6)
+
+            if !item.checklist.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(item.checklist) { paso in
+                        PasoRow(paso: paso,
+                                alMarcar: { store.toggleStep(item, paso.id) },
+                                alCambiar: { store.renameStep(item, paso.id, to: $0) },
+                                alBorrar: { store.deleteStep(item, paso.id) })
+                    }
+                }
+            }
+
+            // El campo de paso nuevo está siempre mientras la fila esté abierta:
+            // es lo que hace descubrible que una tarea puede ser una lista.
+            HStack(spacing: 9) {
+                Image(systemName: "plus")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Paper.inkFaint)
+                    .frame(width: 14)
+                TextField("Añadir paso", text: $pasoNuevo)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(Paper.ink)
+                    .onSubmit {
+                        store.addStep(to: item, title: pasoNuevo)
+                        pasoNuevo = ""
+                    }
+            }
+
+            etiquetas
 
             HStack(spacing: 18) {
                 Menu {
@@ -620,5 +711,121 @@ private struct DiaCelda: View {
 private extension Calendar {
     func inicioDeMes(_ fecha: Date) -> Date {
         date(from: dateComponents([.year, .month], from: fecha)) ?? startOfDay(for: fecha)
+    }
+}
+
+
+/// Un paso de la lista de comprobación.
+private struct PasoRow: View {
+    let paso: ChecklistStep
+    let alMarcar: () -> Void
+    let alCambiar: (String) -> Void
+    let alBorrar: () -> Void
+
+    @State private var texto = ""
+    @State private var encima = false
+
+    var body: some View {
+        HStack(spacing: 9) {
+            Button(action: alMarcar) {
+                Image(systemName: paso.isCompleted ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 12))
+                    .foregroundStyle(paso.isCompleted ? Paper.accentInk : Paper.inkFaint)
+                    .frame(width: 14)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            TextField("", text: $texto)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12.5))
+                .strikethrough(paso.isCompleted, color: Paper.inkFaint)
+                .foregroundStyle(paso.isCompleted ? Paper.inkFaint : Paper.ink)
+                .onSubmit { alCambiar(texto) }
+            if encima {
+                Button(action: alBorrar) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8.5, weight: .bold))
+                        .foregroundStyle(Paper.inkFaint)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .onHover { encima = $0 }
+        .onAppear { texto = paso.title }
+        .onChange(of: paso.title) { texto = paso.title }
+    }
+}
+
+/// Pastilla de etiqueta, con su aspa para quitarla al pasar por encima.
+private struct EtiquetaChip: View {
+    let nombre: String
+    let alQuitar: () -> Void
+    @State private var encima = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(nombre)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Paper.inkSoft)
+            if encima {
+                Button(action: alQuitar) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 7.5, weight: .bold))
+                        .foregroundStyle(Paper.inkFaint)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 2)
+        .background(Capsule().fill(Paper.ink.opacity(0.07)))
+        .overlay(Capsule().strokeBorder(Paper.hairline, lineWidth: 1))
+        .onHover { encima = $0 }
+    }
+}
+
+/// Un campo de texto suelto en un panel, para lo que no cabe en un menú.
+struct CampoEmergente: View {
+    let titulo: String
+    let accion: String
+    var inicial: String = ""
+    let alConfirmar: (String) -> Void
+
+    @State private var texto = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(titulo.uppercased()).rubricStyle()
+            TextField("", text: $texto)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .foregroundStyle(Paper.ink)
+                .frame(width: 190)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 6)
+                .background(Paper.ink.opacity(0.06), in: RoundedRectangle(cornerRadius: 7))
+                .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Paper.hairline))
+                .onSubmit { confirmar() }
+            Button(action: confirmar) {
+                Text(accion)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(Paper.onAccent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .background(Paper.accent, in: RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(14)
+        .onAppear { texto = inicial }
+    }
+
+    private func confirmar() {
+        let limpio = texto.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !limpio.isEmpty else { return }
+        alConfirmar(limpio)
+        texto = ""
     }
 }

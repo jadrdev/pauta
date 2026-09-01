@@ -1216,3 +1216,197 @@ struct AreaTests {
         #expect(s.projects(in: nil).map(\.name) == ["viejo"])
     }
 }
+
+/// Listas de comprobación: pasos dentro de una tarea.
+@MainActor
+struct ChecklistTests {
+    private func tempRoot() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaLista-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    private func recargar(_ s: Store, _ id: UUID) -> Item? { s.items.first { $0.id == id } }
+
+    @Test func stepsKeepTheirOrder() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "mudanza", in: .inbox)
+        for paso in ["cajas", "furgoneta", "llaves"] { s.addStep(to: a, title: paso) }
+        #expect(recargar(s, a.id)?.checklist.map(\.title) == ["cajas", "furgoneta", "llaves"])
+    }
+
+    @Test func blankStepsAreNotCreated() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "mudanza", in: .inbox)
+        s.addStep(to: a, title: "   ")
+        s.addStep(to: a, title: "")
+        #expect(recargar(s, a.id)?.checklist.isEmpty == true)
+    }
+
+    @Test func togglingCountsProgress() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "mudanza", in: .inbox)
+        for paso in ["cajas", "furgoneta"] { s.addStep(to: a, title: paso) }
+        let primero = recargar(s, a.id)!.checklist[0]
+        s.toggleStep(a, primero.id)
+        #expect(recargar(s, a.id)?.checklistDone == 1)
+        s.toggleStep(a, primero.id)
+        #expect(recargar(s, a.id)?.checklistDone == 0)
+    }
+
+    /// Un paso sin texto no dice nada: vaciarlo es borrarlo.
+    @Test func emptyingAStepDeletesIt() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "mudanza", in: .inbox)
+        s.addStep(to: a, title: "cajas")
+        s.addStep(to: a, title: "llaves")
+        let primero = recargar(s, a.id)!.checklist[0]
+        s.renameStep(a, primero.id, to: "  ")
+        #expect(recargar(s, a.id)?.checklist.map(\.title) == ["llaves"])
+    }
+
+    /// Completar la tarea entera no toca sus pasos: si la reabres, la lista
+    /// sigue por donde iba.
+    @Test func completingTheTaskLeavesTheStepsAlone() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "mudanza", in: .inbox)
+        s.addStep(to: a, title: "cajas")
+        s.toggleComplete(a)
+        #expect(recargar(s, a.id)?.checklist.count == 1)
+        #expect(recargar(s, a.id)?.checklistDone == 0)
+    }
+
+    @Test func stepsSurviveAReload() throws {
+        let root = tempRoot()
+        let s = Store(root: root)
+        let a = s.addItem(title: "mudanza", in: .inbox)
+        s.addStep(to: a, title: "cajas")
+        let paso = s.items.first { $0.id == a.id }!.checklist[0]
+        s.toggleStep(a, paso.id)
+
+        let leido = Store(root: root).items.first { $0.id == a.id }
+        #expect(leido?.checklist.map(\.title) == ["cajas"])
+        #expect(leido?.checklistDone == 1)
+    }
+
+    /// La otra lectura de un texto pegado: una tarea y el resto como pasos.
+    @Test func pastedTextCanBecomeOneTaskWithSteps() {
+        let s = Store(inMemory: true)
+        s.addItemWithChecklist(from: "Mudanza\n- cajas\n- furgoneta", in: .inbox)
+        #expect(s.items.count == 1)
+        #expect(s.items[0].title == "Mudanza")
+        #expect(s.items[0].checklist.map(\.title) == ["cajas", "furgoneta"])
+    }
+
+    @Test func orTheSameTextCanBecomeManyTasks() {
+        let s = Store(inMemory: true)
+        s.addItems(from: "Mudanza\n- cajas\n- furgoneta", in: .inbox)
+        #expect(s.items.map(\.title) == ["Mudanza", "cajas", "furgoneta"])
+        #expect(s.items.allSatisfy { $0.checklist.isEmpty })
+    }
+}
+
+/// Etiquetas: transversales a listas y proyectos.
+@MainActor
+struct TagTests {
+    private func recargar(_ s: Store, _ id: UUID) -> Item? { s.items.first { $0.id == id } }
+
+    @Test func aTagIsAListOfItsOwn() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "llamar", in: .inbox)
+        let b = s.addItem(title: "comprar", in: .today)
+        s.addTag(a, "recados")
+        s.addTag(b, "recados")
+        s.addItem(title: "otra", in: .inbox)
+
+        #expect(Set(s.items(for: .tag("recados")).map(\.title)) == ["llamar", "comprar"])
+        #expect(s.allTags == ["recados"])
+    }
+
+    /// «Casa» y «casa» son la misma etiqueta, y ponerla dos veces no la duplica.
+    @Test func tagsIgnoreCaseAndDoNotRepeat() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "regar", in: .inbox)
+        s.addTag(a, "Casa")
+        s.addTag(a, "casa")
+        s.addTag(a, "  CASA  ")
+        #expect(recargar(s, a.id)?.tags == ["Casa"])
+        #expect(s.items(for: .tag("casa")).count == 1)
+    }
+
+    @Test func whitespaceIsCollapsed() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "x", in: .inbox)
+        s.addTag(a, "  por   hacer \n")
+        #expect(recargar(s, a.id)?.tags == ["por hacer"])
+    }
+
+    @Test func aTaskCreatedInsideATagIsBornWithIt() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "nueva", in: .tag("recados"))
+        #expect(recargar(s, a.id)?.tags == ["recados"])
+        #expect(s.items(for: .tag("recados")).count == 1)
+    }
+
+    /// Soltar una tarea sobre una etiqueta se la pone y no le quita las otras:
+    /// las etiquetas no son excluyentes, a diferencia de las listas.
+    @Test func droppingOnATagAddsItWithoutRemovingTheRest() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "x", in: .inbox)
+        s.addTag(a, "casa")
+        s.move(a, to: .tag("urgente"))
+        #expect(recargar(s, a.id)?.tags == ["casa", "urgente"])
+    }
+
+    @Test func removingATagLeavesTheTask() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "x", in: .inbox)
+        s.addTag(a, "casa")
+        s.removeTag(a, "CASA")
+        #expect(recargar(s, a.id)?.tags.isEmpty == true)
+        #expect(s.items.count == 1)
+    }
+
+    @Test func renamingReachesEveryTaskThatCarriesIt() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "uno", in: .inbox)
+        let b = s.addItem(title: "dos", in: .inbox)
+        s.addTag(a, "recados")
+        s.addTag(b, "recados")
+        s.renameTag("recados", to: "encargos")
+        #expect(s.allTags == ["encargos"])
+        #expect(s.items(for: .tag("encargos")).count == 2)
+    }
+
+    /// Renombrar a una que la tarea ya llevaba las funde en una, no la deja dos
+    /// veces puesta.
+    @Test func renamingIntoAnExistingTagMergesThem() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "uno", in: .inbox)
+        s.addTag(a, "recados")
+        s.addTag(a, "casa")
+        s.renameTag("recados", to: "casa")
+        #expect(recargar(s, a.id)?.tags == ["casa"])
+    }
+
+    @Test func deletingATagOnlyRemovesTheLabel() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "uno", in: .inbox)
+        s.addTag(a, "recados")
+        s.deleteTag("recados")
+        #expect(s.allTags.isEmpty)
+        #expect(s.items.map(\.title) == ["uno"])
+    }
+
+    /// Las etiquetas salen de las tareas vivas: al completar la última que la
+    /// llevaba, la etiqueta deja de estorbar en la barra lateral.
+    @Test func aTagDisappearsWhenNothingPendingCarriesIt() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "uno", in: .inbox)
+        s.addTag(a, "recados")
+        #expect(s.allTags == ["recados"])
+        s.toggleComplete(a)
+        #expect(s.allTags.isEmpty)
+    }
+}

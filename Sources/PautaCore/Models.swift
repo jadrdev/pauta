@@ -29,6 +29,29 @@ public enum Recurrence: String, Codable, CaseIterable, Sendable {
 
 // MARK: - Tarea
 
+/// Un paso dentro de una tarea.
+///
+/// Es una lista de comprobación, no subtareas: no tiene fecha, ni proyecto, ni
+/// prioridad propia. Lo que se planifica sigue siendo la tarea entera; los pasos
+/// solo dicen por dónde va.
+public struct ChecklistStep: Identifiable, Codable, Hashable {
+    public var id = UUID()
+    public var title: String
+    public var isCompleted = false
+
+    public init(id: UUID = UUID(), title: String) {
+        self.id = id
+        self.title = title
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id          = try c.decodeIfPresent(UUID.self,   forKey: .id) ?? UUID()
+        title       = try c.decodeIfPresent(String.self, forKey: .title) ?? ""
+        isCompleted = try c.decodeIfPresent(Bool.self,   forKey: .isCompleted) ?? false
+    }
+}
+
 public struct Item: Identifiable, Codable, Hashable {
     public var id = UUID()
     public var title: String
@@ -78,6 +101,14 @@ public struct Item: Identifiable, Codable, Hashable {
     /// Identificador en la fuente externa de la que se capturó, si vino de una.
     /// Evita reimportarla si el marcado en el origen falló.
     public var sourceID: String?
+    /// Los pasos de la tarea, en orden. Vacío = no es una lista.
+    public var checklist: [ChecklistStep] = []
+    /// Etiquetas, en el orden en que se pusieron.
+    ///
+    /// Son cadenas y no objetos con identidad propia a propósito: una etiqueta
+    /// no es más que su nombre, y guardarla aparte obligaría a mantener viva una
+    /// entidad que nadie edita salvo para renombrarla.
+    public var tags: [String] = []
 
     public init(id: UUID = UUID(), title: String) {
         self.id = id
@@ -103,6 +134,8 @@ public struct Item: Identifiable, Codable, Hashable {
         projectID   = try c.decodeIfPresent(UUID.self,   forKey: .projectID)
         createdAt   = try c.decodeIfPresent(Date.self,   forKey: .createdAt) ?? Date()
         sourceID    = try c.decodeIfPresent(String.self, forKey: .sourceID)
+        checklist   = try c.decodeIfPresent([ChecklistStep].self, forKey: .checklist) ?? []
+        tags        = try c.decodeIfPresent([String].self, forKey: .tags) ?? []
         updatedAt   = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
         deletedAt   = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
         position    = try c.decodeIfPresent(Double.self, forKey: .position) ?? 0
@@ -137,6 +170,14 @@ public struct Item: Identifiable, Codable, Hashable {
         if deadlineIsDue { return true }
         guard let when else { return false }
         return Calendar.current.startOfDay(for: when) <= Calendar.current.startOfDay(for: .now)
+    }
+
+    /// Cuántos pasos están hechos.
+    public var checklistDone: Int { checklist.filter(\.isCompleted).count }
+
+    /// Lleva esa etiqueta, sin distinguir mayúsculas.
+    public func hasTag(_ name: String) -> Bool {
+        tags.contains { $0.caseInsensitiveCompare(name) == .orderedSame }
     }
 
     /// El día para el que está planificada, sin hora.
@@ -306,6 +347,7 @@ public enum Perspective: Hashable, CaseIterable {
     case completed
     case project(UUID)
     case area(UUID)
+    case tag(String)
 
     /// Las fijas, en el orden en que se muestran. Los proyectos van aparte.
     public static var allCases: [Perspective] { [.inbox, .today, .upcoming, .anytime, .someday, .completed] }
@@ -320,6 +362,7 @@ public enum Perspective: Hashable, CaseIterable {
         case .completed: "Completadas"
         case .project: "Proyecto"
         case .area: "Área"
+        case .tag(let name): name
         }
     }
 
@@ -336,6 +379,7 @@ public enum Perspective: Hashable, CaseIterable {
         case .completed: "archivebox"
         case .project: "circle.dotted"
         case .area: "square.stack"
+        case .tag: "tag"
         }
     }
 

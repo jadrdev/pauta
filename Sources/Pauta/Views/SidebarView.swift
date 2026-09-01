@@ -39,6 +39,21 @@ struct SidebarView: View {
                 }
             }
 
+            if !store.allTags.isEmpty {
+                Text("ETIQUETAS")
+                    .rubricStyle()
+                    .padding(.leading, 41)
+                    .padding(.trailing, 18)
+                    .padding(.top, 26)
+                    .padding(.bottom, 8)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    ForEach(store.allTags, id: \.self) { tag in
+                        SidebarRow(perspective: .tag(tag), label: tag, tag: tag)
+                    }
+                }
+            }
+
             Spacer(minLength: 20)
 
             botonNuevo("Nuevo proyecto") {
@@ -245,10 +260,12 @@ private struct SidebarRow: View {
     let perspective: Perspective
     let label: String
     var project: Project?
+    var tag: String?
     var sangria: CGFloat = 0
 
     @State private var hovering = false
     @State private var isDropTarget = false
+    @State private var renombrando = false
 
     private var isSelected: Bool { nav.perspective == perspective }
 
@@ -305,7 +322,25 @@ private struct SidebarRow: View {
         }
         .onHover { hovering = $0 }
         .onTapGesture { nav.go(to: perspective) }
+        .popover(isPresented: $renombrando, arrowEdge: .trailing) {
+            CampoEmergente(titulo: "Renombrar etiqueta", accion: "Renombrar",
+                           inicial: tag ?? "") { nuevo in
+                guard let tag else { return }
+                store.renameTag(tag, to: nuevo)
+                // La lista que se está viendo era la de la etiqueta vieja, que
+                // ya no existe: sin esto quedaría en pantalla y vacía.
+                if nav.perspective == .tag(tag) { nav.go(to: .tag(nuevo)) }
+                renombrando = false
+            }
+        }
         .contextMenu {
+            if let tag {
+                Button("Renombrar etiqueta…") { renombrando = true }
+                Button("Quitar de todas las tareas", role: .destructive) {
+                    if nav.perspective == .tag(tag) { nav.go(to: .inbox) }
+                    store.deleteTag(tag)
+                }
+            }
             if let project {
                 if !store.areas.isEmpty {
                     Menu("Área") {

@@ -122,10 +122,41 @@ consultas sobre la misma tarea, así que su prioridad es intrínseca y todas la
 respetan. En `Próximamente` manda el día, y el orden manual solo ordena dentro de
 cada día.
 
-Pegar un texto de varias líneas en el campo de nueva tarea crea **una tarea por
-línea**, quitando viñetas (`*`, `-`, `•`) y numeración. Cuando existan las listas
-de comprobación, este será el punto donde elegir entre tareas sueltas o una sola
-tarea con lista.
+Pegar un texto de varias líneas en el campo de nueva tarea **pregunta qué
+quieres**: tantas tareas como líneas, o una sola tarea con el resto como pasos.
+Las dos lecturas son razonables y ninguna es obviamente la buena, así que decidir
+por ti acertaría la mitad de las veces. En ambos casos se quitan las viñetas
+(`*`, `-`, `•`) y la numeración.
+
+### Listas de comprobación
+
+Una tarea puede llevar pasos. Se ven al desplegarla, y en la fila cerrada aparece
+la cuenta —`1/3`—, que se pone en verde solo cuando está entera: si toda cuenta
+gritara, ninguna diría nada.
+
+Son **pasos, no subtareas**: no tienen fecha, ni proyecto, ni prioridad propia.
+Lo que se planifica sigue siendo la tarea; los pasos solo dicen por dónde va. Por
+eso completar la tarea no los marca —si la reabres, la lista sigue donde estaba—
+y vaciar el texto de un paso lo borra, porque un paso sin texto no dice nada.
+
+El campo «Añadir paso» está siempre mientras la fila esté abierta: es lo que hace
+descubrible que una tarea puede ser una lista.
+
+### Etiquetas
+
+Transversales a todo lo demás: una tarea puede llevar varias, y cada una es una
+lista más en la barra lateral. Soltar una tarea sobre una etiqueta **se la añade
+sin quitarle las otras** — a diferencia de las listas, las etiquetas no son
+excluyentes. Una tarea creada dentro de una etiqueta nace con ella puesta.
+
+`Casa` y `casa` son la misma, y los espacios de sobra se recortan. En cada fila
+solo se muestran las etiquetas que la lista no da ya por sabidas: dentro de
+`casa`, esa no se repite en cada línea.
+
+Las etiquetas **salen de las tareas**, no de una lista aparte: existen mientras
+algo pendiente las lleve, así que no quedan huérfanas que limpiar. El precio es
+que renombrar una toca todas las tareas que la llevan; a cambio no hay una
+entidad más que mantener viva. Renombrar y quitar están en su menú contextual.
 
 Cada proyecto puede llevar un emoji: se elige pulsando el círculo junto a su
 título, de una paleta corta, y sustituye a su símbolo en la barra lateral.
@@ -477,7 +508,7 @@ Combinado con `--dump` inspecciona la maqueta en vez de los datos reales.
 
 ```
 Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
-  Models.swift            Item, Project, Area, Perspective
+  Models.swift            Item, ChecklistStep, Project, Area, Perspective
   Store.swift             estado + persistencia + consultas
 Sources/Pauta/            la app de macOS
   PautaApp.swift          punto de entrada, menús, atajos y barra de menús
@@ -497,7 +528,6 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
   calendario de verdad. Van como fuente aparte, mezclada solo en la vista.
   Escribir tareas como eventos, en cambio, es mala idea: duplica y genera
   conflictos
-- Listas de comprobación y etiquetas (y la elección al pegar varias líneas)
 - Widget y app de iOS — necesitan proyecto de Xcode y cuenta de desarrollador.
   `PautaCore` ya está extraído para ese salto, y la sincronización ya está
   hecha: la misma carpeta de iCloud le sirve a un iPhone sin tocar nada
