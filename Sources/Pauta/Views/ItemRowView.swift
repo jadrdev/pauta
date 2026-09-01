@@ -108,7 +108,7 @@ struct ItemRowView: View {
         .contentShape(Rectangle())
         // Se arrastra el identificador, no la tarea entera: quien recibe la
         // busca en el almacén, que es la única fuente de verdad.
-        .draggable(item.id.uuidString)
+        .draggable(cargaDeArrastre())
         // Soltar sobre una fila coloca lo arrastrado justo antes de ella.
         .dropDestination(for: String.self) { payload, _ in
             let arrastradas = payload
@@ -393,6 +393,13 @@ struct ItemRowView: View {
     private func hydrate() {
         title = item.title
         notes = item.notes
+    }
+
+    /// El autoclosure de `draggable` se evalúa al empezar a arrastrar, que es el
+    /// único momento en que se puede anotar qué se está moviendo.
+    private func cargaDeArrastre() -> String {
+        nav.arrastrandoProyecto = false
+        return item.id.uuidString
     }
 
     private func move(to projectID: UUID?) {

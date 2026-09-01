@@ -197,6 +197,9 @@ public struct Project: Identifiable, Codable, Hashable {
     public var createdAt = Date()
     public var updatedAt = Date()
     public var deletedAt: Date?
+    /// Orden manual en la barra lateral. Como en las tareas, es un hueco entre
+    /// vecinos y no un índice, para que mover uno escriba un solo archivo.
+    public var position: Double = 0
 
     public init(id: UUID = UUID(), name: String) {
         self.id = id
@@ -213,6 +216,7 @@ public struct Project: Identifiable, Codable, Hashable {
         createdAt   = try c.decodeIfPresent(Date.self,   forKey: .createdAt) ?? Date()
         updatedAt   = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
         deletedAt   = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
+        position    = try c.decodeIfPresent(Double.self, forKey: .position) ?? 0
     }
 }
 
@@ -222,6 +226,18 @@ extension Project {
         a.createdAt == b.createdAt
             ? a.id.uuidString < b.id.uuidString
             : a.createdAt < b.createdAt
+    }
+
+    /// El orden de la barra lateral: manual, y por creación al empatar.
+    public static func byPosition(_ a: Project, _ b: Project) -> Bool {
+        a.position == b.position ? byCreation(a, b) : a.position < b.position
+    }
+
+    /// Orden alfabético del idioma del usuario: respeta acentos y la ñ, que un
+    /// `<` entre cadenas compara por su valor Unicode y coloca al final.
+    public static func byName(_ a: Project, _ b: Project) -> Bool {
+        let comparacion = a.name.localizedStandardCompare(b.name)
+        return comparacion == .orderedSame ? byCreation(a, b) : comparacion == .orderedAscending
     }
 }
 

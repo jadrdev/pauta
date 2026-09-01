@@ -79,6 +79,17 @@ rápidas: programar, aparcar o eliminar.
   una, y cambiar solo la prioridad hacía que el gesto pareciera no hacer nada:
   la tarea se quedaba donde estaba. También se puede soltar sobre el **rótulo del
   día**, que la manda a la cabeza de ese día.
+- **Los proyectos también se arrastran entre ellos** para ordenar la barra
+  lateral. Una fila de proyecto recibe las dos cosas, así que la señal es
+  distinta a propósito: reordenando sale una línea de inserción, y recibiendo
+  una tarea se enciende la fila entera. Son dos gestos que caen en el mismo
+  sitio y no deben parecer el mismo.
+
+Pasando el cursor por el rótulo `PROYECTOS` aparece **«A–Z»**, que los ordena
+alfabéticamente; también está en el menú contextual de cualquier proyecto. Es el
+alfabético del idioma, no el de los códigos: la ñ va tras la n y los acentos
+cuentan como su letra. Solo aparece con el cursor encima porque ordenar es algo
+que se hace de año en año.
 
 La prioridad es **una sola para toda la app**, no una por lista: las listas son
 consultas sobre la misma tarea, así que su prioridad es intrínseca y todas la

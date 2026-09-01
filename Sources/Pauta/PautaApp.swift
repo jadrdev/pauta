@@ -11,6 +11,11 @@ final class Navigation {
     var perspective: Perspective = .today
     var selectedItemID: UUID?
     var isAddingItem = false
+    /// Qué se está arrastrando ahora mismo. Las filas de proyecto reciben tanto
+    /// tareas —«mueve esto aquí»— como otros proyectos —«ponte antes que este»—,
+    /// y la señal que dibujan tiene que ser distinta. Lo anota quien empieza el
+    /// arrastre, porque al soltar ya es tarde para dibujar nada.
+    var arrastrandoProyecto = false
 
     func startNewItem() {
         if case .completed = perspective { perspective = .inbox }

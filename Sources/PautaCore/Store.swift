@@ -331,7 +331,7 @@ public final class Store {
 
         let freshProjects = loadObjects(in: projectsDir, cache: &projectCache)
             .filter { $0.deletedAt == nil }
-            .sorted(by: Project.byCreation)
+            .sorted(by: Project.byPosition)
         if freshProjects != projects { projects = freshProjects }
     }
 
@@ -692,9 +692,15 @@ public final class Store {
     /// nada. Se numeran respetando el orden que ya tenían, y se hace una sola vez
     /// porque después las posiciones ya son distintas.
     func normalizePositionsIfNeeded() {
-        guard Set(items.map(\.position)).count != items.count else { return }
-        for (i, item) in items.sorted(by: Item.byPosition).enumerated() {
-            mutateItem(item.id) { $0.position = Double(i + 1) }
+        if Set(items.map(\.position)).count != items.count {
+            for (i, item) in items.sorted(by: Item.byPosition).enumerated() {
+                mutateItem(item.id) { $0.position = Double(i + 1) }
+            }
+        }
+        if Set(projects.map(\.position)).count != projects.count {
+            for (i, project) in projects.sorted(by: Project.byPosition).enumerated() {
+                mutateProject(project.id) { $0.position = Double(i + 1) }
+            }
         }
     }
 
@@ -845,9 +851,42 @@ public final class Store {
         }
         project.createdAt = created
         project.updatedAt = created
+        project.position = (projects.map(\.position).max() ?? 0) + 1
         projects.append(project)
         persist(project)
         return project
+    }
+
+    /// Coloca `project` justo antes de `other`, o al final si `other` es `nil`.
+    /// Mismo hueco entre vecinos que en las tareas: mueve uno, escribe uno.
+    public func place(_ project: Project, before other: Project?) {
+        let lista = projects.filter { $0.id != project.id }
+        guard !lista.isEmpty else { return }
+
+        let nueva: Double
+        if let other, let idx = lista.firstIndex(where: { $0.id == other.id }) {
+            let anterior = idx > 0 ? lista[idx - 1].position : lista[idx].position - 2
+            nueva = (anterior + lista[idx].position) / 2
+        } else {
+            nueva = (lista.map(\.position).max() ?? 0) + 1
+        }
+        mutateProject(project.id) { $0.position = nueva }
+        projects.sort(by: Project.byPosition)
+    }
+
+    /// Renumera los proyectos por nombre.
+    ///
+    /// Aquí sí se reescriben todos los archivos, y está bien: es una acción que
+    /// se pide a mano y de una vez, no algo que ocurra en cada arrastre. Los
+    /// que ya estén en su sitio no se tocan, así que ordenar dos veces seguidas
+    /// no escribe nada la segunda.
+    public func sortProjectsAlphabetically() {
+        for (i, project) in projects.sorted(by: Project.byName).enumerated() {
+            let nueva = Double(i + 1)
+            guard project.position != nueva else { continue }
+            mutateProject(project.id) { $0.position = nueva }
+        }
+        projects.sort(by: Project.byPosition)
     }
 
     public func rename(_ project: Project, to name: String) {
@@ -910,6 +949,14 @@ extension Store {
         store.setDeadline(hoyLimite, to: .now)
         let futura = store.addItem(title: "Preparar la declaración", in: .inbox)
         store.setDeadline(futura, to: calendar.date(byAdding: .day, value: 12, to: .now))
+        // Tres proyectos, y no uno: el orden de la barra lateral solo se ve
+        // cuando hay varios.
+        let mudanza = store.addProject(name: "Mudanza")
+        store.setIcon(mudanza, to: "📦")
+        let bici = store.addProject(name: "Bicicleta")
+        store.setIcon(bici, to: "💪")
+        store.addItem(title: "Pedir cajas", in: .project(mudanza.id))
+        store.addItem(title: "Cambiar la cadena", in: .project(bici.id))
         store.addItem(title: "Aprender a tocar el bajo", in: .someday)
         store.addItem(title: "Rehacer la estantería del salón", in: .someday)
         let done = store.addItem(title: "Reservar mesa para el viernes", in: .inbox)

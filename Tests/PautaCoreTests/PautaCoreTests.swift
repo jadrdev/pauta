@@ -944,3 +944,110 @@ struct IncrementalLoadTests {
         #expect(store.items(for: .inbox).map(\.title) == ["queda"])
     }
 }
+
+/// El orden de los proyectos en la barra lateral: a mano o alfabético.
+@MainActor
+struct ProjectOrderingTests {
+    private func tempRoot() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaProy-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    @Test func newProjectsGoToTheEnd() {
+        let s = Store(inMemory: true)
+        s.addProject(name: "uno")
+        s.addProject(name: "dos")
+        s.addProject(name: "tres")
+        #expect(s.projects.map(\.name) == ["uno", "dos", "tres"])
+    }
+
+    @Test func placingBeforeMovesIt() {
+        let s = Store(inMemory: true)
+        s.addProject(name: "uno")
+        s.addProject(name: "dos")
+        let tres = s.addProject(name: "tres")
+        s.place(tres, before: s.projects[0])
+        #expect(s.projects.map(\.name) == ["tres", "uno", "dos"])
+    }
+
+    @Test func placingWithoutTargetSendsItToTheEnd() {
+        let s = Store(inMemory: true)
+        let uno = s.addProject(name: "uno")
+        s.addProject(name: "dos")
+        s.place(uno, before: nil)
+        #expect(s.projects.map(\.name) == ["dos", "uno"])
+    }
+
+    /// Mover uno escribe un archivo, no la lista entera.
+    @Test func reorderingWritesOnlyOneFile() throws {
+        let root = tempRoot()
+        let s = Store(root: root)
+        s.addProject(name: "uno")
+        let dos = s.addProject(name: "dos")
+        s.addProject(name: "tres")
+
+        let primero = root.appendingPathComponent("projects/\(s.projects[0].id.uuidString).json")
+        let antes = try Data(contentsOf: primero)
+        s.place(dos, before: nil)
+        #expect(try Data(contentsOf: primero) == antes)
+        #expect(s.projects.map(\.name) == ["uno", "tres", "dos"])
+    }
+
+    @Test func theOrderSurvivesAReload() throws {
+        let root = tempRoot()
+        let s = Store(root: root)
+        s.addProject(name: "uno")
+        s.addProject(name: "dos")
+        let tres = s.addProject(name: "tres")
+        s.place(tres, before: s.projects[0])
+        #expect(Store(root: root).projects.map(\.name) == ["tres", "uno", "dos"])
+    }
+
+    /// El alfabético es el del idioma: la ñ va tras la n y los acentos cuentan
+    /// como su letra. Comparando cadenas con `<` irían las dos al final.
+    @Test func alphabeticalUsesTheLanguagesOrder() {
+        let s = Store(inMemory: true)
+        for nombre in ["Zeta", "ñu", "banco", "Ávila", "Casa"] { s.addProject(name: nombre) }
+        s.sortProjectsAlphabetically()
+        #expect(s.projects.map(\.name) == ["Ávila", "banco", "Casa", "ñu", "Zeta"])
+    }
+
+    /// Ordenar dos veces seguidas no debe reescribir nada la segunda: con la
+    /// carpeta sincronizada, cada archivo tocado es tráfico y una ocasión de
+    /// conflicto.
+    @Test func sortingTwiceWritesNothingTheSecondTime() throws {
+        let root = tempRoot()
+        let s = Store(root: root)
+        for nombre in ["Zeta", "banco", "Casa"] { s.addProject(name: nombre) }
+        s.sortProjectsAlphabetically()
+
+        let dir = root.appendingPathComponent("projects")
+        let archivos = try FileManager.default.contentsOfDirectory(at: dir,
+                                                                   includingPropertiesForKeys: nil)
+        let antes = try archivos.map { try Data(contentsOf: $0) }
+        s.sortProjectsAlphabetically()
+        #expect(try archivos.map { try Data(contentsOf: $0) } == antes)
+    }
+
+    /// Los proyectos guardados antes de que existiera el campo valen todos 0, y
+    /// entre dos ceros no hay punto medio: sin renumerarlos el primer arrastre
+    /// no movería nada.
+    @Test func canReorderProjectsSavedBeforePositionsExisted() throws {
+        let root = tempRoot()
+        let dir = root.appendingPathComponent("projects", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        for (i, nombre) in ["uno", "dos", "tres"].enumerated() {
+            let id = UUID()
+            let json = #"{"id":"\#(id.uuidString)","name":"\#(nombre)","createdAt":"2026-08-2\#(i)T10:00:00Z"}"#
+            try json.write(to: dir.appendingPathComponent("\(id.uuidString).json"),
+                           atomically: true, encoding: .utf8)
+        }
+        let s = Store(root: root)
+        #expect(s.projects.map(\.name) == ["uno", "dos", "tres"])
+        s.place(s.projects[2], before: s.projects[0])
+        #expect(s.projects.map(\.name) == ["tres", "uno", "dos"])
+        #expect(Store(root: root).projects.map(\.name) == ["tres", "uno", "dos"])
+    }
+}
