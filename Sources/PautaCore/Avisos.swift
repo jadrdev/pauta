@@ -1,5 +1,21 @@
 import Foundation
+import Observation
 import UserNotifications
+
+/// Si hay algo que avisar y el sistema no va a dejar.
+///
+/// Un aviso que no llega y no lo dice es peor que no tener avisos: la tarea
+/// parece cubierta y no lo está. Esto es lo que permite que la interfaz lo
+/// cuente en vez de callarse.
+@Observable
+@MainActor
+public final class AvisoEstado {
+    public static let shared = AvisoEstado()
+    public private(set) var mudos = false
+    private init() {}
+
+    static func set(_ valor: Bool) { shared.mudos = valor }
+}
 
 /// Avisos del sistema para las tareas que tienen hora.
 ///
@@ -11,7 +27,69 @@ import UserNotifications
 /// añadiendo y quitando uno a uno. Es más trabajo por cambio y muchísimo menos
 /// de lo que cuesta razonar sobre qué avisos quedaron pendientes de una tarea
 /// que se completó, se movió de día, se borró o volvió de otro dispositivo.
+/// Lo que la app quiere que pase cuando se toca un aviso. Lo rellena la app al
+/// arrancar; vive aquí porque el delegado no tiene forma de alcanzarla.
+@MainActor
+public enum AvisoAcciones {
+    public static var alAbrir: ((UUID) -> Void)?
+    public static var alCompletar: ((UUID) -> Void)?
+}
+
+/// Delegado del centro de notificaciones.
+///
+/// Sin él no pasan dos cosas. La primera: **el aviso no se ve si Pauta está
+/// delante**, porque el sistema lo silencia por defecto dando por hecho que ya
+/// estás mirando la app — y en una app de tareas ese es justo el momento en que
+/// más falta hace. La segunda: pulsarlo no hace nada.
+public final class AvisoDelegado: NSObject, UNUserNotificationCenterDelegate {
+    public func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner, .sound, .list]
+    }
+
+    public func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        guard let id = UUID(uuidString: response.notification.request.identifier) else { return }
+        let accion = response.actionIdentifier
+        await MainActor.run {
+            if accion == Avisos.accionCompletar {
+                AvisoAcciones.alCompletar?(id)
+            } else {
+                AvisoAcciones.alAbrir?(id)
+            }
+        }
+    }
+}
+
 public enum Avisos {
+    /// Identificadores de la acción y de su categoría.
+    static let accionCompletar = "completar"
+    static let categoria = "tarea"
+
+    nonisolated(unsafe) private static let delegado = AvisoDelegado()
+
+    /// Se llama al arrancar, antes de que la app termine de lanzarse: puesto
+    /// más tarde, el sistema ya habría entregado sin delegado los avisos que
+    /// esperaban.
+    public static func hookUp() {
+        guard let centro else { return }
+        centro.delegate = delegado
+        // Poder completar desde el propio aviso es lo que hace que una rutina
+        // diaria no obligue a abrir la app para nada.
+        centro.setNotificationCategories([
+            UNNotificationCategory(
+                identifier: categoria,
+                actions: [UNNotificationAction(identifier: accionCompletar,
+                                               title: "Completar",
+                                               options: [])],
+                intentIdentifiers: [])
+        ])
+    }
+
     /// Cuántos avisos se programan como mucho.
     ///
     /// El sistema descarta los que pasen de 64 por app, y sin un tope propio se
@@ -61,16 +139,22 @@ public enum Avisos {
             .prefix(tope)
 
         centro.removeAllPendingNotificationRequests()
-        guard !pendientes.isEmpty else { return }
+        guard !pendientes.isEmpty else {
+            await AvisoEstado.set(false)
+            return
+        }
 
         if await authorization() == .notDetermined { await request() }
-        guard await authorization() == .authorized else { return }
+        let permitido = await authorization() == .authorized
+        await AvisoEstado.set(!permitido)
+        guard permitido else { return }
 
         for (item, cuando) in pendientes {
             let contenido = UNMutableNotificationContent()
             contenido.title = item.title.isEmpty ? "Sin título" : item.title
             if !item.notes.isEmpty { contenido.body = item.notes }
             contenido.sound = .default
+            contenido.categoryIdentifier = categoria
 
             let partes = Calendar.current.dateComponents(
                 [.year, .month, .day, .hour, .minute], from: cuando)

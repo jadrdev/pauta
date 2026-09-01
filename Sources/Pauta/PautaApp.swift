@@ -87,6 +87,9 @@ struct Entry {
         // integración con Recordatorios sin abrir la interfaz. El bucle de
         // eventos tiene que seguir vivo, porque la concesión de permisos de TCC
         // vuelve por él.
+        // Antes de lanzar la interfaz: si se pusiera después, un aviso pulsado
+        // con la app cerrada se entregaría sin nadie que lo atendiera.
+        Avisos.hookUp()
         if CommandLine.arguments.contains("--avisos") {
             // Por el bucle principal, como los de Recordatorios: el centro de
             // notificaciones responde por él, y esperando con un semáforo en el
@@ -208,6 +211,16 @@ struct PautaApp: App {
                 // Da igual qué cambió —hora, día, completada, borrada, llegada
                 // de otro dispositivo—: reconstruir es más barato que razonar
                 // sobre qué aviso quedó suelto.
+                .task {
+                    AvisoAcciones.alAbrir = { id in
+                        openWindow(id: "main")
+                        mostrar(id, in: store, nav: nav)
+                    }
+                    AvisoAcciones.alCompletar = { id in
+                        guard let item = store.items.first(where: { $0.id == id }) else { return }
+                        store.toggleComplete(item)
+                    }
+                }
                 .task(id: store.items) {
                     guard !Launch.demo else { return }
                     // Un segundo de espera: escribir un título cambia las tareas
@@ -312,6 +325,22 @@ struct RootView: View {
 /// Silencioso a propósito: si no hay permiso todavía, o la lista está vacía, no
 /// interrumpe. El permiso se pide la primera vez que se ejecuta, y si se deniega
 /// la app sigue funcionando igual sin la captura remota.
+/// Lleva la vista hasta una tarea y la deja abierta.
+///
+/// La lista se elige por la tarea y no se deja la que hubiera: si el aviso te
+/// manda a una tarea que no se ve desde donde estabas, el salto no serviría de
+/// nada. Toda tarea con aviso tiene día, así que o es de hoy o es futura.
+@MainActor
+func mostrar(_ id: UUID, in store: Store, nav: Navigation) {
+    guard let item = store.items.first(where: { $0.id == id }) else { return }
+    if item.isCompleted { nav.go(to: .completed) }
+    else if item.isToday { nav.go(to: .today) }
+    else if item.isUpcoming { nav.go(to: .upcoming) }
+    else if let projectID = item.projectID { nav.go(to: .project(projectID)) }
+    else { nav.go(to: .inbox) }
+    nav.selectedItemID = id
+}
+
 @MainActor
 func importFromReminders(into store: Store, nav: Navigation) async {
     do {

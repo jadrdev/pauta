@@ -167,6 +167,24 @@ cambio, porque escribir un título cambia las tareas en cada tecla.
 Hay un tope de **60**: el sistema descarta lo que pase de 64 por app, y sin tope
 propio se perderían avisos sin decirlo. Se quedan los más cercanos.
 
+Es la API vigente, `UNUserNotificationCenter` con un disparador de calendario —
+`NSUserNotification` está obsoleta desde macOS 11. El disparador **no se repite**
+aunque la tarea sí: la sucesora nace al completar la anterior y trae su propio
+aviso, mientras que un disparador repetitivo seguiría sonando después de que la
+serie hubiera acabado.
+
+Hay un delegado, y hace falta para dos cosas que sin él no ocurren:
+
+- **El aviso se ve aunque Pauta esté delante.** El sistema lo silencia por
+  defecto dando por hecho que ya estás mirando la app, y en una app de tareas ese
+  es justo el momento en que más falta hace.
+- **Pulsarlo abre la tarea**, en una lista donde se vea; y trae un botón
+  **«Completar»** para despachar una rutina sin abrir nada.
+
+Y si el permiso está denegado, **la app lo dice**: una franja arriba de la lista,
+con un atajo a los ajustes del sistema. Un aviso que no llega y se calla es peor
+que no tener avisos, porque la tarea parece cubierta y no lo está.
+
 ```bash
 ./build/Pauta.app/Contents/MacOS/Pauta --avisos
 ```

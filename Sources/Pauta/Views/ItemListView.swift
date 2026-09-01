@@ -21,6 +21,8 @@ struct ItemListView: View {
                     .padding(.top, 16)
                     .padding(.bottom, 10)
 
+                if AvisoEstado.shared.mudos { avisosMudos }
+
                 if items.isEmpty && !nav.isAddingItem {
                     emptyState.padding(.top, 26).padding(.bottom, 10)
                 }
@@ -83,6 +85,35 @@ struct ItemListView: View {
                     .rubricStyle()
             }
         }
+    }
+
+    /// Hay tareas con hora y el sistema no va a avisar de ninguna.
+    ///
+    /// Se dice una vez arriba y no en cada tarea: es una condición de la app
+    /// entera, no de una tarea, y repetirla por fila sería ruido.
+    @ViewBuilder private var avisosMudos: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "bell.slash")
+                .font(.system(size: 10.5, weight: .semibold))
+            Text("LOS AVISOS ESTÁN DESACTIVADOS PARA PAUTA")
+                .font(.rubric).tracking(1.3)
+            Spacer(minLength: 8)
+            Button {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                    NSWorkspace.shared.open(url)
+                }
+            } label: {
+                Text("ACTIVAR").font(.rubric).tracking(1.3)
+            }
+            .buttonStyle(.plain)
+        }
+        .foregroundStyle(Paper.warning)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 8)
+        .background(Paper.warning.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8)
+            .strokeBorder(Paper.warning.opacity(0.35), lineWidth: 1))
+        .padding(.bottom, 12)
     }
 
     private var countLabel: String {
