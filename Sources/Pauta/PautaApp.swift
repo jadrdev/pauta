@@ -87,6 +87,21 @@ struct Entry {
         // integración con Recordatorios sin abrir la interfaz. El bucle de
         // eventos tiene que seguir vivo, porque la concesión de permisos de TCC
         // vuelve por él.
+        if CommandLine.arguments.contains("--avisos") {
+            // Por el bucle principal, como los de Recordatorios: el centro de
+            // notificaciones responde por él, y esperando con un semáforo en el
+            // hilo principal la respuesta no llegaría nunca.
+            runOnMainLoop {
+                let nombres = ["notDetermined", "denied", "authorized", "provisional",
+                               "ephemeral"]
+                let i = await Avisos.authorization().rawValue
+                print("permiso de avisos: \(i < nombres.count ? nombres[i] : "\(i)")")
+                let pendientes = await Avisos.pending()
+                print("avisos programados: \(pendientes.count)")
+                for id in pendientes.prefix(5) { print("  · \(id)") }
+            }
+            return
+        }
         if CommandLine.arguments.contains("--reminders-status") {
             let estado: String
             switch RemindersInbox.authorization {
@@ -188,6 +203,19 @@ struct PautaApp: App {
                     watcher = FolderWatcher(url: store.storageURL) {
                         store.reload()
                     }
+                }
+                // Los avisos se rehacen enteros con cada cambio de las tareas.
+                // Da igual qué cambió —hora, día, completada, borrada, llegada
+                // de otro dispositivo—: reconstruir es más barato que razonar
+                // sobre qué aviso quedó suelto.
+                .task(id: store.items) {
+                    guard !Launch.demo else { return }
+                    // Un segundo de espera: escribir un título cambia las tareas
+                    // en cada tecla, y `task(id:)` cancela la anterior, así que
+                    // solo se reprograma cuando la mano para.
+                    try? await Task.sleep(for: .seconds(1))
+                    guard !Task.isCancelled else { return }
+                    await Avisos.reschedule(store.items)
                 }
         }
         .windowStyle(.hiddenTitleBar)

@@ -1410,3 +1410,195 @@ struct TagTests {
         #expect(s.allTags.isEmpty)
     }
 }
+
+/// La hora del día: lo único de Pauta que mira el reloj y no el calendario.
+@MainActor
+struct TimeOfDayTests {
+    private func recargar(_ s: Store, _ id: UUID) -> Item? { s.items.first { $0.id == id } }
+
+    @Test func anHourWithoutADayIsScheduledForToday() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .inbox)
+        s.setTime(a, to: 9 * 60)
+        #expect(recargar(s, a.id)?.day == Calendar.current.startOfDay(for: .now))
+        #expect(s.items(for: .today).map(\.title) == ["pastilla"])
+    }
+
+    /// Quitar el día se lleva la hora: «a las nueve» sin día no dice cuándo.
+    @Test func removingTheDayRemovesTheHour() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .today)
+        s.setTime(a, to: 9 * 60)
+        s.schedule(a, to: nil)
+        #expect(recargar(s, a.id)?.timeOfDay == nil)
+    }
+
+    @Test func parkingAlsoRemovesIt() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .today)
+        s.setTime(a, to: 9 * 60)
+        s.park(a)
+        #expect(recargar(s, a.id)?.timeOfDay == nil)
+    }
+
+    @Test func theExactMomentIsTheDayPlusTheHour() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .today)
+        s.setTime(a, to: 9 * 60 + 30)
+        let momento = recargar(s, a.id)?.scheduledAt
+        let partes = Calendar.current.dateComponents([.hour, .minute], from: momento!)
+        #expect(partes.hour == 9)
+        #expect(partes.minute == 30)
+    }
+
+    @Test func hoursOutsideTheDayAreClamped() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "x", in: .today)
+        s.setTime(a, to: 5000)
+        #expect(recargar(s, a.id)?.timeOfDay == 24 * 60 - 1)
+        s.setTime(a, to: -30)
+        #expect(recargar(s, a.id)?.timeOfDay == 0)
+    }
+
+    /// En Hoy, lo que tiene hora va primero y por hora; lo demás conserva el
+    /// orden manual debajo. Una hora no es una preferencia que se pueda
+    /// reordenar: son las nueve o no lo son.
+    @Test func timedTasksLeadTheDayInOrderOfTheClock() {
+        let s = Store(inMemory: true)
+        let suelta1 = s.addItem(title: "suelta 1", in: .today)
+        let tarde = s.addItem(title: "tarde", in: .today)
+        s.addItem(title: "suelta 2", in: .today)
+        let pronto = s.addItem(title: "pronto", in: .today)
+        s.setTime(tarde, to: 18 * 60)
+        s.setTime(pronto, to: 9 * 60)
+
+        #expect(s.items(for: .today).map(\.title)
+                == ["pronto", "tarde", "suelta 1", "suelta 2"])
+        // Y el orden manual de las que no tienen hora se sigue respetando.
+        s.place(suelta1, before: nil, in: .today)
+        #expect(s.items(for: .today).map(\.title)
+                == ["pronto", "tarde", "suelta 2", "suelta 1"])
+    }
+
+    /// Sin horas de por medio nada cambia: el orden manual sigue mandando.
+    @Test func withoutHoursNothingChanges() {
+        let s = Store(inMemory: true)
+        s.addItem(title: "a", in: .today)
+        let b = s.addItem(title: "b", in: .today)
+        s.addItem(title: "c", in: .today)
+        s.place(b, before: s.items(for: .today)[0], in: .today)
+        #expect(s.items(for: .today).map(\.title) == ["b", "a", "c"])
+    }
+
+    /// Lo que hace útil una repetitiva: «todos los días a las nueve». Sin
+    /// heredarla, la segunda vuelta ya no tendría hora.
+    @Test func theNextOccurrenceKeepsTheHour() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .today)
+        s.setTime(a, to: 9 * 60)
+        s.setRecurrence(a, to: .diaria)
+        s.toggleComplete(a)
+
+        let siguiente = s.items.first { !$0.isCompleted && $0.title == "pastilla" }
+        #expect(siguiente?.timeOfDay == 9 * 60)
+        #expect(siguiente?.day == Calendar.current.startOfDay(
+            for: Calendar.current.date(byAdding: .day, value: 1, to: .now)!))
+    }
+
+    /// Las etiquetas y los pasos también vuelven, y los pasos sin marcar: la
+    /// lista es la de esta vuelta, no la de la anterior ya hecha.
+    @Test func theNextOccurrenceKeepsTagsAndResetsTheChecklist() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "revisar", in: .today)
+        s.addTag(a, "trabajo")
+        s.addStep(to: a, title: "uno")
+        s.addStep(to: a, title: "dos")
+        let paso = s.items.first { $0.id == a.id }!.checklist[0]
+        s.toggleStep(a, paso.id)
+        s.setRecurrence(a, to: .semanal)
+        s.toggleComplete(a)
+
+        let siguiente = s.items.first { !$0.isCompleted && $0.title == "revisar" }
+        #expect(siguiente?.tags == ["trabajo"])
+        #expect(siguiente?.checklist.map(\.title) == ["uno", "dos"])
+        #expect(siguiente?.checklistDone == 0)
+    }
+
+    @Test func theHourSurvivesAReload() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaHora-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let s = Store(root: root)
+        let a = s.addItem(title: "pastilla", in: .today)
+        s.setTime(a, to: 9 * 60 + 30)
+        #expect(Store(root: root).items.first { $0.id == a.id }?.timeOfDay == 9 * 60 + 30)
+    }
+}
+
+/// Qué tareas merecen aviso. El envío en sí lo hace el sistema; lo que se puede
+/// fijar aquí es la selección.
+@MainActor
+struct AvisoTests {
+    private let ahora = Date(timeIntervalSince1970: 1_700_000_000)
+
+    private func conHora(_ s: Store, _ titulo: String, _ dias: Int, _ minutos: Int) -> Item {
+        let a = s.addItem(title: titulo, in: .inbox)
+        s.schedule(a, to: Calendar.current.date(byAdding: .day, value: dias, to: .now))
+        s.setTime(a, to: minutos)
+        return a
+    }
+
+    @Test func onlyTimedFutureAndOpenTasksAreScheduled() {
+        let s = Store(inMemory: true)
+        conHora(s, "mañana", 1, 9 * 60)
+        conHora(s, "ayer", -1, 9 * 60)
+        let hecha = conHora(s, "hecha", 1, 10 * 60)
+        s.toggleComplete(hecha)
+        s.addItem(title: "sin hora", in: .today)
+
+        let elegidas = s.items.filter { $0.deletedAt == nil && !$0.isCompleted }
+            .filter { ($0.scheduledAt ?? .distantPast) > .now }
+            .map(\.title)
+        #expect(elegidas == ["mañana"])
+    }
+
+    /// Una tarea completada con repetición deja una sucesora, y es la sucesora
+    /// la que tiene que avisar: la hecha ya no.
+    @Test func theSuccessorIsTheOneThatWarns() {
+        let s = Store(inMemory: true)
+        let a = conHora(s, "pastilla", 0, 23 * 60 + 59)
+        s.setRecurrence(a, to: .diaria)
+        s.toggleComplete(a)
+
+        let pendientes = s.items.filter { !$0.isCompleted && $0.scheduledAt != nil }
+        #expect(pendientes.count == 1)
+        #expect(pendientes[0].timeOfDay == 23 * 60 + 59)
+        #expect(pendientes[0].id != a.id)
+    }
+
+    /// Fuera de un `.app` no hay centro de notificaciones, y pedirlo revienta el
+    /// proceso. Este test corre justo ahí, así que fija que la guarda existe.
+    @Test func withoutABundleItDoesNothingAndDoesNotCrash() async {
+        let s = Store(inMemory: true)
+        conHora(s, "pastilla", 1, 9 * 60)
+        await Avisos.reschedule(s.items)
+        #expect(await Avisos.pending().isEmpty)
+    }
+
+    /// El sistema descarta lo que pase de 64 avisos por app, así que el tope se
+    /// aplica aquí y sobre los más cercanos.
+    @Test func theCapKeepsTheNearestOnes() {
+        let s = Store(inMemory: true)
+        for i in 1...80 { conHora(s, "t\(i)", i, 9 * 60) }
+        let ordenadas = s.items
+            .compactMap { item -> (String, Date)? in
+                guard let cuando = item.scheduledAt, cuando > .now else { return nil }
+                return (item.title, cuando)
+            }
+            .sorted { $0.1 < $1.1 }
+            .prefix(Avisos.tope)
+        #expect(ordenadas.count == 60)
+        #expect(ordenadas.first?.0 == "t1")
+        #expect(ordenadas.last?.0 == "t60")
+    }
+}

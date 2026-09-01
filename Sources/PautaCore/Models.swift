@@ -101,6 +101,14 @@ public struct Item: Identifiable, Codable, Hashable {
     /// Identificador en la fuente externa de la que se capturó, si vino de una.
     /// Evita reimportarla si el marcado en el origen falló.
     public var sourceID: String?
+    /// Hora del día, en minutos desde medianoche. `nil` = sin hora.
+    ///
+    /// Va aparte de `when` y no dentro. `when` es **un día**: hay quince sitios
+    /// que lo normalizan a las 00:00 para comparar, agrupar y ordenar. Meterle
+    /// una hora dentro le daría dos significados al mismo campo, y la cuenta de
+    /// la repetición —que devuelve el arranque del día siguiente— la perdería
+    /// en silencio. Un campo aparte no se puede perder sin que se note.
+    public var timeOfDay: Int?
     /// Los pasos de la tarea, en orden. Vacío = no es una lista.
     public var checklist: [ChecklistStep] = []
     /// Etiquetas, en el orden en que se pusieron.
@@ -134,6 +142,7 @@ public struct Item: Identifiable, Codable, Hashable {
         projectID   = try c.decodeIfPresent(UUID.self,   forKey: .projectID)
         createdAt   = try c.decodeIfPresent(Date.self,   forKey: .createdAt) ?? Date()
         sourceID    = try c.decodeIfPresent(String.self, forKey: .sourceID)
+        timeOfDay   = try c.decodeIfPresent(Int.self,    forKey: .timeOfDay)
         checklist   = try c.decodeIfPresent([ChecklistStep].self, forKey: .checklist) ?? []
         tags        = try c.decodeIfPresent([String].self, forKey: .tags) ?? []
         updatedAt   = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
@@ -170,6 +179,21 @@ public struct Item: Identifiable, Codable, Hashable {
         if deadlineIsDue { return true }
         guard let when else { return false }
         return Calendar.current.startOfDay(for: when) <= Calendar.current.startOfDay(for: .now)
+    }
+
+    /// El momento exacto, cuando tiene día y hora.
+    public var scheduledAt: Date? {
+        guard let day, let timeOfDay else { return nil }
+        return Calendar.current.date(byAdding: .minute, value: timeOfDay, to: day)
+    }
+
+    /// La hora escrita como la escribe el idioma: «9:30» aquí, «9:30 AM» donde
+    /// se use el reloj de doce.
+    public var timeLabel: String? {
+        guard let timeOfDay else { return nil }
+        let base = Calendar.current.startOfDay(for: .now)
+        return Calendar.current.date(byAdding: .minute, value: timeOfDay, to: base)?
+            .formatted(.dateTime.hour().minute())
     }
 
     /// Cuántos pasos están hechos.
@@ -224,6 +248,23 @@ extension Item {
     /// Orden manual, con la creación como desempate para que siga siendo total.
     public static func byPosition(_ a: Item, _ b: Item) -> Bool {
         a.position == b.position ? byCreation(a, b) : a.position < b.position
+    }
+
+    /// El orden dentro de un día: primero lo que tiene hora, por hora, y debajo
+    /// el orden manual.
+    ///
+    /// La hora gana a la prioridad manual porque no es una preferencia sino una
+    /// restricción de fuera: no puedes decidir que las nueve van después de las
+    /// seis. Solo se usa donde el marco es «el día» —Hoy y cada día de
+    /// Próximamente—; en un proyecto o en la bandeja manda el orden manual, que
+    /// ahí comparar horas de días distintos no diría nada.
+    public static func bySchedule(_ a: Item, _ b: Item) -> Bool {
+        switch (a.timeOfDay, b.timeOfDay) {
+        case let (x?, y?): x == y ? byPosition(a, b) : x < y
+        case (_?, nil): true
+        case (nil, _?): false
+        case (nil, nil): byPosition(a, b)
+        }
     }
 }
 

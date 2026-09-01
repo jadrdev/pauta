@@ -70,6 +70,7 @@ struct ItemRowView: View {
     @State private var eligiendoFin = false
     @State private var pasoNuevo = ""
     @State private var poniendoEtiqueta = false
+    @State private var eligiendoHora = false
     @FocusState private var titleFocused: Bool
 
     private var isSelected: Bool { nav.selectedItemID == item.id }
@@ -186,6 +187,11 @@ struct ItemRowView: View {
     /// Indicadores a la derecha: notas, proyecto y fecha, en texto tenue.
     @ViewBuilder private var badges: some View {
         HStack(spacing: 12) {
+            if let hora = item.timeLabel, !item.isCompleted {
+                Text(hora)
+                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(Paper.inkSoft)
+            }
             if let deadline = item.deadline, !item.isCompleted {
                 HStack(spacing: 3) {
                     Image(systemName: item.isOverdue ? "exclamationmark.triangle.fill" : "flag.fill")
@@ -320,6 +326,20 @@ struct ItemRowView: View {
                     }
                     Button("Otra fecha…") { eligiendoFecha = true }
                     Divider()
+                    // La hora cuelga de la fecha y no es un control aparte:
+                    // una hora sin día no significa nada, y la fila de
+                    // controles ya iba llena.
+                    Menu("Hora") {
+                        ForEach([8 * 60, 9 * 60, 12 * 60, 15 * 60, 18 * 60, 21 * 60], id: \.self) { m in
+                            Button(Self.hora(m)) { store.setTime(item, to: m) }
+                        }
+                        Button("Otra hora…") { eligiendoHora = true }
+                        if item.timeOfDay != nil {
+                            Divider()
+                            Button("Sin hora") { store.setTime(item, to: nil) }
+                        }
+                    }
+                    Divider()
                     Button("Algún día") { store.park(item) }
                     Button("Sin fecha") { store.schedule(item, to: nil) }
                 } label: {
@@ -334,6 +354,12 @@ struct ItemRowView: View {
                     SelectorDeFecha(inicial: item.when ?? Date()) { fecha in
                         store.schedule(item, to: fecha)
                         eligiendoFecha = false
+                    }
+                }
+                .popover(isPresented: $eligiendoHora, arrowEdge: .bottom) {
+                    SelectorDeHora(inicial: item.timeOfDay ?? 9 * 60) { minutos in
+                        store.setTime(item, to: minutos)
+                        eligiendoHora = false
                     }
                 }
 
@@ -436,15 +462,21 @@ struct ItemRowView: View {
     private var whenLabel: String {
         if item.isSomeday { return "Algún día" }
         guard let when = item.when else { return "Sin fecha" }
-        if item.recurrence != nil {
-            let cal = Calendar.current
-            if cal.isDateInToday(when) { return "Desde hoy" }
-            if cal.isDateInTomorrow(when) { return "Desde mañana" }
-            return "Desde \(when.formatted(.dateTime.day().month(.abbreviated)))"
-        }
-        if Calendar.current.isDateInToday(when) { return "Hoy" }
-        if Calendar.current.isDateInTomorrow(when) { return "Mañana" }
-        return when.formatted(.dateTime.day().month(.abbreviated))
+        let cal = Calendar.current
+        var dia: String
+        if cal.isDateInToday(when) { dia = "Hoy" }
+        else if cal.isDateInTomorrow(when) { dia = "Mañana" }
+        else { dia = when.formatted(.dateTime.day().month(.abbreviated)) }
+        if item.recurrence != nil { dia = "Desde \(dia.lowercased())" }
+        guard let hora = item.timeLabel else { return dia }
+        return "\(dia) · \(hora)"
+    }
+
+    /// Los minutos desde medianoche, escritos como los escribe el idioma.
+    static func hora(_ minutos: Int) -> String {
+        let base = Calendar.current.startOfDay(for: .now)
+        return Calendar.current.date(byAdding: .minute, value: minutos, to: base)?
+            .formatted(.dateTime.hour().minute()) ?? ""
     }
 
     /// «Cada semana», o «Cada semana → 30 nov» cuando tiene fin.
@@ -827,5 +859,76 @@ struct CampoEmergente: View {
         guard !limpio.isEmpty else { return }
         alConfirmar(limpio)
         texto = ""
+    }
+}
+
+/// Elegir una hora del día.
+///
+/// Rejilla y no ruedas: con las 24 horas a la vista se acierta de un vistazo y
+/// de un clic, mientras que una rueda obliga a buscar y a arrastrar.
+struct SelectorDeHora: View {
+    let inicial: Int
+    let alElegir: (Int) -> Void
+
+    @State private var hora: Int
+    @State private var minuto: Int
+
+    init(inicial: Int, alElegir: @escaping (Int) -> Void) {
+        self.inicial = inicial
+        self.alElegir = alElegir
+        _hora = State(initialValue: inicial / 60)
+        _minuto = State(initialValue: (inicial / 5) % 12 * 5)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text("HORA").rubricStyle()
+                Spacer(minLength: 8)
+                Text(ItemRowView.hora(hora * 60 + minuto))
+                    .font(.display(15))
+                    .foregroundStyle(Paper.ink)
+            }
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(34), spacing: 2), count: 6),
+                      spacing: 2) {
+                ForEach(0..<24, id: \.self) { h in
+                    celda(String(format: "%02d", h), elegida: h == hora) { hora = h }
+                }
+            }
+            Text("MINUTOS").rubricStyle()
+            HStack(spacing: 2) {
+                ForEach([0, 15, 30, 45], id: \.self) { m in
+                    celda(String(format: ":%02d", m), elegida: m == minuto, ancho: 52) { minuto = m }
+                }
+            }
+            Button { alElegir(hora * 60 + minuto) } label: {
+                Text("Poner la hora")
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(Paper.onAccent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Paper.accent, in: RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 2)
+        }
+        .padding(16)
+        .frame(width: 34 * 6 + 10 + 32)
+    }
+
+    private func celda(_ texto: String, elegida: Bool, ancho: CGFloat = 34,
+                       accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            Text(texto)
+                .font(.system(size: 12, weight: elegida ? .semibold : .regular).monospacedDigit())
+                .foregroundStyle(elegida ? Paper.onAccent : Paper.ink)
+                .frame(width: ancho - 4, height: 26)
+                .background {
+                    if elegida { RoundedRectangle(cornerRadius: 7).fill(Paper.accent) }
+                }
+                .frame(width: ancho, height: 30)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }

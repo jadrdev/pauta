@@ -495,13 +495,13 @@ public final class Store {
                 .sorted(by: Item.byPosition)
         case .today:
             // Aquí manda el orden manual: es la lista que se prioriza a diario.
-            items.filter(\.isToday).sorted(by: Item.byPosition)
+            items.filter(\.isToday).sorted(by: Item.bySchedule)
         case .upcoming:
             // El día manda; dentro de cada día, el orden manual.
             items.filter(\.isUpcoming)
                 .sorted {
                     let a = $0.when ?? .distantFuture, b = $1.when ?? .distantFuture
-                    return a == b ? Item.byPosition($0, $1) : a < b
+                    return a == b ? Item.bySchedule($0, $1) : a < b
                 }
         case .anytime:
             items.filter(\.isAnytime).sorted(by: Item.byPosition)
@@ -661,15 +661,20 @@ public final class Store {
     }
 
     public func toggleComplete(_ item: Item) {
-        let completandoAhora = !item.isCompleted
+        // Todo se lee del almacén y nada del valor que llega: quien llama puede
+        // tener una copia de antes de ponerle la hora, la repetición o los
+        // pasos, y la sucesora nacería sin ellos.
+        guard let antes = items.first(where: { $0.id == item.id }) else { return }
+        let completandoAhora = !antes.isCompleted
         mutateItem(item.id) {
             $0.isCompleted.toggle()
             $0.completedAt = $0.isCompleted ? Store.stamped() : nil
         }
+        guard let ahora = items.first(where: { $0.id == item.id }) else { return }
         if completandoAhora {
-            spawnNextOccurrence(of: item)
+            spawnNextOccurrence(of: ahora)
         } else {
-            retireSpawnedSuccessor(of: item)
+            retireSpawnedSuccessor(of: ahora)
         }
     }
 
@@ -693,6 +698,13 @@ public final class Store {
         siguiente.notes = item.notes
         siguiente.projectID = item.projectID
         siguiente.when = proxima
+        // La hora es lo que hace útil una repetitiva: «todos los días a las
+        // nueve». Si no se heredara, la segunda vuelta ya no tendría hora.
+        siguiente.timeOfDay = item.timeOfDay
+        siguiente.tags = item.tags
+        // Los pasos vuelven sin marcar: la lista es la de esta vuelta, no la
+        // de la anterior ya hecha.
+        siguiente.checklist = item.checklist.map { ChecklistStep(title: $0.title) }
         siguiente.recurrence = recurrence
         siguiente.recurrenceEnd = item.recurrenceEnd
         siguiente.spawnedFrom = item.id
@@ -729,6 +741,22 @@ public final class Store {
         mutateItem(item.id) {
             $0.when = date.map { Calendar.current.startOfDay(for: $0) }
             $0.isSomeday = false
+            // Quitar el día se lleva la hora: una hora sin día no dice cuándo.
+            if date == nil { $0.timeOfDay = nil }
+        }
+    }
+
+    /// Pone o quita la hora, en minutos desde medianoche.
+    ///
+    /// Ponérsela a algo sin fecha lo programa para hoy: una hora suelta no
+    /// significa nada, y «a las nueve» sin más quiere decir las nueve de hoy.
+    public func setTime(_ item: Item, to minutes: Int?) {
+        mutateItem(item.id) {
+            $0.timeOfDay = minutes.map { max(0, min(24 * 60 - 1, $0)) }
+            if minutes != nil, $0.when == nil {
+                $0.when = Calendar.current.startOfDay(for: .now)
+                $0.isSomeday = false
+            }
         }
     }
 
@@ -927,6 +955,7 @@ public final class Store {
         mutateItem(item.id) {
             $0.isSomeday = true
             $0.when = nil
+            $0.timeOfDay = nil
         }
     }
 
@@ -1200,6 +1229,7 @@ extension Store {
         store.schedule(flights, to: calendar.date(byAdding: .day, value: 4, to: .now))
         // Una repetitiva con principio y fin.
         let riego = store.addItem(title: "Regar las plantas", in: .today)
+        store.setTime(riego, to: 8 * 60 + 30)
         store.setRecurrence(riego, to: .semanal)
         store.setRecurrenceEnd(store.items.last!,
                                to: calendar.date(byAdding: .day, value: 60, to: .now))

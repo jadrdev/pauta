@@ -128,6 +128,49 @@ Las dos lecturas son razonables y ninguna es obviamente la buena, así que decid
 por ti acertaría la mitad de las veces. En ambos casos se quitan las viñetas
 (`*`, `-`, `•`) y la numeración.
 
+### La hora
+
+Toda fecha en Pauta es **un día**, normalizado a las 00:00; la hora es lo único
+que mira el reloj. Se pone desde el propio menú de fecha —`Hora ▸`—, no desde un
+control aparte: una hora sin día no significa nada, así que ponérsela a algo sin
+fecha lo programa para hoy, y quitarle la fecha o aparcarlo se lleva la hora.
+
+Va en un campo aparte y **no dentro de `when`**. `when` es un día y hay quince
+sitios que lo normalizan para comparar, agrupar y ordenar; meterle una hora
+dentro le daría dos significados al mismo campo, y la cuenta de la repetición
+—que devuelve el arranque del día siguiente— la perdería en silencio. Un campo
+aparte no se puede perder sin que se note.
+
+En `Hoy` y en cada día de `Próximamente`, **lo que tiene hora va primero y por
+hora**; debajo sigue mandando el orden manual. La hora gana a la prioridad
+porque no es una preferencia sino una restricción de fuera: no puedes decidir
+que las nueve van después de las seis. En un proyecto o en la bandeja no se
+aplica, que ahí comparar horas de días distintos no diría nada.
+
+Una repetitiva **hereda la hora** —y las etiquetas, y los pasos, estos sin
+marcar—: «todos los días a las nueve» exige que la segunda vuelta también sean
+las nueve.
+
+#### El aviso
+
+Una hora sin aviso sería una etiqueta, así que las tareas con hora avisan por el
+sistema. El permiso se pide **la primera vez que hay algo que avisar**, no al
+arrancar: quien no use horas no tiene por qué ver el diálogo. Si lo rechazas, la
+hora sigue funcionando como orden y como rótulo, solo que muda.
+
+Los avisos se **reconstruyen enteros** con cada cambio, en vez de irse añadiendo
+y quitando uno a uno. Es más trabajo por cambio y muchísimo menos que razonar
+sobre qué aviso quedó suelto de una tarea que se completó, cambió de día, se
+borró o llegó de otro dispositivo. Se reprograma un segundo después del último
+cambio, porque escribir un título cambia las tareas en cada tecla.
+
+Hay un tope de **60**: el sistema descarta lo que pase de 64 por app, y sin tope
+propio se perderían avisos sin decirlo. Se quedan los más cercanos.
+
+```bash
+./build/Pauta.app/Contents/MacOS/Pauta --avisos
+```
+
 ### Listas de comprobación
 
 Una tarea puede llevar pasos. Se ven al desplegarla, y en la fila cerrada aparece
@@ -510,6 +553,7 @@ Combinado con `--dump` inspecciona la maqueta en vez de los datos reales.
 Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
   Models.swift            Item, ChecklistStep, Project, Area, Perspective
   Store.swift             estado + persistencia + consultas
+  Avisos.swift            avisos del sistema para las tareas con hora
 Sources/Pauta/            la app de macOS
   PautaApp.swift          punto de entrada, menús, atajos y barra de menús
   Views/Theme.swift       paleta, tipografía y filetes
