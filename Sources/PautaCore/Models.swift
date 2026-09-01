@@ -164,6 +164,7 @@ public protocol Timestamped: Codable {
 
 extension Item: Timestamped {}
 extension Project: Timestamped {}
+extension Area: Timestamped {}
 
 extension Item {
     /// Orden total: por creación y, cuando coincide, por identificador.
@@ -200,6 +201,8 @@ public struct Project: Identifiable, Codable, Hashable {
     /// Orden manual en la barra lateral. Como en las tareas, es un hueco entre
     /// vecinos y no un índice, para que mover uno escriba un solo archivo.
     public var position: Double = 0
+    /// El área a la que pertenece, si está en alguna.
+    public var areaID: UUID?
 
     public init(id: UUID = UUID(), name: String) {
         self.id = id
@@ -217,6 +220,39 @@ public struct Project: Identifiable, Codable, Hashable {
         updatedAt   = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
         deletedAt   = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
         position    = try c.decodeIfPresent(Double.self, forKey: .position) ?? 0
+        areaID      = try c.decodeIfPresent(UUID.self,   forKey: .areaID)
+    }
+}
+
+/// Un cajón de proyectos: «Trabajo», «Casa», «Estudios».
+///
+/// No guarda tareas propias. Lo que un área agrupa son proyectos, así que sus
+/// tareas son las de sus proyectos: sin proyecto no hay a qué colgarlas, y una
+/// tarea suelta dentro de un área sería un segundo padre con sus propias reglas.
+public struct Area: Identifiable, Codable, Hashable {
+    public var id = UUID()
+    public var name: String
+    /// Emoji que la identifica en la barra lateral. Vacío = sin emoji.
+    public var icon: String = ""
+    public var createdAt = Date()
+    public var updatedAt = Date()
+    public var deletedAt: Date?
+    public var position: Double = 0
+
+    public init(id: UUID = UUID(), name: String) {
+        self.id = id
+        self.name = name
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id        = try c.decodeIfPresent(UUID.self,   forKey: .id) ?? UUID()
+        name      = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+        icon      = try c.decodeIfPresent(String.self, forKey: .icon) ?? ""
+        createdAt = try c.decodeIfPresent(Date.self,   forKey: .createdAt) ?? Date()
+        updatedAt = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
+        deletedAt = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
+        position  = try c.decodeIfPresent(Double.self, forKey: .position) ?? 0
     }
 }
 
@@ -241,6 +277,24 @@ extension Project {
     }
 }
 
+extension Area {
+    /// Orden total, por el mismo motivo que en `Item`.
+    public static func byCreation(_ a: Area, _ b: Area) -> Bool {
+        a.createdAt == b.createdAt
+            ? a.id.uuidString < b.id.uuidString
+            : a.createdAt < b.createdAt
+    }
+
+    public static func byPosition(_ a: Area, _ b: Area) -> Bool {
+        a.position == b.position ? byCreation(a, b) : a.position < b.position
+    }
+
+    public static func byName(_ a: Area, _ b: Area) -> Bool {
+        let comparacion = a.name.localizedStandardCompare(b.name)
+        return comparacion == .orderedSame ? byCreation(a, b) : comparacion == .orderedAscending
+    }
+}
+
 // MARK: - Perspectivas de la barra lateral
 
 public enum Perspective: Hashable, CaseIterable {
@@ -251,6 +305,7 @@ public enum Perspective: Hashable, CaseIterable {
     case someday
     case completed
     case project(UUID)
+    case area(UUID)
 
     /// Las fijas, en el orden en que se muestran. Los proyectos van aparte.
     public static var allCases: [Perspective] { [.inbox, .today, .upcoming, .anytime, .someday, .completed] }
@@ -264,6 +319,7 @@ public enum Perspective: Hashable, CaseIterable {
         case .someday: "Algún día"
         case .completed: "Completadas"
         case .project: "Proyecto"
+        case .area: "Área"
         }
     }
 
@@ -279,6 +335,17 @@ public enum Perspective: Hashable, CaseIterable {
         case .someday: "shippingbox"
         case .completed: "archivebox"
         case .project: "circle.dotted"
+        case .area: "square.stack"
+        }
+    }
+
+    /// Dónde tiene sentido crear una tarea. En «Completadas» nacería ya hecha;
+    /// en un área no habría a qué proyecto colgarla, porque lo que un área
+    /// agrupa son proyectos.
+    public var acceptsNewItems: Bool {
+        switch self {
+        case .completed, .area: false
+        default: true
         }
     }
 

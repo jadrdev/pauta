@@ -398,7 +398,7 @@ struct ItemRowView: View {
     /// El autoclosure de `draggable` se evalúa al empezar a arrastrar, que es el
     /// único momento en que se puede anotar qué se está moviendo.
     private func cargaDeArrastre() -> String {
-        nav.arrastrandoProyecto = false
+        nav.arrastrando = .tarea
         return item.id.uuidString
     }
 

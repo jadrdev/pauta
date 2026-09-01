@@ -44,6 +44,7 @@ sería contradictorio.
 |---|---|
 | `⌘N` | Nueva tarea en la lista actual |
 | `⌘⇧N` | Nuevo proyecto |
+| `⌘⌥N` | Nueva área |
 | `↩` | Guardar y seguir escribiendo otra tarea |
 | `esc` | Cancelar la tarea nueva |
 | `⌘⇧R` | Importar de Recordatorios |
@@ -80,16 +81,41 @@ rápidas: programar, aparcar o eliminar.
   la tarea se quedaba donde estaba. También se puede soltar sobre el **rótulo del
   día**, que la manda a la cabeza de ese día.
 - **Los proyectos también se arrastran entre ellos** para ordenar la barra
-  lateral. Una fila de proyecto recibe las dos cosas, así que la señal es
-  distinta a propósito: reordenando sale una línea de inserción, y recibiendo
-  una tarea se enciende la fila entera. Son dos gestos que caen en el mismo
-  sitio y no deben parecer el mismo.
+  lateral, y **sobre un área** para meterlos en ella. Sobre el rótulo
+  `PROYECTOS` vuelven a quedarse sueltos.
+- **Las áreas se arrastran entre ellas** para ordenarlas.
 
-Pasando el cursor por el rótulo `PROYECTOS` aparece **«A–Z»**, que los ordena
-alfabéticamente; también está en el menú contextual de cualquier proyecto. Es el
-alfabético del idioma, no el de los códigos: la ñ va tras la n y los acentos
-cuentan como su letra. Solo aparece con el cursor encima porque ordenar es algo
-que se hace de año en año.
+Una misma fila recibe cosas distintas, así que la señal cambia según lo que
+lleves: **línea de inserción** cuando es reordenar entre iguales, y **la fila
+entera encendida** cuando es meter algo dentro. Son gestos que caen en el mismo
+sitio y no deben parecer el mismo.
+
+Pasando el cursor por el rótulo `PROYECTOS` aparece **«A–Z»**, que ordena áreas
+y proyectos alfabéticamente; también está en el menú contextual de cualquiera de
+los dos. Es el alfabético del idioma, no el de los códigos: la ñ va tras la n y
+los acentos cuentan como su letra. Los proyectos se ordenan **dentro de su
+grupo**, que es como se leen. Solo aparece con el cursor encima porque ordenar
+es algo que se hace de año en año.
+
+### Áreas
+
+Un área es un cajón de proyectos: «Casa», «Trabajo», «Estudios». Al pincharla
+enseña **todo lo pendiente de sus proyectos**, con la pastilla del proyecto en
+cada tarea para saber de dónde sale cada una.
+
+Un área **no guarda tareas propias**. Lo que agrupa son proyectos, así que sin
+proyecto no habría a qué colgarlas, y una tarea suelta dentro de un área sería
+un segundo padre con sus propias reglas en un modelo que ya tiene uno. Por eso
+estando en un área no aparece el botón de añadir y `⌘N` crea en la bandeja, que
+es donde va lo que aún no está decidido.
+
+Borrar un área **no borra sus proyectos**: los deja sueltos. Agrupar no es
+contener, y perder el trabajo de dentro por tirar el cajón sería una pérdida
+difícil de deshacer.
+
+El rótulo `PROYECTOS` se muestra aunque no haya ninguno suelto: es el sitio
+donde se sueltan para sacarlos de un área, y sin él no habría forma de sacarlos
+arrastrando.
 
 La prioridad es **una sola para toda la app**, no una por lista: las listas son
 consultas sobre la misma tarea, así que su prioridad es intrínseca y todas la
@@ -451,7 +477,7 @@ Combinado con `--dump` inspecciona la maqueta en vez de los datos reales.
 
 ```
 Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
-  Models.swift            Item, Project, Perspective
+  Models.swift            Item, Project, Area, Perspective
   Store.swift             estado + persistencia + consultas
 Sources/Pauta/            la app de macOS
   PautaApp.swift          punto de entrada, menús, atajos y barra de menús
@@ -471,7 +497,6 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
   calendario de verdad. Van como fuente aparte, mezclada solo en la vista.
   Escribir tareas como eventos, en cambio, es mala idea: duplica y genera
   conflictos
-- Áreas que agrupen proyectos
 - Listas de comprobación y etiquetas (y la elección al pegar varias líneas)
 - Widget y app de iOS — necesitan proyecto de Xcode y cuenta de desarrollador.
   `PautaCore` ya está extraído para ese salto, y la sincronización ya está

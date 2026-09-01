@@ -1010,7 +1010,7 @@ struct ProjectOrderingTests {
     @Test func alphabeticalUsesTheLanguagesOrder() {
         let s = Store(inMemory: true)
         for nombre in ["Zeta", "ñu", "banco", "Ávila", "Casa"] { s.addProject(name: nombre) }
-        s.sortProjectsAlphabetically()
+        s.sortAlphabetically()
         #expect(s.projects.map(\.name) == ["Ávila", "banco", "Casa", "ñu", "Zeta"])
     }
 
@@ -1021,13 +1021,13 @@ struct ProjectOrderingTests {
         let root = tempRoot()
         let s = Store(root: root)
         for nombre in ["Zeta", "banco", "Casa"] { s.addProject(name: nombre) }
-        s.sortProjectsAlphabetically()
+        s.sortAlphabetically()
 
         let dir = root.appendingPathComponent("projects")
         let archivos = try FileManager.default.contentsOfDirectory(at: dir,
                                                                    includingPropertiesForKeys: nil)
         let antes = try archivos.map { try Data(contentsOf: $0) }
-        s.sortProjectsAlphabetically()
+        s.sortAlphabetically()
         #expect(try archivos.map { try Data(contentsOf: $0) } == antes)
     }
 
@@ -1049,5 +1049,170 @@ struct ProjectOrderingTests {
         s.place(s.projects[2], before: s.projects[0])
         #expect(s.projects.map(\.name) == ["tres", "uno", "dos"])
         #expect(Store(root: root).projects.map(\.name) == ["tres", "uno", "dos"])
+    }
+}
+
+/// Áreas: cajones de proyectos.
+@MainActor
+struct AreaTests {
+    private func tempRoot() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaArea-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    @Test func anAreaShowsWhatItsProjectsHavePending() {
+        let s = Store(inMemory: true)
+        let casa = s.addArea(name: "Casa")
+        let mudanza = s.addProject(name: "Mudanza")
+        let bici = s.addProject(name: "Bicicleta")
+        let trabajo = s.addProject(name: "Trabajo")
+        s.move(mudanza, toArea: casa.id)
+        s.move(bici, toArea: casa.id)
+
+        s.addItem(title: "cajas", in: .project(mudanza.id))
+        s.addItem(title: "cadena", in: .project(bici.id))
+        s.addItem(title: "informe", in: .project(trabajo.id))
+
+        #expect(Set(s.items(for: .area(casa.id)).map(\.title)) == ["cajas", "cadena"])
+        #expect(s.count(for: .area(casa.id)) == 2)
+    }
+
+    @Test func completedTasksDoNotCount() {
+        let s = Store(inMemory: true)
+        let casa = s.addArea(name: "Casa")
+        let p = s.addProject(name: "Mudanza")
+        s.move(p, toArea: casa.id)
+        let cajas = s.addItem(title: "cajas", in: .project(p.id))
+        s.toggleComplete(cajas)
+        #expect(s.items(for: .area(casa.id)).isEmpty)
+    }
+
+    /// Sacar un proyecto de un área lo saca también de su lista.
+    @Test func takingAProjectOutEmptiesTheArea() {
+        let s = Store(inMemory: true)
+        let casa = s.addArea(name: "Casa")
+        let p = s.addProject(name: "Mudanza")
+        s.move(p, toArea: casa.id)
+        s.addItem(title: "cajas", in: .project(p.id))
+        #expect(s.count(for: .area(casa.id)) == 1)
+
+        s.move(p, toArea: nil)
+        #expect(s.count(for: .area(casa.id)) == 0)
+        #expect(s.projects(in: nil).map(\.name) == ["Mudanza"])
+    }
+
+    /// Borrar el área no se lleva por delante lo que había dentro: agrupa, no
+    /// contiene. Perder proyectos enteros por borrar un cajón sería difícil de
+    /// deshacer.
+    @Test func deletingAnAreaKeepsItsProjects() {
+        let s = Store(inMemory: true)
+        let casa = s.addArea(name: "Casa")
+        let p = s.addProject(name: "Mudanza")
+        s.move(p, toArea: casa.id)
+        let tarea = s.addItem(title: "cajas", in: .project(p.id))
+
+        s.delete(casa)
+        #expect(s.areas.isEmpty)
+        #expect(s.projects.map(\.name) == ["Mudanza"])
+        #expect(s.projects(in: nil).count == 1)
+        #expect(s.items(for: .project(p.id)).map(\.id) == [tarea.id])
+    }
+
+    @Test func anAreaAcceptsNoTasksOfItsOwn() {
+        let s = Store(inMemory: true)
+        let casa = s.addArea(name: "Casa")
+        s.addItem(title: "suelta", in: .area(casa.id))
+        // Nace sin proyecto, así que cae en la bandeja y no en el área.
+        #expect(s.items(for: .inbox).map(\.title) == ["suelta"])
+        #expect(s.items(for: .area(casa.id)).isEmpty)
+        #expect(Perspective.area(casa.id).acceptsNewItems == false)
+    }
+
+    @Test func areasReorderAndSurviveAReload() throws {
+        let root = tempRoot()
+        let s = Store(root: root)
+        s.addArea(name: "Casa")
+        s.addArea(name: "Trabajo")
+        let estudios = s.addArea(name: "Estudios")
+        s.place(estudios, before: s.areas[0])
+        #expect(s.areas.map(\.name) == ["Estudios", "Casa", "Trabajo"])
+        #expect(Store(root: root).areas.map(\.name) == ["Estudios", "Casa", "Trabajo"])
+    }
+
+    @Test func membershipSurvivesAReload() throws {
+        let root = tempRoot()
+        let s = Store(root: root)
+        let casa = s.addArea(name: "Casa")
+        let p = s.addProject(name: "Mudanza")
+        s.move(p, toArea: casa.id)
+
+        let otro = Store(root: root)
+        #expect(otro.projects(in: casa.id).map(\.name) == ["Mudanza"])
+        #expect(otro.projects(in: nil).isEmpty)
+    }
+
+    /// El alfabético ordena los proyectos dentro de su grupo, no en una sola
+    /// lista: en la barra lateral se leen por grupos.
+    @Test func alphabeticalSortsWithinEachGroup() {
+        let s = Store(inMemory: true)
+        let casa = s.addArea(name: "Casa")
+        for nombre in ["zapatos", "armario"] {
+            s.move(s.addProject(name: nombre), toArea: casa.id)
+        }
+        for nombre in ["zoo", "banco"] { s.addProject(name: nombre) }
+
+        s.sortAlphabetically()
+        #expect(s.projects(in: nil).map(\.name) == ["banco", "zoo"])
+        #expect(s.projects(in: casa.id).map(\.name) == ["armario", "zapatos"])
+    }
+
+    /// Las posiciones tienen que seguir siendo únicas entre todos los proyectos:
+    /// si se repitieran entre grupos, el arranque lo tomaría por un empate y
+    /// los renumeraría, deshaciendo el orden.
+    @Test func positionsStayUniqueAcrossGroups() {
+        let s = Store(inMemory: true)
+        let casa = s.addArea(name: "Casa")
+        for nombre in ["zapatos", "armario"] {
+            s.move(s.addProject(name: nombre), toArea: casa.id)
+        }
+        for nombre in ["zoo", "banco"] { s.addProject(name: nombre) }
+        s.sortAlphabetically()
+        #expect(Set(s.projects.map(\.position)).count == s.projects.count)
+    }
+
+    @Test func sortingTwiceWritesNothingTheSecondTime() throws {
+        let root = tempRoot()
+        let s = Store(root: root)
+        let casa = s.addArea(name: "Casa")
+        s.move(s.addProject(name: "zapatos"), toArea: casa.id)
+        s.addProject(name: "banco")
+        s.addArea(name: "Trabajo")
+        s.sortAlphabetically()
+
+        let dirs = ["projects", "areas"].map { root.appendingPathComponent($0) }
+        let archivos = try dirs.flatMap {
+            try FileManager.default.contentsOfDirectory(at: $0, includingPropertiesForKeys: nil)
+        }
+        let antes = try archivos.map { try Data(contentsOf: $0) }
+        s.sortAlphabetically()
+        #expect(try archivos.map { try Data(contentsOf: $0) } == antes)
+    }
+
+    /// Los datos escritos antes de que existieran las áreas no traen ni el campo
+    /// ni la carpeta, y tienen que seguir abriéndose.
+    @Test func dataWrittenBeforeAreasExistedStillOpens() throws {
+        let root = tempRoot()
+        let dir = root.appendingPathComponent("projects", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let id = UUID()
+        let json = #"{"id":"\#(id.uuidString)","name":"viejo","createdAt":"2026-08-20T10:00:00Z"}"#
+        try json.write(to: dir.appendingPathComponent("\(id.uuidString).json"),
+                       atomically: true, encoding: .utf8)
+
+        let s = Store(root: root)
+        #expect(s.areas.isEmpty)
+        #expect(s.projects(in: nil).map(\.name) == ["viejo"])
     }
 }

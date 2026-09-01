@@ -39,7 +39,7 @@ struct ItemListView: View {
 
                 if nav.isAddingItem {
                     draftRow
-                } else if nav.perspective != .completed {
+                } else if nav.perspective.acceptsNewItems {
                     addButton
                 }
             }
@@ -61,8 +61,13 @@ struct ItemListView: View {
     @ViewBuilder private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             if case .project(let id) = nav.perspective, let project = store.project(id) {
-                ProjectIconButton(project: project)
-                ProjectTitleField(project: project)
+                IconoEditable(icon: project.icon) { store.setIcon(project, to: $0) }
+                TituloEditable(id: project.id, nombre: project.name) {
+                    store.rename(project, to: $0)
+                }
+            } else if case .area(let id) = nav.perspective, let area = store.area(id) {
+                IconoEditable(icon: area.icon) { store.setIcon(area, to: $0) }
+                TituloEditable(id: area.id, nombre: area.name) { store.rename(area, to: $0) }
             } else {
                 Text(store.title(for: nav.perspective))
                     .font(.display(30))
@@ -92,10 +97,23 @@ struct ItemListView: View {
             Text(emptyTitle)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Paper.inkSoft)
-            Text("Pulsa ⌘N para añadir una tarea.")
-                .font(.system(size: 12.5))
-                .foregroundStyle(Paper.inkFaint)
+            if let emptyHint {
+                Text(emptyHint)
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(Paper.inkFaint)
+            }
         }
+    }
+
+    /// Qué se puede hacer desde aquí. En un área ⌘N no añade nada —lo que
+    /// agrupa son proyectos—, así que ofrecerlo sería mandar a un sitio donde
+    /// no pasa lo que se promete.
+    private var emptyHint: String? {
+        if case .area = nav.perspective {
+            return "Arrastra proyectos a esta área en la barra lateral."
+        }
+        guard nav.perspective.acceptsNewItems else { return nil }
+        return "Pulsa ⌘N para añadir una tarea."
     }
 
     /// «Mañana», «Sábado» dentro de la semana, y fecha con mes más allá.
@@ -118,6 +136,7 @@ struct ItemListView: View {
         case .someday: "Nada aparcado para algún día."
         case .completed: "Todavía no has completado nada."
         case .project: "Este proyecto no tiene tareas."
+        case .area: "Los proyectos de esta área no tienen nada pendiente."
         }
     }
 
@@ -225,12 +244,12 @@ private struct DayHeader: View {
     }
 }
 
-/// Emoji del proyecto en la cabecera; al pulsarlo se abre un pequeño panel
+/// Emoji del proyecto o del área en la cabecera; al pulsarlo se abre un panel
 /// para elegirlo. Paleta corta y curada a propósito: entre veinte se escoge
 /// de un vistazo, en el teclado de emojis completo del sistema no.
-private struct ProjectIconButton: View {
-    @Environment(Store.self) private var store
-    let project: Project
+private struct IconoEditable: View {
+    let icon: String
+    let alElegir: (String) -> Void
     @State private var showingPicker = false
 
     private static let palette = [
@@ -240,12 +259,12 @@ private struct ProjectIconButton: View {
 
     var body: some View {
         Button { showingPicker.toggle() } label: {
-            if project.icon.isEmpty {
+            if icon.isEmpty {
                 Image(systemName: "circle.dotted")
                     .font(.system(size: 19, weight: .medium))
                     .foregroundStyle(Paper.inkFaint)
             } else {
-                Text(project.icon).font(.system(size: 23))
+                Text(icon).font(.system(size: 23))
             }
         }
         .buttonStyle(.plain)
@@ -255,22 +274,22 @@ private struct ProjectIconButton: View {
                           spacing: 6) {
                     ForEach(Self.palette, id: \.self) { emoji in
                         Button {
-                            store.setIcon(project, to: emoji)
+                            alElegir(emoji)
                             showingPicker = false
                         } label: {
                             Text(emoji)
                                 .font(.system(size: 17))
                                 .frame(width: 30, height: 30)
-                                .background(project.icon == emoji ? Paper.accent.opacity(0.16) : .clear,
+                                .background(icon == emoji ? Paper.accent.opacity(0.16) : .clear,
                                             in: RoundedRectangle(cornerRadius: 6))
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                if !project.icon.isEmpty {
+                if !icon.isEmpty {
                     Button("Quitar emoji") {
-                        store.setIcon(project, to: "")
+                        alElegir("")
                         showingPicker = false
                     }
                     .buttonStyle(.plain)
@@ -283,21 +302,24 @@ private struct ProjectIconButton: View {
     }
 }
 
-/// Título editable en la cabecera de un proyecto.
-private struct ProjectTitleField: View {
-    @Environment(Store.self) private var store
-    let project: Project
-    @State private var name = ""
+/// Título editable en la cabecera de un proyecto o de un área.
+private struct TituloEditable: View {
+    let id: UUID
+    let nombre: String
+    let alCambiar: (String) -> Void
+    @State private var texto = ""
 
     var body: some View {
-        TextField("Sin título", text: $name)
+        TextField("Sin título", text: $texto)
             .textFieldStyle(.plain)
             .font(.display(30))
             .tracking(-0.6)
             .foregroundStyle(Paper.ink)
             .fixedSize(horizontal: false, vertical: true)
-            .onAppear { name = project.name }
-            .onChange(of: project.id) { name = project.name }
-            .onChange(of: name) { store.rename(project, to: name) }
+            .onAppear { texto = nombre }
+            // Al cambiar de proyecto o de área hay que recargar el campo: si no,
+            // el texto del anterior se escribiría encima del nuevo.
+            .onChange(of: id) { texto = nombre }
+            .onChange(of: texto) { alCambiar(texto) }
     }
 }

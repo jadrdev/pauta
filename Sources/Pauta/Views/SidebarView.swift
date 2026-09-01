@@ -15,39 +15,41 @@ struct SidebarView: View {
                 }
             }
 
-            if !store.projects.isEmpty {
+            // El grupo «sin área» se muestra en cuanto hay algo que agrupar,
+            // aunque esté vacío: es el sitio donde se sueltan los proyectos para
+            // sacarlos de un área, y sin él no habría forma de sacarlos
+            // arrastrando.
+            if !store.projects.isEmpty || !store.areas.isEmpty {
                 CabeceraProyectos()
 
                 VStack(alignment: .leading, spacing: 1) {
-                    ForEach(store.projects) { project in
-                        SidebarRow(perspective: .project(project.id),
-                                   label: project.name.isEmpty ? "Sin título" : project.name,
-                                   project: project)
+                    ForEach(store.projects(in: nil)) { project in
+                        fila(project)
+                    }
+                }
+            }
+
+            ForEach(store.areas) { area in
+                AreaRow(area: area)
+                VStack(alignment: .leading, spacing: 1) {
+                    // Sangrados: lo que cuelga de un área se lee de un vistazo.
+                    ForEach(store.projects(in: area.id)) { project in
+                        fila(project, sangria: 14)
                     }
                 }
             }
 
             Spacer(minLength: 20)
 
-            Button {
+            botonNuevo("Nuevo proyecto") {
                 let project = store.addProject(name: "")
                 nav.go(to: .project(project.id))
-            } label: {
-                HStack(spacing: 9) {
-                    // El «+» ocupa la columna del icono, el texto la de la etiqueta.
-                    Text("\u{FF0B}")
-                        .font(.system(size: 11, weight: .bold))
-                        .frame(width: 17, alignment: .center)
-                    Text("Nuevo proyecto").font(.system(size: 12.5, weight: .medium))
-                }
-                .foregroundStyle(Paper.inkFaint)
-                .padding(.leading, 15)
-                .padding(.trailing, 18)
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            botonNuevo("Nueva área") {
+                let area = store.addArea(name: "")
+                nav.go(to: .area(area.id))
+            }
+            .padding(.bottom, 4)
         }
         // Hueco para los botones de la ventana, que flotan sobre la barra lateral.
         // NavigationSplitView ya reserva el margen de la zona del titular, así
@@ -59,6 +61,32 @@ struct SidebarView: View {
             Rectangle().fill(Paper.hairline).frame(width: 1)
         }
     }
+
+    private func fila(_ project: Project, sangria: CGFloat = 0) -> some View {
+        SidebarRow(perspective: .project(project.id),
+                   label: project.name.isEmpty ? "Sin título" : project.name,
+                   project: project,
+                   sangria: sangria)
+    }
+
+    private func botonNuevo(_ titulo: String, accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            HStack(spacing: 9) {
+                // El «+» ocupa la columna del icono, el texto la de la etiqueta.
+                Text("\u{FF0B}")
+                    .font(.system(size: 11, weight: .bold))
+                    .frame(width: 17, alignment: .center)
+                Text(titulo).font(.system(size: 12.5, weight: .medium))
+            }
+            .foregroundStyle(Paper.inkFaint)
+            .padding(.leading, 15)
+            .padding(.trailing, 18)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
 }
 
 /// El rótulo «PROYECTOS» y, al pasar por encima, el atajo para ordenarlos.
@@ -68,17 +96,18 @@ struct SidebarView: View {
 private struct CabeceraProyectos: View {
     @Environment(Store.self) private var store
     @State private var encima = false
+    @State private var recibiendo = false
 
     var body: some View {
         HStack(spacing: 8) {
-            Text("PROYECTOS").rubricStyle()
+            Text("PROYECTOS").rubricStyle(recibiendo ? Paper.accentInk : Paper.inkFaint)
             Spacer(minLength: 8)
             if encima {
-                Button { store.sortProjectsAlphabetically() } label: {
+                Button { store.sortAlphabetically() } label: {
                     Text("A–Z").rubricStyle(Paper.accentInk)
                 }
                 .buttonStyle(.plain)
-                .help("Ordenar los proyectos alfabéticamente")
+                .help("Ordenar áreas y proyectos alfabéticamente")
             }
         }
         // Alineado con la columna de texto de las filas: 15 + 17 + 9.
@@ -86,8 +115,127 @@ private struct CabeceraProyectos: View {
         .padding(.trailing, 18)
         .padding(.top, 26)
         .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(recibiendo ? Paper.accent.opacity(0.30) : .clear)
         .contentShape(Rectangle())
+        // Soltar aquí un proyecto lo saca del área en la que estuviera.
+        .dropDestination(for: String.self) { payload, _ in
+            let sueltos = payload.compactMap(Arrastre.proyecto).compactMap(store.project)
+            for project in sueltos { store.move(project, toArea: nil) }
+            return !sueltos.isEmpty
+        } isTargeted: { recibiendo = $0 }
         .onHover { encima = $0 }
+    }
+}
+
+/// Un área en la barra lateral: rótulo de grupo, pero además se puede pinchar
+/// para ver todo lo pendiente de sus proyectos.
+private struct AreaRow: View {
+    @Environment(Store.self) private var store
+    @Environment(Navigation.self) private var nav
+    let area: Area
+
+    @State private var encima = false
+    @State private var recibiendo = false
+
+    private var seleccionada: Bool { nav.perspective == .area(area.id) }
+    /// Se está arrastrando otra área: entonces esto es reordenar, no meter.
+    private var reordenando: Bool { nav.arrastrando == .area }
+
+    var body: some View {
+        let cuenta = store.count(for: .area(area.id))
+        HStack(spacing: 8) {
+            if !area.icon.isEmpty {
+                Text(area.icon).font(.system(size: 11))
+            }
+            Text((area.name.isEmpty ? "Sin título" : area.name).uppercased())
+                .rubricStyle(seleccionada ? Paper.accentInk : Paper.inkSoft)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            if cuenta > 0 {
+                Text("\(cuenta)")
+                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(seleccionada ? Paper.accentInk : Paper.inkFaint)
+            }
+        }
+        .padding(.leading, 15)
+        .padding(.trailing, 18)
+        .padding(.top, 22)
+        .padding(.bottom, 7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(fondo)
+        .overlay(alignment: .leading) {
+            Rectangle().fill(seleccionada ? Paper.accent : .clear).frame(width: 3)
+        }
+        .overlay(alignment: .top) {
+            if recibiendo, reordenando {
+                Rectangle().fill(Paper.accent).frame(height: 2).padding(.top, 10)
+            }
+        }
+        .contentShape(Rectangle())
+        .draggable(cargaDeArrastre())
+        .dropDestination(for: String.self) { payload, _ in recibir(payload) }
+            isTargeted: { recibiendo = $0 }
+        .onHover { encima = $0 }
+        .onTapGesture { nav.go(to: .area(area.id)) }
+        .contextMenu {
+            Button("Ordenar áreas y proyectos alfabéticamente") {
+                store.sortAlphabetically()
+            }
+            Divider()
+            Button("Eliminar área", role: .destructive) {
+                if nav.perspective == .area(area.id) { nav.go(to: .inbox) }
+                store.delete(area)
+            }
+        }
+    }
+
+    @ViewBuilder private var fondo: some View {
+        if recibiendo, !reordenando {
+            Paper.accent.opacity(0.30)
+        } else if seleccionada {
+            Paper.accent.opacity(0.16)
+        } else if encima {
+            Paper.ink.opacity(0.045)
+        }
+    }
+
+    private func cargaDeArrastre() -> String {
+        nav.arrastrando = .area
+        return Arrastre.prefijoArea + area.id.uuidString
+    }
+
+    /// Un área recibe dos cosas: otra área, que se coloca antes; y un proyecto,
+    /// que pasa a formar parte de ella. Tareas no: no tendría a qué colgarlas.
+    private func recibir(_ payload: [String]) -> Bool {
+        if let otra = payload.compactMap(Arrastre.area).compactMap(store.area).first {
+            guard otra.id != area.id else { return false }
+            store.place(otra, before: area)
+            return true
+        }
+        let proyectos = payload.compactMap(Arrastre.proyecto).compactMap(store.project)
+        for project in proyectos { store.move(project, toArea: area.id) }
+        return !proyectos.isEmpty
+    }
+}
+
+/// Cómo viaja lo arrastrado.
+///
+/// Tareas, proyectos y áreas son todos un UUID y caen sobre las mismas filas,
+/// así que el texto lleva delante de qué se trata. Sin eso, soltar un proyecto
+/// sobre otro se leería como una tarea que no existe.
+enum Arrastre {
+    static let prefijoProyecto = "proyecto:"
+    static let prefijoArea = "area:"
+
+    static func proyecto(_ payload: String) -> UUID? { id(payload, prefijoProyecto) }
+    static func area(_ payload: String) -> UUID? { id(payload, prefijoArea) }
+    /// Las tareas viajan como su UUID pelado.
+    static func tarea(_ payload: String) -> UUID? { UUID(uuidString: payload) }
+
+    private static func id(_ payload: String, _ prefijo: String) -> UUID? {
+        guard payload.hasPrefix(prefijo) else { return nil }
+        return UUID(uuidString: String(payload.dropFirst(prefijo.count)))
     }
 }
 
@@ -97,6 +245,7 @@ private struct SidebarRow: View {
     let perspective: Perspective
     let label: String
     var project: Project?
+    var sangria: CGFloat = 0
 
     @State private var hovering = false
     @State private var isDropTarget = false
@@ -129,7 +278,7 @@ private struct SidebarRow: View {
                     .foregroundStyle(isSelected ? Paper.accentInk : Paper.inkFaint)
             }
         }
-        .padding(.leading, 15)
+        .padding(.leading, 15 + sangria)
         .padding(.trailing, 18)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -158,8 +307,19 @@ private struct SidebarRow: View {
         .onTapGesture { nav.go(to: perspective) }
         .contextMenu {
             if let project {
-                Button("Ordenar proyectos alfabéticamente") {
-                    store.sortProjectsAlphabetically()
+                if !store.areas.isEmpty {
+                    Menu("Área") {
+                        Button("Sin área") { store.move(project, toArea: nil) }
+                        Divider()
+                        ForEach(store.areas) { area in
+                            Button(area.name.isEmpty ? "Sin título" : area.name) {
+                                store.move(project, toArea: area.id)
+                            }
+                        }
+                    }
+                }
+                Button("Ordenar áreas y proyectos alfabéticamente") {
+                    store.sortAlphabetically()
                 }
                 Divider()
                 Button("Eliminar proyecto", role: .destructive) {
@@ -171,13 +331,11 @@ private struct SidebarRow: View {
     }
 
     /// Se está arrastrando un proyecto sobre otro: es reordenar, no mover.
-    private var reordenando: Bool { project != nil && nav.arrastrandoProyecto }
-
-    private static let prefijo = "proyecto:"
+    private var reordenando: Bool { project != nil && nav.arrastrando == .proyecto }
 
     private func cargaDeArrastre(_ project: Project) -> String {
-        nav.arrastrandoProyecto = true
-        return Self.prefijo + project.id.uuidString
+        nav.arrastrando = .proyecto
+        return Arrastre.prefijoProyecto + project.id.uuidString
     }
 
     /// Qué hacer con lo que se suelta encima.
@@ -187,23 +345,20 @@ private struct SidebarRow: View {
     /// UUID y caen sobre la misma fila, y sin distinguirlos un proyecto soltado
     /// sobre otro se interpretaría como una tarea que no existe.
     private func recibir(_ payload: [String]) -> Bool {
-        if let project, let arrastrado = payload.compactMap(proyecto).first {
+        if let project, let arrastrado = payload.compactMap(Arrastre.proyecto)
+                                                .compactMap(store.project).first {
             guard arrastrado.id != project.id else { return false }
+            // Cae en el sitio del de destino, área incluida: si no, saltaría al
+            // hueco pero se quedaría colgando de otro grupo.
+            store.move(arrastrado, toArea: project.areaID)
             store.place(arrastrado, before: project)
             return true
         }
         let tareas = payload
-            .compactMap(UUID.init(uuidString:))
+            .compactMap(Arrastre.tarea)
             .compactMap { id in store.items.first { $0.id == id } }
         for item in tareas { store.move(item, to: perspective) }
         return !tareas.isEmpty
-    }
-
-    private func proyecto(_ payload: String) -> Project? {
-        guard payload.hasPrefix(Self.prefijo),
-              let id = UUID(uuidString: String(payload.dropFirst(Self.prefijo.count)))
-        else { return nil }
-        return store.project(id)
     }
 
     @ViewBuilder private var background: some View {

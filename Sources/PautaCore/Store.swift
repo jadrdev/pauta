@@ -37,10 +37,12 @@ public enum Retention {
 public final class Store {
     public var items: [Item] = []
     public var projects: [Project] = []
+    public var areas: [Area] = []
 
     private let root: URL
     private let itemsDir: URL
     private let projectsDir: URL
+    private let areasDir: URL
     private let encoder: JSONEncoder = {
         let e = JSONEncoder()
         e.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -75,6 +77,7 @@ public final class Store {
     /// Lo leído de cada archivo en la última carga, por nombre de archivo.
     private var itemCache: [String: Cached<Item>] = [:]
     private var projectCache: [String: Cached<Project>] = [:]
+    private var areaCache: [String: Cached<Area>] = [:]
 
     /// Archivos que iCloud tenía desalojados en la última carga. Si es mayor que
     /// cero, faltan datos que aparecerán cuando terminen de bajar.
@@ -123,7 +126,7 @@ public final class Store {
 
         var copied = 0
         try? fm.createDirectory(at: destination, withIntermediateDirectories: true)
-        for sub in ["items", "projects"] {
+        for sub in ["items", "projects", "areas"] {
             let from = source.appendingPathComponent(sub, isDirectory: true)
             let to = destination.appendingPathComponent(sub, isDirectory: true)
             guard let files = try? fm.contentsOfDirectory(at: from,
@@ -152,6 +155,7 @@ public final class Store {
         self.root = base
         self.itemsDir = base.appendingPathComponent("items", isDirectory: true)
         self.projectsDir = base.appendingPathComponent("projects", isDirectory: true)
+        self.areasDir = base.appendingPathComponent("areas", isDirectory: true)
         if !inMemory {
             // Al estrenar la carpeta de iCloud, adopta lo que hubiera en local.
             if root == nil { Store.adoptData(from: Store.localRoot, to: base) }
@@ -159,6 +163,7 @@ public final class Store {
             let fm = FileManager.default
             try? fm.createDirectory(at: itemsDir, withIntermediateDirectories: true)
             try? fm.createDirectory(at: projectsDir, withIntermediateDirectories: true)
+            try? fm.createDirectory(at: areasDir, withIntermediateDirectories: true)
             load()
             normalizePositionsIfNeeded()
             purgeOldTombstones()
@@ -184,6 +189,10 @@ public final class Store {
 
     private func url(forProject id: UUID) -> URL {
         projectsDir.appendingPathComponent("\(id.uuidString).json")
+    }
+
+    private func url(forArea id: UUID) -> URL {
+        areasDir.appendingPathComponent("\(id.uuidString).json")
     }
 
     /// Pide a iCloud que baje lo que tenga desalojado.
@@ -316,7 +325,9 @@ public final class Store {
     }
 
     private func load() {
-        pendingDownloads = requestDownloads(in: itemsDir) + requestDownloads(in: projectsDir)
+        pendingDownloads = requestDownloads(in: itemsDir)
+            + requestDownloads(in: projectsDir)
+            + requestDownloads(in: areasDir)
 
         var live: [Item] = []
         for item in loadObjects(in: itemsDir, cache: &itemCache) {
@@ -333,6 +344,11 @@ public final class Store {
             .filter { $0.deletedAt == nil }
             .sorted(by: Project.byPosition)
         if freshProjects != projects { projects = freshProjects }
+
+        let freshAreas = loadObjects(in: areasDir, cache: &areaCache)
+            .filter { $0.deletedAt == nil }
+            .sorted(by: Area.byPosition)
+        if freshAreas != areas { areas = freshAreas }
     }
 
     /// Escritura atómica del objeto tocado, y solo de ese: reescribir todo en
@@ -352,6 +368,13 @@ public final class Store {
         let file = url(forProject: project.id)
         try? data.write(to: file, options: .atomic)
         projectCache[file.lastPathComponent] = Cached(stamp: stamp(of: file), value: project)
+    }
+
+    private func persist(_ area: Area) {
+        guard !inMemory, let data = try? encoder.encode(area) else { return }
+        let file = url(forArea: area.id)
+        try? data.write(to: file, options: .atomic)
+        areaCache[file.lastPathComponent] = Cached(stamp: stamp(of: file), value: area)
     }
 
     /// Reparte el `data.json` de un solo blob en un archivo por objeto. El
@@ -455,6 +478,13 @@ public final class Store {
         persist(projects[idx])
     }
 
+    private func mutateArea(_ id: UUID, _ change: (inout Area) -> Void) {
+        guard let idx = areas.firstIndex(where: { $0.id == id }) else { return }
+        change(&areas[idx])
+        areas[idx].updatedAt = Store.stamped()
+        persist(areas[idx])
+    }
+
     // MARK: - Consultas
 
     public func items(for perspective: Perspective) -> [Item] {
@@ -487,8 +517,25 @@ public final class Store {
         case .project(let id):
             items.filter { !$0.isCompleted && $0.projectID == id }
                 .sorted(by: Item.byPosition)
+        case .area(let id):
+            itemsInArea(id)
         }
     }
+
+    /// Un área no tiene tareas propias: enseña las de sus proyectos.
+    private func itemsInArea(_ id: UUID) -> [Item] {
+        let suyos = Set(projects.filter { $0.areaID == id }.map(\.id))
+        return items
+            .filter { !$0.isCompleted && $0.projectID.map(suyos.contains) == true }
+            .sorted(by: Item.byPosition)
+    }
+
+    /// Los proyectos de un área, o los que no están en ninguna si es `nil`.
+    public func projects(in areaID: UUID?) -> [Project] {
+        projects.filter { $0.areaID == areaID }
+    }
+
+    public func area(_ id: UUID) -> Area? { areas.first { $0.id == id } }
 
     public func count(for perspective: Perspective) -> Int { items(for: perspective).count }
 
@@ -506,6 +553,7 @@ public final class Store {
 
     public func title(for perspective: Perspective) -> String {
         if case .project(let id) = perspective { return project(id)?.name ?? "Proyecto" }
+        if case .area(let id) = perspective { return area(id)?.name ?? "Área" }
         return perspective.title
     }
 
@@ -549,7 +597,9 @@ public final class Store {
             item.isSomeday = true
         case .project(let id):
             item.projectID = id
-        case .inbox, .completed:
+        // Un área no puede recibir una tarea: no sabría a qué proyecto colgarla.
+        // La interfaz ni siquiera ofrece añadir estando en una.
+        case .inbox, .completed, .area:
             break
         }
         stampCreation(&item)
@@ -682,6 +732,7 @@ public final class Store {
         }
         purge(itemsDir, as: Item.self) { $0.deletedAt }
         purge(projectsDir, as: Project.self) { $0.deletedAt }
+        purge(areasDir, as: Area.self) { $0.deletedAt }
         return borrados
     }
 
@@ -700,6 +751,11 @@ public final class Store {
         if Set(projects.map(\.position)).count != projects.count {
             for (i, project) in projects.sorted(by: Project.byPosition).enumerated() {
                 mutateProject(project.id) { $0.position = Double(i + 1) }
+            }
+        }
+        if Set(areas.map(\.position)).count != areas.count {
+            for (i, area) in areas.sorted(by: Area.byPosition).enumerated() {
+                mutateArea(area.id) { $0.position = Double(i + 1) }
             }
         }
     }
@@ -804,6 +860,8 @@ public final class Store {
             }
         case .project(let id):
             mutateItem(item.id) { $0.projectID = id }
+        case .area:
+            break
         }
     }
 
@@ -874,17 +932,34 @@ public final class Store {
         projects.sort(by: Project.byPosition)
     }
 
-    /// Renumera los proyectos por nombre.
+    /// Renumera áreas y proyectos por nombre.
     ///
-    /// Aquí sí se reescriben todos los archivos, y está bien: es una acción que
-    /// se pide a mano y de una vez, no algo que ocurra en cada arrastre. Los
-    /// que ya estén en su sitio no se tocan, así que ordenar dos veces seguidas
-    /// no escribe nada la segunda.
-    public func sortProjectsAlphabetically() {
-        for (i, project) in projects.sorted(by: Project.byName).enumerated() {
+    /// Aquí sí se reescriben archivos, y está bien: es una acción que se pide a
+    /// mano y de una vez, no algo que ocurra en cada arrastre. Los que ya estén
+    /// en su sitio no se tocan, así que ordenar dos veces seguidas no escribe
+    /// nada la segunda.
+    ///
+    /// Los proyectos se ordenan **dentro de su grupo** —los sueltos primero y
+    /// luego los de cada área—, porque así es como se leen en la barra lateral.
+    /// La numeración sigue siendo única entre todos: si se repitiera entre
+    /// grupos, el arranque la tomaría por un empate y renumeraría de nuevo.
+    public func sortAlphabetically() {
+        for (i, area) in areas.sorted(by: Area.byName).enumerated() {
             let nueva = Double(i + 1)
-            guard project.position != nueva else { continue }
-            mutateProject(project.id) { $0.position = nueva }
+            guard area.position != nueva else { continue }
+            mutateArea(area.id) { $0.position = nueva }
+        }
+        areas.sort(by: Area.byPosition)
+
+        let grupos: [UUID?] = [nil] + areas.map { Optional($0.id) }
+        var n = 0
+        for grupo in grupos {
+            for project in projects(in: grupo).sorted(by: Project.byName) {
+                n += 1
+                let nueva = Double(n)
+                guard project.position != nueva else { continue }
+                mutateProject(project.id) { $0.position = nueva }
+            }
         }
         projects.sort(by: Project.byPosition)
     }
@@ -896,6 +971,67 @@ public final class Store {
     /// Cambia el emoji del proyecto. Cadena vacía = quitarlo.
     public func setIcon(_ project: Project, to icon: String) {
         mutateProject(project.id) { $0.icon = icon }
+    }
+
+    /// Mete el proyecto en un área, o lo saca de todas si es `nil`.
+    public func move(_ project: Project, toArea areaID: UUID?) {
+        mutateProject(project.id) { $0.areaID = areaID }
+    }
+
+    @discardableResult
+    public func addArea(name: String) -> Area {
+        var area = Area(name: name.isEmpty ? "Nueva área" : name)
+        var created = Store.stamped(area.createdAt)
+        if let last = areas.map(\.createdAt).max(),
+           created < last.addingTimeInterval(0.001) {
+            created = Store.stamped(last.addingTimeInterval(0.001))
+        }
+        area.createdAt = created
+        area.updatedAt = created
+        area.position = (areas.map(\.position).max() ?? 0) + 1
+        areas.append(area)
+        persist(area)
+        return area
+    }
+
+    public func rename(_ area: Area, to name: String) {
+        mutateArea(area.id) { $0.name = name }
+    }
+
+    public func setIcon(_ area: Area, to icon: String) {
+        mutateArea(area.id) { $0.icon = icon }
+    }
+
+    /// Coloca `area` justo antes de `other`, o al final si `other` es `nil`.
+    public func place(_ area: Area, before other: Area?) {
+        let lista = areas.filter { $0.id != area.id }
+        guard !lista.isEmpty else { return }
+
+        let nueva: Double
+        if let other, let idx = lista.firstIndex(where: { $0.id == other.id }) {
+            let anterior = idx > 0 ? lista[idx - 1].position : lista[idx].position - 2
+            nueva = (anterior + lista[idx].position) / 2
+        } else {
+            nueva = (lista.map(\.position).max() ?? 0) + 1
+        }
+        mutateArea(area.id) { $0.position = nueva }
+        areas.sort(by: Area.byPosition)
+    }
+
+    /// Borra el área y saca sus proyectos de ella.
+    ///
+    /// Los proyectos **no** se borran: un área es una forma de agrupar, no un
+    /// contenedor del que las cosas dependan para existir. Borrarla arrastrando
+    /// consigo el trabajo de dentro sería una pérdida difícil de deshacer.
+    public func delete(_ area: Area) {
+        for project in projects where project.areaID == area.id {
+            mutateProject(project.id) { $0.areaID = nil }
+        }
+        guard let idx = areas.firstIndex(where: { $0.id == area.id }) else { return }
+        var buried = areas.remove(at: idx)
+        buried.deletedAt = Store.stamped()
+        buried.updatedAt = buried.deletedAt!
+        persist(buried)
     }
 
     /// Borra el proyecto y devuelve sus tareas a la bandeja de entrada.
@@ -950,13 +1086,17 @@ extension Store {
         let futura = store.addItem(title: "Preparar la declaración", in: .inbox)
         store.setDeadline(futura, to: calendar.date(byAdding: .day, value: 12, to: .now))
         // Tres proyectos, y no uno: el orden de la barra lateral solo se ve
-        // cuando hay varios.
+        // cuando hay varios. Dos de ellos dentro de un área.
         let mudanza = store.addProject(name: "Mudanza")
         store.setIcon(mudanza, to: "📦")
         let bici = store.addProject(name: "Bicicleta")
         store.setIcon(bici, to: "💪")
         store.addItem(title: "Pedir cajas", in: .project(mudanza.id))
         store.addItem(title: "Cambiar la cadena", in: .project(bici.id))
+        let casa = store.addArea(name: "Casa")
+        store.setIcon(casa, to: "🏠")
+        store.move(mudanza, toArea: casa.id)
+        store.move(bici, toArea: casa.id)
         store.addItem(title: "Aprender a tocar el bajo", in: .someday)
         store.addItem(title: "Rehacer la estantería del salón", in: .someday)
         let done = store.addItem(title: "Reservar mesa para el viernes", in: .inbox)

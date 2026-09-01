@@ -11,14 +11,19 @@ final class Navigation {
     var perspective: Perspective = .today
     var selectedItemID: UUID?
     var isAddingItem = false
-    /// Qué se está arrastrando ahora mismo. Las filas de proyecto reciben tanto
-    /// tareas —«mueve esto aquí»— como otros proyectos —«ponte antes que este»—,
-    /// y la señal que dibujan tiene que ser distinta. Lo anota quien empieza el
-    /// arrastre, porque al soltar ya es tarde para dibujar nada.
-    var arrastrandoProyecto = false
+    /// Qué se está arrastrando ahora mismo. Una misma fila recibe cosas
+    /// distintas —una tarea que se mueve dentro, o un hermano que se coloca
+    /// antes— y la señal que dibuja tiene que ser distinta. Lo anota quien
+    /// empieza el arrastre, porque al soltar ya es tarde para dibujar nada.
+    var arrastrando: Arrastrado = .tarea
+
+    enum Arrastrado { case tarea, proyecto, area }
 
     func startNewItem() {
-        if case .completed = perspective { perspective = .inbox }
+        // Hay listas donde una tarea nueva no tendría dónde caer: en las
+        // completadas nacería ya hecha, y un área no sabría a qué proyecto
+        // colgarla. Se crea en la bandeja, que es donde va lo aún sin decidir.
+        if !perspective.acceptsNewItems { perspective = .inbox }
         selectedItemID = nil
         isAddingItem = true
     }
@@ -132,15 +137,23 @@ struct Entry {
                     print("archivos pendientes de bajar de iCloud: \(store.pendingDownloads)")
                 }
             }
-            print("tareas: \(store.items.count)  proyectos: \(store.projects.count)")
+            print("tareas: \(store.items.count)  proyectos: \(store.projects.count)"
+                  + "  áreas: \(store.areas.count)")
             for perspective in Perspective.allCases {
                 let titles = store.items(for: perspective).map(\.title)
                 print("\n[\(perspective.title)] \(titles.count)")
                 titles.forEach { print("  · \($0)") }
             }
+            for area in store.areas {
+                let dentro = store.projects(in: area.id).map(\.name).joined(separator: ", ")
+                print("\n[Área: \(area.name)] \(store.count(for: .area(area.id)))"
+                      + (dentro.isEmpty ? "  (sin proyectos)" : "  → \(dentro)"))
+            }
             for project in store.projects {
                 let titles = store.items(for: .project(project.id)).map(\.title)
-                print("\n[Proyecto: \(project.name)] \(titles.count)")
+                let area = project.areaID.flatMap(store.area)
+                print("\n[Proyecto: \(project.name)"
+                      + (area.map { " · \($0.name)" } ?? "") + "] \(titles.count)")
                 titles.forEach { print("  · \($0)") }
             }
             return
@@ -188,6 +201,11 @@ struct PautaApp: App {
                     nav.go(to: .project(project.id))
                 }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
+                Button("Nueva área") {
+                    let area = store.addArea(name: "")
+                    nav.go(to: .area(area.id))
+                }
+                .keyboardShortcut("n", modifiers: [.command, .option])
             }
             // Sin esto, cerrar la ventana deja la app sin forma de volver salvo el
             // panel de la barra de menús: quien no lo conozca se queda fuera.
