@@ -1763,3 +1763,101 @@ struct InsistenciaTests {
         #expect(t.nextAlarm(after: fecha(2026, 9, 1, 7, 0), calendar: cal) == nil)
     }
 }
+
+/// Cómo se lee un día entero: tareas y eventos en el mismo hilo.
+@MainActor
+struct AgendaTests {
+    private func evento(_ titulo: String, _ h: Int, _ m: Int = 0,
+                        dura: Int = 60, todoElDia: Bool = false) -> Evento {
+        let inicio = Calendar.current.date(
+            byAdding: .minute, value: h * 60 + m,
+            to: Calendar.current.startOfDay(for: .now))!
+        return Evento(id: titulo, title: titulo, start: inicio,
+                      end: inicio.addingTimeInterval(TimeInterval(dura * 60)),
+                      isAllDay: todoElDia, calendarName: "Trabajo", color: nil)
+    }
+
+    private func titulos(_ filas: [FilaDelDia]) -> [String] {
+        filas.map {
+            switch $0 {
+            case .tarea(let i): i.title
+            case .evento(let e): e.title
+            }
+        }
+    }
+
+    /// El día se lee en el orden en que va a ocurrir, sin importar si cada cosa
+    /// es una tarea o un evento.
+    @Test func eventsAndTimedTasksShareOneTimeline() {
+        let s = Store(inMemory: true)
+        let pronto = s.addItem(title: "pastilla", in: .today)
+        let tarde = s.addItem(title: "gimnasio", in: .today)
+        s.setTime(pronto, to: 8 * 60)
+        s.setTime(tarde, to: 19 * 60)
+
+        let filas = Agenda.filas(tareas: s.items(for: .today),
+                                 eventos: [evento("reunión", 10), evento("comida", 14)])
+        #expect(titulos(filas) == ["pastilla", "reunión", "comida", "gimnasio"])
+    }
+
+    /// Lo de todo el día enmarca la jornada, así que va arriba.
+    @Test func allDayEventsFrameTheDay() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .today)
+        s.setTime(a, to: 8 * 60)
+        let filas = Agenda.filas(tareas: s.items(for: .today),
+                                 eventos: [evento("reunión", 10),
+                                           evento("festivo", 0, todoElDia: true)])
+        #expect(titulos(filas) == ["festivo", "pastilla", "reunión"])
+    }
+
+    /// Y lo que no tiene hora queda debajo, en su orden manual: los eventos no
+    /// se cuelan en la prioridad, que no son tuyos y no se reordenan.
+    @Test func untimedTasksKeepTheirManualOrderBelow() {
+        let s = Store(inMemory: true)
+        s.addItem(title: "a", in: .today)
+        let b = s.addItem(title: "b", in: .today)
+        s.addItem(title: "c", in: .today)
+        s.place(b, before: s.items(for: .today)[0], in: .today)
+
+        let filas = Agenda.filas(tareas: s.items(for: .today), eventos: [evento("reunión", 10)])
+        #expect(titulos(filas) == ["reunión", "b", "a", "c"])
+    }
+
+    @Test func withoutEventsNothingChanges() {
+        let s = Store(inMemory: true)
+        s.addItem(title: "a", in: .today)
+        s.addItem(title: "b", in: .today)
+        let filas = Agenda.filas(tareas: s.items(for: .today), eventos: [])
+        #expect(titulos(filas) == ["a", "b"])
+    }
+
+    /// A la misma hora, la tarea y el evento no se pisan: se conserva el orden
+    /// en que venían, que para las tareas es su prioridad.
+    @Test func aTieKeepsTheIncomingOrder() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "tarea", in: .today)
+        s.setTime(a, to: 10 * 60)
+        let filas = Agenda.filas(tareas: s.items(for: .today), eventos: [evento("reunión", 10)])
+        #expect(titulos(filas) == ["reunión", "tarea"])
+    }
+
+    /// Un evento ya terminado sigue en el día, pero se sabe que pasó.
+    @Test func aFinishedEventIsMarkedAsPast() {
+        let e = evento("desayuno", 8)
+        #expect(e.hasPassed(e.end.addingTimeInterval(60)))
+        #expect(e.hasPassed(e.start) == false)
+    }
+
+    /// Lo de todo el día no «pasa» a ninguna hora: dura hasta que acaba el día.
+    @Test func anAllDayEventNeverReadsAsPast() {
+        let e = evento("festivo", 0, todoElDia: true)
+        #expect(e.hasPassed(e.end.addingTimeInterval(3600)) == false)
+    }
+
+    @Test func eventsSortAllDayFirstThenByStart() {
+        let ordenados = [evento("tarde", 16), evento("festivo", 0, todoElDia: true),
+                         evento("mañana", 9)].sorted(by: Agenda.antes)
+        #expect(ordenados.map(\.title) == ["festivo", "mañana", "tarde"])
+    }
+}

@@ -4,6 +4,7 @@ import PautaCore
 struct ItemListView: View {
     @Environment(Store.self) private var store
     @Environment(Navigation.self) private var nav
+    @Environment(Agenda.self) private var agenda
 
     @State private var draftTitle = ""
     @State private var pegado: String?
@@ -22,8 +23,9 @@ struct ItemListView: View {
                     .padding(.bottom, 10)
 
                 if AvisoEstado.shared.mudos { avisosMudos }
+                invitacionAlCalendario
 
-                if items.isEmpty && !nav.isAddingItem {
+                if items.isEmpty && eventosDeHoy.isEmpty && !nav.isAddingItem {
                     emptyState.padding(.top, 26).padding(.bottom, 10)
                 }
 
@@ -32,6 +34,16 @@ struct ItemListView: View {
                         ForEach(store.upcomingByDay(), id: \.day) { group in
                             DayHeader(label: dayLabel(group.day), items: group.items)
                             ForEach(group.items) { ItemRowView(item: $0) }
+                        }
+                    } else if case .today = nav.perspective {
+                        // Hoy es el día entero, no solo la lista de tareas: lo
+                        // que hay que hacer y lo que ya está comprometido, en el
+                        // orden en que va a ocurrir.
+                        ForEach(Agenda.filas(tareas: items, eventos: agenda.eventos)) { fila in
+                            switch fila {
+                            case .tarea(let item): ItemRowView(item: item)
+                            case .evento(let evento): EventoRow(evento: evento)
+                            }
                         }
                     } else {
                         ForEach(items) { item in
@@ -80,7 +92,7 @@ struct ItemListView: View {
                     .foregroundStyle(Paper.ink)
             }
             Spacer(minLength: 0)
-            if !items.isEmpty {
+            if !items.isEmpty || !eventosDeHoy.isEmpty {
                 Text(countLabel)
                     .rubricStyle()
             }
@@ -116,7 +128,21 @@ struct ItemListView: View {
         .padding(.bottom, 12)
     }
 
+    /// Los eventos solo salen en Hoy; en las demás listas no hay día que llenar.
+    private var eventosDeHoy: [Evento] {
+        if case .today = nav.perspective { return agenda.eventos }
+        return []
+    }
+
     private var countLabel: String {
+        let eventos = eventosDeHoy.count
+        // Los eventos no se suman a las tareas abiertas: no son cosas que hacer
+        // ni se completan, así que se cuentan aparte o no se cuentan.
+        let cola = eventos == 0 ? "" : (eventos == 1 ? "1 EVENTO · " : "\(eventos) EVENTOS · ")
+        return cola + tareasLabel
+    }
+
+    private var tareasLabel: String {
         let n = items.count
         // El título de esa lista ya dice «Completadas»: repetirlo en el rótulo
         // sobraría, así que ahí solo se cuenta.
@@ -176,6 +202,33 @@ struct ItemListView: View {
     }
 
     // MARK: - Añadir tarea
+
+    /// Invitación a enseñar el calendario, solo mientras no se haya decidido.
+    /// Si se dijo que no, no se vuelve a preguntar desde aquí: hay un comando en
+    /// el menú para cuando se cambie de idea.
+    @ViewBuilder private var invitacionAlCalendario: some View {
+        if case .today = nav.perspective, agenda.eventos.isEmpty,
+           Agenda.authorization == .notDetermined {
+            Button {
+                Task {
+                    await agenda.requestAccess()
+                    await agenda.load(force: true)
+                }
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 10.5, weight: .semibold))
+                    Text("MOSTRAR LOS EVENTOS DEL CALENDARIO")
+                        .font(.rubric).tracking(1.3)
+                }
+                .foregroundStyle(Paper.inkFaint)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, 10)
+        }
+    }
 
     @ViewBuilder private var addButton: some View {
         addButtonLabel
@@ -412,5 +465,44 @@ private struct TituloEditable: View {
             // el texto del anterior se escribiría encima del nuevo.
             .onChange(of: id) { texto = nombre }
             .onChange(of: texto) { alCambiar(texto) }
+    }
+}
+
+/// Un evento del calendario dentro de Hoy.
+///
+/// Se lee, no se toca: sin casilla, sin arrastre y sin editor. La casilla es la
+/// promesa de que algo se puede completar, y un evento no se completa — se pasa.
+/// La franja de color es la del calendario del que viene, que es como se
+/// distinguen de un vistazo el trabajo y lo demás.
+private struct EventoRow: View {
+    let evento: Evento
+
+    private var color: Color {
+        guard let c = evento.color else { return Paper.inkFaint }
+        return Color(.sRGB, red: c.red, green: c.green, blue: c.blue)
+    }
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 13) {
+            // Ocupa la columna de la casilla, para que los títulos se alineen.
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(color)
+                .frame(width: 3, height: 15)
+                .frame(width: 16)
+                .offset(y: 2)
+            Text(evento.title)
+                .font(.system(size: 13.5, weight: .medium))
+                .foregroundStyle(Paper.inkSoft)
+                .lineLimit(1)
+            Spacer(minLength: 12)
+            Text(evento.timeLabel)
+                .font(.system(size: 11, weight: .medium).monospacedDigit())
+                .foregroundStyle(Paper.inkFaint)
+        }
+        .padding(.vertical, 9)
+        // Lo que ya pasó se apaga: sigue siendo parte del día, pero ya no pide
+        // nada.
+        .opacity(evento.hasPassed() ? 0.45 : 1)
+        .help("\(evento.calendarName) · \(evento.timeLabel)")
     }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import EventKit
 import AppKit
 import Observation
 import PautaCore
@@ -90,6 +91,23 @@ struct Entry {
         // Antes de lanzar la interfaz: si se pusiera después, un aviso pulsado
         // con la app cerrada se entregaría sin nadie que lo atendiera.
         Avisos.hookUp()
+        if CommandLine.arguments.contains("--eventos") {
+            runOnMainLoop {
+                let estados: [EKAuthorizationStatus: String] = [
+                    .notDetermined: "notDetermined (aún no se ha preguntado)",
+                    .restricted: "restricted", .denied: "denied (hay que activarlo en Ajustes)",
+                    .fullAccess: "fullAccess (listo)", .writeOnly: "writeOnly (insuficiente)",
+                ]
+                print("Calendario: \(estados[Agenda.authorization] ?? "desconocido")")
+                let agenda = Agenda()
+                await agenda.load()
+                print("eventos de hoy: \(agenda.eventos.count)")
+                for e in agenda.eventos {
+                    print("  · \(e.timeLabel)  \(e.title)   [\(e.calendarName)]")
+                }
+            }
+            return
+        }
         if CommandLine.arguments.contains("--avisos") {
             // Por el bucle principal, como los de Recordatorios: el centro de
             // notificaciones responde por él, y esperando con un semáforo en el
@@ -187,6 +205,7 @@ struct PautaApp: App {
     /// Vigila la carpeta de datos para recoger lo que llegue de otro
     /// dispositivo mientras la app está abierta.
     @State private var watcher: FolderWatcher?
+    @State private var agenda = Agenda()
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
@@ -198,6 +217,7 @@ struct PautaApp: App {
             RootView()
                 .environment(store)
                 .environment(nav)
+                .environment(agenda)
                 .frame(minWidth: 720, minHeight: 420)
                 .task {
                     // Recoge lo que llegue de otro dispositivo mientras la app
@@ -227,7 +247,19 @@ struct PautaApp: App {
                 .onReceive(NotificationCenter.default.publisher(
                     for: .NSCalendarDayChanged).receive(on: RunLoop.main)) { _ in
                     guard !Launch.demo else { return }
-                    Task { await Avisos.reschedule(store.items) }
+                    Task {
+                        await Avisos.reschedule(store.items)
+                        await agenda.load(force: true)
+                    }
+                }
+                // Los eventos se releen al entrar en Hoy y al cambiar el día:
+                // son de fuera y no cambian cuando cambian las tareas.
+                .task(id: nav.perspective) {
+                    // En maqueta, eventos inventados: mirar el diseño no debe
+                    // pedir permiso ni leer el calendario de nadie.
+                    if Launch.demo { agenda.seedForDemo(); return }
+                    guard case .today = nav.perspective else { return }
+                    await agenda.load()
                 }
                 .task(id: store.items) {
                     guard !Launch.demo else { return }
@@ -263,6 +295,20 @@ struct PautaApp: App {
                     .keyboardShortcut("0", modifiers: .command)
             }
             CommandGroup(after: .newItem) {
+                Button("Eventos del calendario…") {
+                    Task {
+                        // Si ya se dijo que no, pedirlo otra vez no abre nada:
+                        // esa decisión solo se cambia en los ajustes.
+                        if Agenda.authorization == .notDetermined {
+                            await agenda.requestAccess()
+                            await agenda.load(force: true)
+                        } else if !Agenda.isAuthorized {
+                            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+                    }
+                }
                 Button("Importar de Recordatorios") {
                     Task { await importFromReminders(into: store, nav: nav) }
                 }

@@ -128,6 +128,37 @@ Las dos lecturas son razonables y ninguna es obviamente la buena, así que decid
 por ti acertaría la mitad de las veces. En ambos casos se quitan las viñetas
 (`*`, `-`, `•`) y la numeración.
 
+### Los eventos del día
+
+`Hoy` enseña también **los eventos de tu calendario**, para que sea el día
+completo y no solo la lista de tareas: lo que hay que hacer y lo que ya está
+comprometido, en el orden en que va a ocurrir. Lo de todo el día enmarca la
+jornada y va arriba; después, todo lo que tiene hora —da igual si es un evento o
+una tarea— y por último lo que no tiene hora, en su orden manual. Un evento ya
+terminado se apaga: sigue siendo parte del día, pero ya no pide nada.
+
+Se leen y no se tocan: sin casilla, sin arrastre y sin editor. La casilla es la
+promesa de que algo se puede completar, y un evento no se completa — se pasa. La
+franja de color es la del calendario del que viene, que es como se distingue de
+un vistazo el trabajo de lo demás.
+
+**Los eventos no entran en el `Store`.** Si entraran, acabarían escritos en la
+carpeta como copias del calendario de verdad, y dos copias de lo mismo terminan
+discrepando: se edita el evento fuera y aquí queda la versión vieja para
+siempre. La fuente es el calendario; esto es lo que se lee de él cada vez, y se
+relee solo cuando el sistema avisa de que algo cambió. Tampoco se hace al revés
+—escribir las tareas de Pauta como eventos—: duplicaría cada tarea en dos sitios
+que se editan por separado y hay que reconciliar.
+
+El permiso se ofrece **una vez**, con una línea discreta en `Hoy`. Si dices que
+no, no se vuelve a preguntar desde ahí; queda el comando *Eventos del
+calendario…*, que lleva a los ajustes del sistema. Y no se cuentan como tareas:
+el rótulo dice «4 EVENTOS · 7 ABIERTAS», porque un evento no es algo que hacer.
+
+```bash
+./build/Pauta.app/Contents/MacOS/Pauta --eventos
+```
+
 ### Lo que no se hizo a tiempo
 
 Nada se pierde ni se queda atrás: una tarea planificada para un día que ya pasó
@@ -603,6 +634,7 @@ Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
   Models.swift            Item, ChecklistStep, Project, Area, Perspective
   Store.swift             estado + persistencia + consultas
   Avisos.swift            avisos del sistema para las tareas con hora
+  Agenda.swift            eventos del calendario, solo de lectura
 Sources/Pauta/            la app de macOS
   PautaApp.swift          punto de entrada, menús, atajos y barra de menús
   Views/Theme.swift       paleta, tipografía y filetes
@@ -615,12 +647,10 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
 
 ## Qué falta (siguiente iteración)
 
-- **Eventos del calendario en Hoy**, solo lectura, para que Hoy sea el día
-  completo y no solo la lista de tareas. Los eventos no deben entrar en el
-  `Store`: acabarían escritos en la carpeta como copias que se desincronizan del
-  calendario de verdad. Van como fuente aparte, mezclada solo en la vista.
-  Escribir tareas como eventos, en cambio, es mala idea: duplica y genera
-  conflictos
+- **Los eventos también en `Próximamente`**, que ya va agrupada por día y es
+  donde encajarían sin inventar nada. Se dejó fuera para no cargar de golpe una
+  ventana de semanas de calendario: primero conviene ver si en `Hoy` estorban o
+  ayudan
 - Widget y app de iOS — necesitan proyecto de Xcode y cuenta de desarrollador.
   `PautaCore` ya está extraído para ese salto, y la sincronización ya está
   hecha: la misma carpeta de iCloud le sirve a un iPhone sin tocar nada

@@ -42,6 +42,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <string>Pauta lee su propia lista de Recordatorios para traer a la bandeja lo que apuntes desde el iPhone o con Siri.</string>
     <key>NSRemindersUsageDescription</key>
     <string>Pauta lee su propia lista de Recordatorios para traer a la bandeja lo que apuntes desde el iPhone o con Siri.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.</string>
 </dict>
 </plist>
 PLIST
