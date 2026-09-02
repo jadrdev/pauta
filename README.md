@@ -399,6 +399,33 @@ principal, todo sin cambiar de app. Cubre casi todo lo que daría un widget sin
 necesitar extensión ni firma — WidgetKit exige un `.appex` embebido que no encaja
 con el empaquetado actual por SwiftPM y firma ad-hoc.
 
+## Instalar
+
+El disco `.dmg` va en la [página de versiones](https://github.com/jadrdev/pauta/releases).
+Se abre, se arrastra Pauta a `Aplicaciones` y ya está.
+
+La primera vez macOS **no la va a dejar abrirse**, y conviene saber por qué en
+vez de pelearse con el mensaje: Gatekeeper solo confía en lo que se descarga si
+está firmado con un certificado *Developer ID* y notarizado por Apple, y las dos
+cosas exigen la cuenta de desarrollador de pago. Sin ellas dice que la app «está
+dañada», que no es verdad y no explica nada. Se le quita la cuarentena a mano:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Pauta.app
+```
+
+No lo hagas con una app que no sepas de dónde viene. Aquí el código está entero
+a la vista y puedes compilarlo tú, que es la otra salida y la mejor.
+
+Para generar el disco:
+
+```bash
+./tools/make-dmg.sh
+```
+
+Avisa de si la firma sirve para repartir o solo para probar, y escupe el sha256
+para poder publicarlo junto al archivo.
+
 ## Compilar y ejecutar
 
 ```bash
