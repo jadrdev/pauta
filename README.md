@@ -438,6 +438,47 @@ perfil de aprovisionamiento embebido, que no encajan con un bundle montado a
 mano. iCloud Drive es una carpeta normal y la app no está en sandbox, así que
 escribe en ella directamente.
 
+### Por qué no hay cuentas
+
+Pauta no tiene registro ni inicio de sesión, y no es un descuido: **no hay a
+dónde entrar**. Un login solo significa algo si hay un servidor que guarda tus
+datos o una suscripción que comprobar, y aquí no hay ninguna de las dos. Los
+datos son tuyos, están en tu carpeta, y la cuenta que los sincroniza ya existe:
+es la Apple Account de tu iCloud. Añadir otra sería una segunda identidad para
+la misma persona, y la app tendría que decidir qué hacer cuando las dos no
+coincidan.
+
+Las reglas de la App Store empujan en esa misma dirección. La 5.1.1(v) dice que
+una app no puede exigir cuenta para funciones que no dependen de una cuenta, así
+que una pantalla de registro delante de un gestor de tareas local es más
+probable que se rechace a que se pida. Y si algún día se ofreciera un login de
+terceros —Google, por ejemplo—, la 4.8 obliga a ofrecer también una alternativa
+equivalente que no recopile datos, que es justo lo que hace *Iniciar sesión con
+Apple*: Google a secas no sería una opción.
+
+Un login se justificaría el día que haya algo al otro lado: **compartir listas
+con otra persona**, una versión web, sincronizar con algo que no sea Apple, o una
+suscripción con derechos que verificar. Ni siquiera cobrar por la app lo exige —
+de eso ya se encarga el recibo de compra. Si llega, lo razonable es *Iniciar
+sesión con Apple* y como **llave de lo compartido, nunca como puerta de entrada**:
+la app tiene que seguir abriéndose y funcionando entera sin identificarse.
+
+### Lo que sí costaría publicarla
+
+El trabajo de llevarla a la App Store no son las cuentas, es el **sandbox**: allí
+es obligatorio, y bajo sandbox la ruta de ahora
+—`~/Library/Mobile Documents/com~apple~CloudDocs/Pauta/`— deja de ser accesible.
+Habría que pasar al contenedor de iCloud de verdad, con sus entitlements y su
+perfil, que es exactamente lo que este montaje evitaba. Con `NSUbiquitousContainers`
+la carpeta sigue viéndose en iCloud Drive, así que no se pierde nada de cara al
+usuario, pero **la ruta cambia** y los datos hay que mudarlos.
+
+Lo bueno es que esa mudanza ya está resuelta: `adoptData(from:to:)` es lo que hace
+hoy al estrenar la carpeta de iCloud —copia lo que hubiera en la local y deja el
+original como respaldo—, y sirve igual para el salto al contenedor. Lo demás es
+fontanería conocida: proyecto de Xcode en vez del bundle a mano, firma de
+distribución, notarización y las etiquetas de privacidad.
+
 Copiar la carpeta es la copia de seguridad; borrarla deja la app a cero. Para ver
 el estado guardado sin abrir la interfaz:
 
