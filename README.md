@@ -1,7 +1,26 @@
-# Pauta
+<div align="center">
 
-Gestor de tareas para macOS. Nativo en SwiftUI, con los datos en un archivo
-local y sin suscripción.
+<img src="Resources/icon-mono-preview.png" width="120" alt="Pauta">
+
+<h1>Pauta</h1>
+
+<p><strong>Gestor de tareas para macOS.</strong><br>
+Nativo en SwiftUI, sin cuentas, sin suscripción<br>
+y con tus datos en tu propia carpeta de iCloud.</p>
+
+<p>
+<img src="https://img.shields.io/badge/macOS-14%2B-10E888?style=flat-square&labelColor=0E1114" alt="macOS 14+">
+<img src="https://img.shields.io/badge/Swift-6-10E888?style=flat-square&labelColor=0E1114" alt="Swift 6">
+<img src="https://img.shields.io/badge/dependencias-ninguna-10E888?style=flat-square&labelColor=0E1114" alt="sin dependencias">
+<img src="https://img.shields.io/badge/tus%20datos-en%20tu%20carpeta-10E888?style=flat-square&labelColor=0E1114" alt="tus datos en tu carpeta">
+</p>
+
+<img src="docs/hoy-oscuro.png" width="860" alt="Hoy, con los eventos del calendario y las tareas en el mismo día">
+
+<p><em>Hoy es el día completo: lo que hay que hacer y lo que ya está comprometido,<br>
+en el orden en que va a ocurrir.</em></p>
+
+</div>
 
 Pauta organiza el trabajo en dos ejes: **cuándo** y **de qué**. Una tarea entra
 por la bandeja sin que tengas que decidir nada más que el título. Desde ahí le
@@ -37,6 +56,11 @@ del modelo: el primero significa «todavía no lo he decidido» y deja la tarea 
 la bandeja; el segundo, «lo quiero hacer, pero no ahora». Por eso ponerle fecha
 a una tarea aparcada la saca de Algún día — estar aparcada y con fecha a la vez
 sería contradictorio.
+
+<div align="center">
+<img src="docs/proximamente-claro.png" width="820" alt="Próximamente, agrupada por día, en tema claro">
+<p><em>Próximamente agrupa por día. La app sigue el tema del sistema.</em></p>
+</div>
 
 ## Cómo se usa
 
