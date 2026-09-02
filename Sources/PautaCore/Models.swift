@@ -181,6 +181,14 @@ public struct Item: Identifiable, Codable, Hashable {
         return Calendar.current.startOfDay(for: when) <= Calendar.current.startOfDay(for: .now)
     }
 
+    /// Cuántos días lleva arrastrándose desde el día para el que se planificó.
+    /// Cero si es de hoy, del futuro, o si no tiene día.
+    public var daysLate: Int {
+        guard !isCompleted, let day else { return 0 }
+        let hoy = Calendar.current.startOfDay(for: .now)
+        return max(0, Calendar.current.dateComponents([.day], from: day, to: hoy).day ?? 0)
+    }
+
     /// El momento exacto, cuando tiene día y hora.
     public var scheduledAt: Date? {
         guard let day, let timeOfDay else { return nil }

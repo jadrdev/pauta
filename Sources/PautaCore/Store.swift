@@ -685,14 +685,27 @@ public final class Store {
     /// rastro de lo hecho, que es justo lo que uno quiere ver de una rutina.
     private func spawnNextOccurrence(of item: Item) {
         guard let recurrence = item.recurrence else { return }
-        // Se cuenta desde la fecha que tenía, no desde hoy: si completas tarde
-        // una tarea semanal, la siguiente sigue cayendo en su día.
-        let base = item.when ?? Store.stamped()
-        let proxima = recurrence.next(after: base)
+        // La cuenta sale de la fecha que tenía y no de hoy, para que una semanal
+        // completada con un día de retraso siga cayendo en su día de la semana.
+        //
+        // Pero se avanza hasta pasar de hoy. Sin eso, completar una diaria con
+        // tres días de retraso paría una sucesora ya vencida, y habría que
+        // completarla tantas veces como días de retraso llevara solo para
+        // ponerse al día: la app pidiendo cuentas por unos días que ya pasaron.
+        let cal = Calendar.current
+        let hoy = cal.startOfDay(for: .now)
+        var proxima = recurrence.next(after: item.when ?? Store.stamped())
+        // El tope corta un bucle infinito si alguna vez `next` no avanzara.
+        var vueltas = 0
+        while cal.startOfDay(for: proxima) <= hoy, vueltas < 5000 {
+            proxima = recurrence.next(after: proxima)
+            vueltas += 1
+        }
         // Pasado el fin, la última repetición se completa y no nace ninguna más.
+        // Se comprueba después de ponerse al día: una serie que terminó mientras
+        // la tarea estaba atrasada no debe revivir.
         if let fin = item.recurrenceEnd,
-           Calendar.current.startOfDay(for: proxima)
-            > Calendar.current.startOfDay(for: fin) { return }
+           cal.startOfDay(for: proxima) > cal.startOfDay(for: fin) { return }
 
         var siguiente = Item(title: item.title)
         siguiente.notes = item.notes
@@ -1210,6 +1223,10 @@ extension Store {
         // Sin fecha: solo se ve en el proyecto y en Cualquier momento.
         store.addItem(title: "Escribir los textos de la portada", in: .project(project.id))
         store.addItem(title: "Comprar entradas del concierto", in: .inbox)
+        // Una arrastrada de días atrás, para ver cómo lo dice.
+        let atrasada = store.addItem(title: "Devolver el paquete", in: .inbox)
+        store.schedule(atrasada,
+                       to: Calendar.current.date(byAdding: .day, value: -3, to: .now))
         // Una lista de comprobación y unas etiquetas, para que se vean.
         for paso in ["Cerrar junio", "Pedir facturas", "Enviar a gestoría"] {
             store.addStep(to: budget, title: paso)

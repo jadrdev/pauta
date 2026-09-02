@@ -187,6 +187,18 @@ struct ItemRowView: View {
     /// Indicadores a la derecha: notas, proyecto y fecha, en texto tenue.
     @ViewBuilder private var badges: some View {
         HStack(spacing: 12) {
+            // Lo que se planificó para un día que ya pasó sigue en Hoy, pero
+            // tiene que decir desde cuándo: sin esto, algo de hace tres días se
+            // lee igual que algo de esta mañana.
+            if item.daysLate > 0, let when = item.when {
+                HStack(spacing: 3) {
+                    Image(systemName: "clock.arrow.circlepath").font(.system(size: 9))
+                    Text(when.formatted(.dateTime.day().month(.abbreviated)))
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(Paper.inkSoft)
+                .help("Planificada para el \(when.formatted(.dateTime.day().month(.wide)))")
+            }
             if let hora = item.timeLabel, !item.isCompleted {
                 Text(hora)
                     .font(.system(size: 11, weight: .semibold).monospacedDigit())

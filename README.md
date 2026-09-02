@@ -128,6 +128,31 @@ Las dos lecturas son razonables y ninguna es obviamente la buena, así que decid
 por ti acertaría la mitad de las veces. En ambos casos se quitan las viñetas
 (`*`, `-`, `•`) y la numeración.
 
+### Lo que no se hizo a tiempo
+
+Nada se pierde ni se queda atrás: una tarea planificada para un día que ya pasó
+**sigue en `Hoy`**, día tras día, hasta que se haga o se replanifique. No se
+mueve sola a hoy, porque su fecha original es información: dice cuánto llevas
+arrastrándola.
+
+Y lo dice: junto a la tarea aparece **el día para el que se planificó**, en gris
+y con un icono de reloj. Sin eso, algo de hace tres días se leería igual que
+algo de esta mañana. Va en gris y no en rojo a propósito — el rojo es de las
+fechas límite, que son lo que de verdad aprieta; si todo gritara, nada diría
+nada.
+
+Lo atrasado **no vuelve a avisar**. Su hora ya pasó, y repetir el aviso en cada
+recarga sería peor que no avisar.
+
+Con las repetitivas hay una trampa. La siguiente se cuenta desde la fecha que
+tenía, no desde hoy, para que una semanal completada con un día de retraso siga
+cayendo en su día de la semana. Pero además **se avanza hasta pasar de hoy**: si
+no, completar una diaria con tres días de retraso pariría una sucesora ya
+vencida, y habría que completarla tantas veces como días de retraso llevara solo
+para ponerse al día — la app pidiendo cuentas por unos días que ya pasaron. Y si
+la serie terminó mientras la tarea estaba atrasada, no nace ninguna: ponerse al
+día no revive una serie acabada.
+
 ### La hora
 
 Toda fecha en Pauta es **un día**, normalizado a las 00:00; la hora es lo único

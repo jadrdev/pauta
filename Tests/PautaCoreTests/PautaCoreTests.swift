@@ -1602,3 +1602,89 @@ struct AvisoTests {
         #expect(ordenadas.last?.0 == "t60")
     }
 }
+
+/// Qué pasa con lo que no se hizo el día que tocaba.
+@MainActor
+struct RetrasoTests {
+    private func hace(_ dias: Int) -> Date {
+        Calendar.current.date(byAdding: .day, value: -dias, to: .now)!
+    }
+    private func dentroDe(_ dias: Int) -> Date {
+        Calendar.current.startOfDay(
+            for: Calendar.current.date(byAdding: .day, value: dias, to: .now)!)
+    }
+    private func abierta(_ s: Store, _ titulo: String) -> Item? {
+        s.items.first { !$0.isCompleted && $0.title == titulo }
+    }
+
+    /// No se pierde ni se queda atrás: sigue en Hoy, día tras día.
+    @Test func anUnfinishedTaskCarriesOverToToday() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pendiente", in: .inbox)
+        s.schedule(a, to: hace(3))
+        #expect(s.items(for: .today).map(\.title) == ["pendiente"])
+        #expect(s.items(for: .upcoming).isEmpty)
+        #expect(abierta(s, "pendiente")?.daysLate == 3)
+    }
+
+    @Test func onTimeMeansNoDelay() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "hoy", in: .today)
+        let b = s.addItem(title: "mañana", in: .inbox)
+        s.schedule(b, to: dentroDe(1))
+        #expect(abierta(s, "hoy")?.daysLate == 0)
+        #expect(abierta(s, "mañana")?.daysLate == 0)
+    }
+
+    /// Completar tarde una diaria no debe parir una sucesora ya vencida: si la
+    /// cuenta saliera del día que tenía y nada más, habría que completarla
+    /// tantas veces como días de retraso llevara para ponerse al día.
+    @Test func aLateDailyDoesNotPileUp() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .inbox)
+        s.schedule(a, to: hace(3))
+        s.setRecurrence(a, to: .diaria)
+        s.toggleComplete(a)
+
+        let siguiente = abierta(s, "pastilla")
+        #expect(siguiente?.day == dentroDe(1))
+        #expect(s.items(for: .today).isEmpty)
+    }
+
+    /// Pero el ritmo se respeta: una semanal completada tarde vuelve a caer en
+    /// su día de la semana, no siete días después de hoy.
+    @Test func aLateWeeklyKeepsItsWeekday() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "basura", in: .inbox)
+        s.schedule(a, to: hace(8))
+        s.setRecurrence(a, to: .semanal)
+        s.toggleComplete(a)
+
+        let siguiente = abierta(s, "basura")
+        let cal = Calendar.current
+        #expect(siguiente?.day == dentroDe(6))
+        #expect(cal.component(.weekday, from: siguiente!.day!)
+                == cal.component(.weekday, from: cal.startOfDay(for: hace(8))))
+    }
+
+    /// Y si al ponerse al día la serie ya habría terminado, no nace ninguna.
+    @Test func catchingUpStillRespectsTheEnd() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .inbox)
+        s.schedule(a, to: hace(5))
+        s.setRecurrence(a, to: .diaria)
+        s.setRecurrenceEnd(a, to: hace(2))
+        s.toggleComplete(a)
+        #expect(abierta(s, "pastilla") == nil)
+    }
+
+    /// Lo atrasado no vuelve a avisar: su hora ya pasó, y repetir el aviso cada
+    /// vez que se recarga sería peor que no avisar.
+    @Test func anOverdueTaskDoesNotWarnAgain() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .inbox)
+        s.schedule(a, to: hace(1))
+        s.setTime(a, to: 9 * 60)
+        #expect(abierta(s, "pastilla").flatMap(\.scheduledAt).map { $0 < .now } == true)
+    }
+}
