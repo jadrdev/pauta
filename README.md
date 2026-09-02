@@ -15,10 +15,10 @@ y con tus datos en tu propia carpeta de iCloud.</p>
 <img src="https://img.shields.io/badge/tus%20datos-en%20tu%20carpeta-10E888?style=flat-square&labelColor=0E1114" alt="tus datos en tu carpeta">
 </p>
 
-<img src="docs/hoy-oscuro.png" width="860" alt="Hoy, con los eventos del calendario y las tareas en el mismo día">
+<img src="docs/arrastrar-entre-dias.gif" width="760" alt="Arrastrar una tarea de un día a otro en Próximamente">
 
-<p><em>Hoy es el día completo: lo que hay que hacer y lo que ya está comprometido,<br>
-en el orden en que va a ocurrir.</em></p>
+<p><em>Arrastrar entre días: la fila que señalas dice dos cosas,<br>
+la prioridad y el día.</em></p>
 
 </div>
 
@@ -59,7 +59,7 @@ sería contradictorio.
 
 <div align="center">
 <img src="docs/proximamente-claro.png" width="820" alt="Próximamente, agrupada por día, en tema claro">
-<p><em>Próximamente agrupa por día. La app sigue el tema del sistema.</em></p>
+<p><em>La app sigue el tema del sistema.</em></p>
 </div>
 
 ## Cómo se usa
@@ -153,6 +153,10 @@ por ti acertaría la mitad de las veces. En ambos casos se quitan las viñetas
 (`*`, `-`, `•`) y la numeración.
 
 ### Los eventos del día
+
+<div align="center">
+<img src="docs/hoy-oscuro.png" width="820" alt="Hoy, con los eventos del calendario mezclados entre las tareas">
+</div>
 
 `Hoy` enseña también **los eventos de tu calendario**, para que sea el día
 completo y no solo la lista de tareas: lo que hay que hacer y lo que ya está
