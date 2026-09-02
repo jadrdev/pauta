@@ -13,6 +13,7 @@ y con tus datos en tu propia carpeta de iCloud.</p>
 <img src="https://img.shields.io/badge/Swift-6-10E888?style=flat-square&labelColor=0E1114" alt="Swift 6">
 <img src="https://img.shields.io/badge/dependencias-ninguna-10E888?style=flat-square&labelColor=0E1114" alt="sin dependencias">
 <img src="https://img.shields.io/badge/tus%20datos-en%20tu%20carpeta-10E888?style=flat-square&labelColor=0E1114" alt="tus datos en tu carpeta">
+<a href="LICENSE"><img src="https://img.shields.io/badge/licencia-MIT-10E888?style=flat-square&labelColor=0E1114" alt="licencia MIT"></a>
 </p>
 
 <img src="docs/arrastrar-entre-dias.gif" width="760" alt="Arrastrar una tarea de un día a otro en Próximamente">
@@ -761,3 +762,10 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
 - Widget y app de iOS — necesitan proyecto de Xcode y cuenta de desarrollador.
   `PautaCore` ya está extraído para ese salto, y la sincronización ya está
   hecha: la misma carpeta de iCloud le sirve a un iPhone sin tocar nada
+
+## Licencia
+
+[MIT](LICENSE). Cógelo, cámbialo y haz lo que quieras con ello, incluso venderlo;
+lo único que se pide es que el aviso de copyright viaje con las copias. Y como en
+toda licencia permisiva: **sin garantía de nada**, que aquí los datos son tuyos y
+el que responde por ellos también.
