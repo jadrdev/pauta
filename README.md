@@ -479,6 +479,44 @@ original como respaldo—, y sirve igual para el salto al contenedor. Lo demás 
 fontanería conocida: proyecto de Xcode en vez del bundle a mano, firma de
 distribución, notarización y las etiquetas de privacidad.
 
+### Y si algún día se cobrara
+
+La misma decisión que la de las cuentas, vista desde el otro lado: **ni por
+número de proyectos ni por asiento**, sino una compra única.
+
+Cobrar por cantidad —tantos proyectos, tantas tareas— es lo que primero se le
+ocurre a cualquiera y es lo peor que le podría pasar a esta app. Castiga justo a
+quien le está funcionando, que es el que ha metido su vida dentro, y lo hace en
+el peor momento: cuando ya no puede volverse atrás sin dolor. Peor todavía,
+cambia cómo se usa: con dos proyectos de margen se duda antes de crear uno, y un
+gestor de tareas en el que dudas antes de apuntar algo ha dejado de hacer su
+trabajo. Sería cobrar por empeorar el producto. Y hay algo que el usuario huele
+aunque no sepa explicarlo: **los costes de aquí no crecen con sus proyectos**.
+Sin servidor, el proyecto número cuarenta cuesta lo mismo que el primero, que es
+cero.
+
+Por asiento tampoco, mientras no haya equipo: sería cobrar por algo que no
+existe. Pero el día que haya compartir, por asiento **es** lo correcto, y por
+suscripción — porque ahí aparece por fin la única parte con coste real y
+recurrente, y el precio sigue al coste. Que es lo mismo que pasa con el login:
+[la cuenta y la suscripción llegan juntas o no llegan](#por-qué-no-hay-cuentas).
+
+Mientras tanto, una compra única y el recibo de la App Store como única llave:
+no hay nada que se pueda dejar de pagar porque no hay nada que haya que seguir
+pagando. Con prueba de verdad y no con recortes — nadie muda su vida a un gestor
+de tareas por una captura de pantalla, hay que vivir con él una semana: gratis y
+completa ese tiempo, y luego se paga para seguir. No se quitan funciones, se da
+tiempo.
+
+Si hicieran falta dos escalones, el corte honesto no es «tres proyectos o
+ilimitados», es **«tu Mac» contra «tu vida en todos lados»**: macOS completo, y
+la compra trae iPhone, widget e integraciones. Ese límite se entiende sin
+explicarlo, y encima es el que de verdad cuesta mantener.
+
+Y una regla para entonces: **sin servidor, se cobra por versión mayor y no por
+mes**. Es lo único que paga el mantenimiento sin pedirle a nadie que alquile algo
+que no cuesta nada.
+
 Copiar la carpeta es la copia de seguridad; borrarla deja la app a cero. Para ver
 el estado guardado sin abrir la interfaz:
 
