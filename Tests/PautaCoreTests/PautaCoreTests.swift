@@ -1688,3 +1688,78 @@ struct RetrasoTests {
         #expect(abierta(s, "pastilla").flatMap(\.scheduledAt).map { $0 < .now } == true)
     }
 }
+
+/// Cuándo vuelve a sonar un aviso. Con reloj y zona fijos, para que el test no
+/// dependa de la hora a la que se ejecute.
+@MainActor
+struct InsistenciaTests {
+    private var cal: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }
+    private func fecha(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) -> Date {
+        cal.date(from: DateComponents(year: y, month: m, day: d, hour: h, minute: min))!
+    }
+    private func tarea(dia: Date, hora: Int?) -> Item {
+        var i = Item(title: "pastilla")
+        i.when = dia
+        i.timeOfDay = hora
+        return i
+    }
+
+    /// Lo atrasado vuelve a sonar hoy mismo si su hora aún no ha llegado.
+    @Test func anOverdueTaskWarnsAgainTodayIfTheHourIsStillToCome() {
+        let t = tarea(dia: fecha(2026, 8, 29), hora: 9 * 60)
+        let ahora = fecha(2026, 9, 1, 7, 0)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == fecha(2026, 9, 1, 9, 0))
+        #expect(t.alarmInsists(now: ahora, calendar: cal))
+    }
+
+    /// Y mañana si ya pasó, en vez de callarse para siempre.
+    @Test func andTomorrowIfTheHourAlreadyPassed() {
+        let t = tarea(dia: fecha(2026, 8, 29), hora: 9 * 60)
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == fecha(2026, 9, 2, 9, 0))
+    }
+
+    /// Lo de hoy también insiste: si se pasa la hora, sigue pendiente.
+    @Test func todaysTaskInsistsToo() {
+        let t = tarea(dia: fecha(2026, 9, 1), hora: 18 * 60)
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == fecha(2026, 9, 1, 18, 0))
+        #expect(t.alarmInsists(now: ahora, calendar: cal))
+    }
+
+    /// Lo de más adelante avisa su día y no todos los días desde hoy.
+    @Test func aFutureTaskDoesNotInsist() {
+        let t = tarea(dia: fecha(2026, 9, 8), hora: 9 * 60)
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == fecha(2026, 9, 8, 9, 0))
+        #expect(t.alarmInsists(now: ahora, calendar: cal) == false)
+    }
+
+    /// Completarla es lo único que lo calla.
+    @Test func completingIsWhatSilencesIt() {
+        var t = tarea(dia: fecha(2026, 8, 29), hora: 9 * 60)
+        t.isCompleted = true
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == nil)
+        #expect(t.alarmInsists(now: ahora, calendar: cal) == false)
+    }
+
+    @Test func withoutAnHourThereIsNothingToSound() {
+        let t = tarea(dia: fecha(2026, 8, 29), hora: nil)
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == nil)
+        #expect(t.alarmInsists(now: ahora, calendar: cal) == false)
+    }
+
+    /// Una borrada no suena aunque siga en el archivo hasta que caduque su
+    /// lápida.
+    @Test func aBuriedTaskIsSilent() {
+        var t = tarea(dia: fecha(2026, 8, 29), hora: 9 * 60)
+        t.deletedAt = fecha(2026, 8, 30)
+        #expect(t.nextAlarm(after: fecha(2026, 9, 1, 7, 0), calendar: cal) == nil)
+    }
+}

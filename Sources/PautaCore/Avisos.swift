@@ -132,7 +132,7 @@ public enum Avisos {
         let pendientes = items
             .filter { $0.deletedAt == nil && !$0.isCompleted }
             .compactMap { item -> (Item, Date)? in
-                guard let cuando = item.scheduledAt, cuando > now else { return nil }
+                guard let cuando = item.nextAlarm(after: now) else { return nil }
                 return (item, cuando)
             }
             .sorted { $0.1 < $1.1 }
@@ -152,19 +152,32 @@ public enum Avisos {
         for (item, cuando) in pendientes {
             let contenido = UNMutableNotificationContent()
             contenido.title = item.title.isEmpty ? "Sin título" : item.title
+            // Con fecha absoluta y no «hace tres días»: el aviso se escribe hoy
+            // y puede sonar mañana, y entonces la cuenta ya no cuadraría.
+            if item.daysLate > 0, let dia = item.day {
+                contenido.subtitle =
+                    "Pendiente desde el \(dia.formatted(.dateTime.day().month(.wide)))"
+            }
             if !item.notes.isEmpty { contenido.body = item.notes }
             contenido.sound = .default
             contenido.categoryIdentifier = categoria
 
-            let partes = Calendar.current.dateComponents(
-                [.year, .month, .day, .hour, .minute], from: cuando)
+            // Lo de hoy y lo atrasado insiste cada día a su hora hasta que se
+            // haga; lo de más adelante avisa el día que le toca y punto.
+            //
+            // La repetición es de la insistencia, no de la tarea repetitiva: una
+            // serie avanza creando la sucesora al completar, y esa trae su
+            // propio aviso. Un disparador diario atado a la serie seguiría
+            // sonando después de que la serie hubiera acabado.
+            let insiste = item.alarmInsists(now: now)
+            let campos: Set<Calendar.Component> =
+                insiste ? [.hour, .minute] : [.year, .month, .day, .hour, .minute]
             let peticion = UNNotificationRequest(
                 identifier: item.id.uuidString,
                 content: contenido,
-                // Sin repetición aunque la tarea se repita: la sucesora nace al
-                // completar la anterior y trae su propio aviso. Un disparador
-                // repetitivo seguiría sonando aunque la serie hubiera acabado.
-                trigger: UNCalendarNotificationTrigger(dateMatching: partes, repeats: false))
+                trigger: UNCalendarNotificationTrigger(
+                    dateMatching: Calendar.current.dateComponents(campos, from: cuando),
+                    repeats: insiste))
             try? await centro.add(peticion)
         }
     }

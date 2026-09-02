@@ -141,8 +141,14 @@ algo de esta mañana. Va en gris y no en rojo a propósito — el rojo es de las
 fechas límite, que son lo que de verdad aprieta; si todo gritara, nada diría
 nada.
 
-Lo atrasado **no vuelve a avisar**. Su hora ya pasó, y repetir el aviso en cada
-recarga sería peor que no avisar.
+Lo atrasado **insiste**: vuelve a avisar a su hora, hoy mismo si aún no ha
+llegado y mañana si ya pasó, y así cada día hasta que se haga. El aviso dice
+desde cuándo —«Pendiente desde el 31 de agosto»— con la fecha escrita entera y
+no «hace tres días», porque se escribe hoy y puede sonar mañana. Completarla es
+lo único que lo calla, que es la única forma sensata de callarlo.
+
+Solo insiste lo de hoy y lo atrasado. Una tarea de la semana que viene avisa el
+día que le toca, no todos los días desde hoy.
 
 Con las repetitivas hay una trampa. La siguiente se cuenta desde la fecha que
 tenía, no desde hoy, para que una semanal completada con un día de retraso siga

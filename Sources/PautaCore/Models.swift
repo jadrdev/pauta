@@ -195,6 +195,37 @@ public struct Item: Identifiable, Codable, Hashable {
         return Calendar.current.date(byAdding: .minute, value: timeOfDay, to: day)
     }
 
+    /// Si el aviso debe repetirse cada día hasta que la tarea se haga.
+    ///
+    /// Solo lo de hoy y lo atrasado: una tarea de la semana que viene tiene que
+    /// avisar su día, no todos los días desde hoy.
+    public func alarmInsists(now: Date = .now, calendar: Calendar = .current) -> Bool {
+        guard !isCompleted, deletedAt == nil, timeOfDay != nil, let when else { return false }
+        return calendar.startOfDay(for: when) <= calendar.startOfDay(for: now)
+    }
+
+    /// Cuándo toca avisar: su momento, si aún no ha pasado; y si ya pasó, la
+    /// próxima vez que el reloj marque esa hora.
+    ///
+    /// Lo atrasado sigue pendiente, así que el aviso vuelve —hoy mismo si la
+    /// hora aún no ha llegado, y mañana si ya pasó—. Deja de volver cuando la
+    /// tarea se completa, que es la única forma sensata de callarlo.
+    public func nextAlarm(after now: Date = .now, calendar: Calendar = .current) -> Date? {
+        guard !isCompleted, deletedAt == nil, let timeOfDay else { return nil }
+        // Las cuentas salen del calendario que llega y no de `scheduledAt`, que
+        // usa el del sistema: un método que acepta calendario y luego usa otro
+        // miente sobre lo que hace.
+        if let when,
+           let momento = calendar.date(byAdding: .minute, value: timeOfDay,
+                                       to: calendar.startOfDay(for: when)),
+           momento > now { return momento }
+        guard let aEsaHora = calendar.date(byAdding: .minute, value: timeOfDay,
+                                           to: calendar.startOfDay(for: now))
+        else { return nil }
+        if aEsaHora > now { return aEsaHora }
+        return calendar.date(byAdding: .day, value: 1, to: aEsaHora)
+    }
+
     /// La hora escrita como la escribe el idioma: «9:30» aquí, «9:30 AM» donde
     /// se use el reloj de doce.
     public var timeLabel: String? {

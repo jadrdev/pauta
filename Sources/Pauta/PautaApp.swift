@@ -221,6 +221,14 @@ struct PautaApp: App {
                         store.toggleComplete(item)
                     }
                 }
+                // Al cambiar el día, lo que era «de hoy» pasa a ser atrasado y
+                // su aviso tiene que empezar a insistir. Nada en las tareas
+                // cambia a medianoche, así que sin esto no se enteraría nadie.
+                .onReceive(NotificationCenter.default.publisher(
+                    for: .NSCalendarDayChanged).receive(on: RunLoop.main)) { _ in
+                    guard !Launch.demo else { return }
+                    Task { await Avisos.reschedule(store.items) }
+                }
                 .task(id: store.items) {
                     guard !Launch.demo else { return }
                     // Un segundo de espera: escribir un título cambia las tareas
