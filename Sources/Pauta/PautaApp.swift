@@ -43,6 +43,12 @@ enum Launch {
     static var appearance: NSAppearance.Name?
     /// Vista inicial en maqueta, 1…5 según el orden de la barra lateral.
     static var view: Perspective?
+    /// Abre el panel de alta rápida al arrancar.
+    ///
+    /// Existe para poder mirarlo —y comprobar que el foco cae en el campo— sin
+    /// inyectar el atajo por debajo: un ⌃Espacio sintético obliga a que el foco
+    /// salte entre apps, y eso ni prueba lo que hay que probar ni sale gratis.
+    static var altaRapida = false
 }
 
 /// Ejecuta trabajo asíncrono desde un punto de entrada síncrono sin bloquear el
@@ -77,6 +83,7 @@ struct Entry {
     /// de los datos reales.
     static func main() {
         Launch.demo = CommandLine.arguments.contains("--demo")
+        Launch.altaRapida = CommandLine.arguments.contains("--alta-rapida")
         if CommandLine.arguments.contains("--light") { Launch.appearance = .aqua }
         if CommandLine.arguments.contains("--dark")  { Launch.appearance = .darkAqua }
         if let i = CommandLine.arguments.firstIndex(of: "--view"),
@@ -248,6 +255,7 @@ struct PautaApp: App {
                     // la ventana: apuntar tiene que funcionar con la app en la
                     // barra de menús y nada abierto.
                     AltaRapida.shared.instalar(store: store)
+                    if Launch.altaRapida { AltaRapida.shared.alternar() }
 
                     AvisoAcciones.alAbrir = { id in
                         openWindow(id: "main")

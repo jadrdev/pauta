@@ -949,6 +949,11 @@ en memoria, que no se escriben en disco, y permite forzar la apariencia.
 `--view 1…6` elige la lista de arranque, en el orden de la barra lateral.
 Combinado con `--dump` inspecciona la maqueta en vez de los datos reales.
 
+`--alta-rapida` abre el panel del atajo al arrancar. Está para poder mirarlo y
+comprobar que el foco cae en el campo sin inyectar el atajo por debajo: un
+⌃Espacio sintético obliga a que el foco salte entre apps, y eso ni prueba lo que
+hay que probar ni sale gratis.
+
 ## Estructura
 
 ```
