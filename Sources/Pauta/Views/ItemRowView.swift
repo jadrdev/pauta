@@ -139,6 +139,11 @@ struct ItemRowView: View {
         .onChange(of: notes) { guard isSelected else { return }; commitText() }
         .contextMenu {
             Button("Programar para hoy") { store.schedule(item, to: .now) }
+            // Aplazar también desde la lista: el aviso es la puerta principal,
+            // pero «ahora no puedo» se piensa igual mirando la lista.
+            Button("Aplazar \(Avisos.minutosAplazados) min") {
+                store.snooze(item, minutes: Avisos.minutosAplazados)
+            }
             Button("Aparcar en Algún día") { store.park(item) }
             Button("Quitar fecha") { store.schedule(item, to: nil) }
             Divider()
@@ -200,9 +205,29 @@ struct ItemRowView: View {
                 .help("Planificada para el \(when.formatted(.dateTime.day().month(.wide)))")
             }
             if let hora = item.timeLabel, !item.isCompleted {
-                Text(hora)
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(Paper.inkSoft)
+                HStack(spacing: 3) {
+                    Text(hora)
+                        .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    // El margen tiene que verse: si no, el aviso llegaría antes
+                    // de la hora escrita y parecería que la hora está mal.
+                    if let margen = item.warnLabel {
+                        Image(systemName: "bell.badge")
+                            .font(.system(size: 9))
+                            .help("Aviso \(margen)")
+                    }
+                }
+                .foregroundStyle(Paper.inkSoft)
+            }
+            // Un aplazamiento que no se ve es estado invisible: la tarea estaría
+            // callada hasta las y cuarto sin que nada lo dijera.
+            if let hasta = item.snoozeLabel(), !item.isCompleted {
+                HStack(spacing: 3) {
+                    Image(systemName: "moon.zzz.fill").font(.system(size: 9))
+                    Text(hasta)
+                        .font(.system(size: 11, weight: .medium).monospacedDigit())
+                }
+                .foregroundStyle(Paper.inkFaint)
+                .help("Aplazada hasta las \(hasta)")
             }
             if let deadline = item.deadline, !item.isCompleted {
                 HStack(spacing: 3) {
@@ -348,6 +373,19 @@ struct ItemRowView: View {
                         Button("Otra hora…") { eligiendoHora = true }
                         if item.timeOfDay != nil {
                             Divider()
+                            // El margen cuelga de la hora porque sin hora no
+                            // cuenta desde ninguna parte.
+                            Menu("Avisar antes") {
+                                ForEach([5, 10, 15, 30, 60], id: \.self) { m in
+                                    Button(m % 60 == 0 ? "\(m / 60) h antes" : "\(m) min antes") {
+                                        store.setWarnBefore(item, to: m)
+                                    }
+                                }
+                                if item.warnBefore != nil {
+                                    Divider()
+                                    Button("A la hora") { store.setWarnBefore(item, to: nil) }
+                                }
+                            }
                             Button("Sin hora") { store.setTime(item, to: nil) }
                         }
                     }

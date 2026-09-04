@@ -1861,3 +1861,304 @@ struct AgendaTests {
         #expect(ordenados.map(\.title) == ["festivo", "mañana", "tarde"])
     }
 }
+
+/// El margen: avisar a la hora exacta llega tarde para lo que hay que dejar
+/// hecho antes de ponerse.
+struct MargenTests {
+    private var cal: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }
+    private func fecha(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) -> Date {
+        cal.date(from: DateComponents(year: y, month: m, day: d, hour: h, minute: min))!
+    }
+    private func tarea(dia: Date, hora: Int?, margen: Int? = nil) -> Item {
+        var i = Item(title: "reunión")
+        i.when = dia
+        i.timeOfDay = hora
+        i.warnBefore = margen
+        return i
+    }
+
+    @Test func theAlarmRingsTheMarginBeforeTheHour() {
+        let t = tarea(dia: fecha(2026, 9, 8), hora: 9 * 60, margen: 10)
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == fecha(2026, 9, 8, 8, 50))
+    }
+
+    @Test func withoutAMarginItRingsOnTheHour() {
+        let t = tarea(dia: fecha(2026, 9, 8), hora: 9 * 60)
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == fecha(2026, 9, 8, 9, 0))
+    }
+
+    /// El momento de la tarea no se mueve: lo que se adelanta es el aviso. Si
+    /// se movieran los dos, el margen no serviría de nada.
+    @Test func theMomentItselfDoesNotMove() {
+        let t = tarea(dia: fecha(2026, 9, 8), hora: 9 * 60, margen: 10)
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(t.nextOccurrence(after: ahora, calendar: cal) == fecha(2026, 9, 8, 9, 0))
+    }
+
+    /// Un margen que se sale del día avisa la noche anterior, que es cuando de
+    /// verdad hay que enterarse.
+    @Test func aMarginThatCrossesMidnightWarnsTheNightBefore() {
+        let t = tarea(dia: fecha(2026, 9, 8), hora: 5, margen: 10)
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == fecha(2026, 9, 7, 23, 55))
+    }
+
+    /// Lo atrasado con margen insiste a la hora adelantada, no a la de la tarea.
+    @Test func anOverdueTaskInsistsAtTheEarlierHour() {
+        let t = tarea(dia: fecha(2026, 8, 29), hora: 9 * 60, margen: 15)
+        let ahora = fecha(2026, 9, 1, 7, 0)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == fecha(2026, 9, 1, 8, 45))
+        #expect(t.alarmInsists(now: ahora, calendar: cal))
+    }
+
+    /// Y si la hora adelantada ya pasó, vuelve mañana a esa misma hora.
+    @Test func andTomorrowIfTheEarlierHourAlreadyPassed() {
+        let t = tarea(dia: fecha(2026, 9, 1), hora: 9 * 60, margen: 15)
+        let ahora = fecha(2026, 9, 1, 8, 50)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == fecha(2026, 9, 2, 8, 45))
+    }
+
+    @Test func aMarginWithoutAnHourSoundsNothing() {
+        let t = tarea(dia: fecha(2026, 9, 8), hora: nil, margen: 10)
+        #expect(t.nextAlarm(after: fecha(2026, 9, 1), calendar: cal) == nil)
+    }
+
+    @MainActor
+    @Test func theStoreClampsTheMarginAndTreatsZeroAsNoMargin() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "reunión", in: .today)
+        s.setTime(a, to: 9 * 60)
+        s.setWarnBefore(a, to: 10)
+        #expect(s.items.first { $0.id == a.id }?.warnBefore == 10)
+        s.setWarnBefore(a, to: 0)
+        #expect(s.items.first { $0.id == a.id }?.warnBefore == nil)
+        s.setWarnBefore(a, to: 99_999)
+        #expect(s.items.first { $0.id == a.id }?.warnBefore == 24 * 60)
+    }
+
+    /// Quitar la hora se lleva el margen: un margen sin hora no cuenta desde
+    /// ninguna parte.
+    @MainActor
+    @Test func removingTheHourRemovesTheMargin() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "reunión", in: .today)
+        s.setTime(a, to: 9 * 60)
+        s.setWarnBefore(a, to: 10)
+        s.setTime(a, to: nil)
+        #expect(s.items.first { $0.id == a.id }?.warnBefore == nil)
+    }
+}
+
+/// Aplazar: el aviso llega en mal momento y el gesto de descartarlo se lo lleva
+/// para siempre. Aplazar es lo que le da una segunda oportunidad.
+struct AplazarTests {
+    private var cal: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }
+    private func fecha(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) -> Date {
+        cal.date(from: DateComponents(year: y, month: m, day: d, hour: h, minute: min))!
+    }
+
+    @Test func aSnoozeWinsOverTheHour() {
+        var t = Item(title: "pastilla")
+        t.when = fecha(2026, 9, 1)
+        t.timeOfDay = 9 * 60
+        t.snoozedUntil = fecha(2026, 9, 1, 8, 10)
+        let ahora = fecha(2026, 9, 1, 8, 0)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == fecha(2026, 9, 1, 8, 10))
+        #expect(t.isSnoozed(now: ahora))
+    }
+
+    /// Cumplido el aplazamiento, la tarea vuelve a su horario normal en vez de
+    /// quedarse callada.
+    @Test func onceThePostponementIsOverTheNormalHourComesBack() {
+        var t = Item(title: "pastilla")
+        t.when = fecha(2026, 9, 1)
+        t.timeOfDay = 18 * 60
+        t.snoozedUntil = fecha(2026, 9, 1, 8, 10)
+        let ahora = fecha(2026, 9, 1, 9, 0)
+        #expect(t.isSnoozed(now: ahora) == false)
+        #expect(t.nextAlarm(after: ahora, calendar: cal) == fecha(2026, 9, 1, 18, 0))
+    }
+
+    /// Un aplazamiento suena una vez y no cada día: es «ahora no», no un
+    /// horario nuevo.
+    @Test func aSnoozeDoesNotInsist() {
+        var t = Item(title: "pastilla")
+        t.when = fecha(2026, 8, 29)
+        t.timeOfDay = 9 * 60
+        t.snoozedUntil = fecha(2026, 9, 1, 8, 10)
+        let ahora = fecha(2026, 9, 1, 8, 0)
+        #expect(t.alarmInsists(now: ahora, calendar: cal) == false)
+    }
+
+    /// Sin hora no hay aviso, pero sí aplazamiento: «recuérdamelo en diez
+    /// minutos» es lo más útil que se le puede pedir a una app de tareas.
+    @Test func snoozingWorksEvenWithoutAnHour() {
+        var t = Item(title: "llamar al banco")
+        t.snoozedUntil = fecha(2026, 9, 1, 8, 10)
+        #expect(t.nextAlarm(after: fecha(2026, 9, 1, 8, 0), calendar: cal)
+                == fecha(2026, 9, 1, 8, 10))
+    }
+
+    @Test func completingSilencesASnooze() {
+        var t = Item(title: "pastilla")
+        t.snoozedUntil = fecha(2026, 9, 1, 8, 10)
+        t.isCompleted = true
+        #expect(t.nextAlarm(after: fecha(2026, 9, 1, 8, 0), calendar: cal) == nil)
+    }
+
+    @MainActor
+    @Test func theStorePostponesFromNow() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .today)
+        s.setTime(a, to: 9 * 60)
+        let ahora = Date()
+        s.snooze(a, minutes: 10, now: ahora)
+        let despues = s.items.first { $0.id == a.id }?.snoozedUntil
+        #expect(despues != nil)
+        #expect(abs(despues!.timeIntervalSince(ahora.addingTimeInterval(600))) < 0.01)
+    }
+
+    /// Cambiar el plan borra el aplazamiento: si se mueve el día o la hora, ese
+    /// «ahora no» ya no habla de nada.
+    @MainActor
+    @Test func replanningClearsThePostponement() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .today)
+        s.setTime(a, to: 9 * 60)
+
+        s.snooze(a, minutes: 10)
+        s.setTime(a, to: 10 * 60)
+        #expect(s.items.first { $0.id == a.id }?.snoozedUntil == nil)
+
+        s.snooze(a, minutes: 10)
+        s.schedule(a, to: Calendar.current.date(byAdding: .day, value: 1, to: .now))
+        #expect(s.items.first { $0.id == a.id }?.snoozedUntil == nil)
+
+        s.snooze(a, minutes: 10)
+        s.park(a)
+        #expect(s.items.first { $0.id == a.id }?.snoozedUntil == nil)
+    }
+
+    /// Completar también lo limpia: si vuelve a abrirse no debe arrastrar un
+    /// aplazamiento de otro día.
+    @MainActor
+    @Test func completingClearsItToo() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .today)
+        s.setTime(a, to: 9 * 60)
+        s.snooze(a, minutes: 10)
+        s.toggleComplete(a)
+        #expect(s.items.first { $0.id == a.id }?.snoozedUntil == nil)
+    }
+}
+
+/// La cuenta atrás de lo siguiente: la ceguera temporal no se arregla con un
+/// aviso puntual, sino teniendo a la vista cuánto falta.
+struct CuentaTests {
+    private var cal: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }
+    private func fecha(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) -> Date {
+        cal.date(from: DateComponents(year: y, month: m, day: d, hour: h, minute: min))!
+    }
+    private func tarea(_ titulo: String, dia: Date, hora: Int?) -> Item {
+        var i = Item(title: titulo)
+        i.when = dia
+        i.timeOfDay = hora
+        return i
+    }
+
+    @Test func theNextThingIsTheClosestHourStillToCome() {
+        let hoy = fecha(2026, 9, 1)
+        let items = [tarea("tarde", dia: hoy, hora: 18 * 60),
+                     tarea("pronto", dia: hoy, hora: 13 * 60),
+                     tarea("pasada", dia: hoy, hora: 9 * 60)]
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(Cuenta.proxima(items, now: ahora, calendar: cal)?.item.title == "pronto")
+    }
+
+    /// El margen del aviso no mueve la cuenta: lo que falta es para la tarea.
+    @Test func theCountdownIgnoresTheWarningMargin() {
+        var t = tarea("reunión", dia: fecha(2026, 9, 1), hora: 13 * 60)
+        t.warnBefore = 30
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(Cuenta.proxima([t], now: ahora, calendar: cal)?.cuando
+                == fecha(2026, 9, 1, 13, 0))
+    }
+
+    @Test func completedDeletedAndHourlessDoNotCount() {
+        let hoy = fecha(2026, 9, 1)
+        var hecha = tarea("hecha", dia: hoy, hora: 13 * 60)
+        hecha.isCompleted = true
+        var borrada = tarea("borrada", dia: hoy, hora: 14 * 60)
+        borrada.deletedAt = fecha(2026, 8, 31)
+        let suelta = tarea("sin hora", dia: hoy, hora: nil)
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(Cuenta.proxima([hecha, borrada, suelta], now: ahora, calendar: cal) == nil)
+    }
+
+    /// Una atrasada cuya hora aún no ha llegado hoy sí cuenta: sigue pendiente y
+    /// va a sonar.
+    @Test func anOverdueTaskCountsIfItsHourIsStillToComeToday() {
+        let t = tarea("pastilla", dia: fecha(2026, 8, 29), hora: 13 * 60)
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        #expect(Cuenta.proxima([t], now: ahora, calendar: cal)?.cuando
+                == fecha(2026, 9, 1, 13, 0))
+    }
+
+    /// Lo aparcado en «Algún día» no cuenta aunque le quedara una hora puesta.
+    @Test func parkedTasksDoNotCount() {
+        var t = tarea("algún día", dia: fecha(2026, 9, 1), hora: 13 * 60)
+        t.isSomeday = true
+        #expect(Cuenta.proxima([t], now: fecha(2026, 9, 1, 12, 0), calendar: cal) == nil)
+    }
+
+    @Test func theLabelCountsMinutesUnderAnHour() {
+        #expect(Cuenta.restante(fecha(2026, 9, 1, 12, 20), now: fecha(2026, 9, 1, 12, 0))
+                == "En 20 min")
+    }
+
+    /// Redondea hacia arriba: faltando treinta segundos, decir «en 0 min» sería
+    /// más raro que decir «en 1 min».
+    @Test func itRoundsUpSoNothingReadsAsZero() {
+        let medioMinuto = fecha(2026, 9, 1, 12, 0).addingTimeInterval(30)
+        #expect(Cuenta.restante(medioMinuto, now: fecha(2026, 9, 1, 12, 0)) == "En 1 min")
+    }
+
+    @Test func andHoursWithMinutesAboveTheHour() {
+        #expect(Cuenta.restante(fecha(2026, 9, 1, 13, 5), now: fecha(2026, 9, 1, 12, 0))
+                == "En 1 h 5 min")
+        #expect(Cuenta.restante(fecha(2026, 9, 1, 14, 0), now: fecha(2026, 9, 1, 12, 0))
+                == "En 2 h")
+    }
+
+    @Test func whenItIsTimeItSaysNow() {
+        #expect(Cuenta.restante(fecha(2026, 9, 1, 12, 0), now: fecha(2026, 9, 1, 12, 0))
+                == "Ahora")
+    }
+
+    /// La ventana existe para que la barra de menús no lleve un rótulo puesto
+    /// todo el día: avisa cuando falta poco y por lo demás se calla.
+    @Test func theWindowIsAnHour() {
+        #expect(Cuenta.ventana == 60 * 60)
+        let t = tarea("cena", dia: fecha(2026, 9, 1), hora: 21 * 60)
+        let ahora = fecha(2026, 9, 1, 12, 0)
+        let proxima = Cuenta.proxima([t], now: ahora, calendar: cal)
+        #expect(proxima != nil)
+        #expect(Cuenta.inminente([t], now: ahora, calendar: cal) == nil)
+        #expect(Cuenta.inminente([t], now: fecha(2026, 9, 1, 20, 30), calendar: cal)?
+                    .item.title == "cena")
+    }
+}

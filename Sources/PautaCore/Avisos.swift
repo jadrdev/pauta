@@ -33,6 +33,7 @@ public final class AvisoEstado {
 public enum AvisoAcciones {
     public static var alAbrir: ((UUID) -> Void)?
     public static var alCompletar: ((UUID) -> Void)?
+    public static var alAplazar: ((UUID, Int) -> Void)?
 }
 
 /// Delegado del centro de notificaciones.
@@ -56,19 +57,27 @@ public final class AvisoDelegado: NSObject, UNUserNotificationCenterDelegate {
         guard let id = UUID(uuidString: response.notification.request.identifier) else { return }
         let accion = response.actionIdentifier
         await MainActor.run {
-            if accion == Avisos.accionCompletar {
-                AvisoAcciones.alCompletar?(id)
-            } else {
-                AvisoAcciones.alAbrir?(id)
+            switch accion {
+            case Avisos.accionCompletar: AvisoAcciones.alCompletar?(id)
+            case Avisos.accionAplazar:   AvisoAcciones.alAplazar?(id, Avisos.minutosAplazados)
+            default:                     AvisoAcciones.alAbrir?(id)
             }
         }
     }
 }
 
 public enum Avisos {
-    /// Identificadores de la acción y de su categoría.
+    /// Identificadores de las acciones y de su categoría.
     static let accionCompletar = "completar"
+    static let accionAplazar = "aplazar"
     static let categoria = "tarea"
+
+    /// Cuánto aplaza el botón de aplazar.
+    ///
+    /// Diez minutos y no una hora: lo bastante para terminar lo que se tenía
+    /// entre manos, y lo bastante poco para que aplazar no sea otra forma de
+    /// perderlo de vista.
+    public static let minutosAplazados = 10
 
     nonisolated(unsafe) private static let delegado = AvisoDelegado()
 
@@ -80,11 +89,18 @@ public enum Avisos {
         centro.delegate = delegado
         // Poder completar desde el propio aviso es lo que hace que una rutina
         // diaria no obligue a abrir la app para nada.
+        // Y aplazar es lo que evita el descarte: un aviso que llega en mal
+        // momento se quita de en medio con el gesto de siempre, y ese gesto se
+        // lo lleva hasta mañana. Con el botón, «ahora no» deja de significar
+        // «nunca».
         centro.setNotificationCategories([
             UNNotificationCategory(
                 identifier: categoria,
                 actions: [UNNotificationAction(identifier: accionCompletar,
                                                title: "Completar",
+                                               options: []),
+                          UNNotificationAction(identifier: accionAplazar,
+                                               title: "Aplazar \(minutosAplazados) min",
                                                options: [])],
                 intentIdentifiers: [])
         ])
@@ -152,12 +168,20 @@ public enum Avisos {
         for (item, cuando) in pendientes {
             let contenido = UNMutableNotificationContent()
             contenido.title = item.title.isEmpty ? "Sin título" : item.title
+            var explicacion: [String] = []
+            // Cuando suena antes de la hora hay que decir cuánto falta, o
+            // parecerá que la hora está mal puesta.
+            if !item.isSnoozed(now: now), item.warnBefore != nil,
+               let momento = item.nextOccurrence(after: now) {
+                explicacion.append(Cuenta.restante(momento, now: cuando))
+            }
             // Con fecha absoluta y no «hace tres días»: el aviso se escribe hoy
             // y puede sonar mañana, y entonces la cuenta ya no cuadraría.
             if item.daysLate > 0, let dia = item.day {
-                contenido.subtitle =
-                    "Pendiente desde el \(dia.formatted(.dateTime.day().month(.wide)))"
+                explicacion.append(
+                    "Pendiente desde el \(dia.formatted(.dateTime.day().month(.wide)))")
             }
+            contenido.subtitle = explicacion.joined(separator: " · ")
             if !item.notes.isEmpty { contenido.body = item.notes }
             contenido.sound = .default
             contenido.categoryIdentifier = categoria
@@ -172,12 +196,22 @@ public enum Avisos {
             let insiste = item.alarmInsists(now: now)
             let campos: Set<Calendar.Component> =
                 insiste ? [.hour, .minute] : [.year, .month, .day, .hour, .minute]
+            // Lo aplazado va por intervalo y no por calendario: un disparador de
+            // calendario se cuenta al minuto, y aplazar diez minutos a y media y
+            // treinta segundos daría un momento ya pasado —que no suena nunca—.
+            let disparador: UNNotificationTrigger
+            if item.isSnoozed(now: now) {
+                disparador = UNTimeIntervalNotificationTrigger(
+                    timeInterval: max(1, cuando.timeIntervalSince(now)), repeats: false)
+            } else {
+                disparador = UNCalendarNotificationTrigger(
+                    dateMatching: Calendar.current.dateComponents(campos, from: cuando),
+                    repeats: insiste)
+            }
             let peticion = UNNotificationRequest(
                 identifier: item.id.uuidString,
                 content: contenido,
-                trigger: UNCalendarNotificationTrigger(
-                    dateMatching: Calendar.current.dateComponents(campos, from: cuando),
-                    repeats: insiste))
+                trigger: disparador)
             try? await centro.add(peticion)
         }
     }

@@ -206,6 +206,7 @@ struct PautaApp: App {
     /// dispositivo mientras la app está abierta.
     @State private var watcher: FolderWatcher?
     @State private var agenda = Agenda()
+    @State private var reloj = Reloj()
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
@@ -232,13 +233,29 @@ struct PautaApp: App {
                 // de otro dispositivo—: reconstruir es más barato que razonar
                 // sobre qué aviso quedó suelto.
                 .task {
+                    // El atajo global se registra aquí y no se suelta al cerrar
+                    // la ventana: apuntar tiene que funcionar con la app en la
+                    // barra de menús y nada abierto.
+                    AltaRapida.shared.instalar(store: store)
+
                     AvisoAcciones.alAbrir = { id in
                         openWindow(id: "main")
                         mostrar(id, in: store, nav: nav)
                     }
+                    // Los dos reprograman a mano en vez de esperar a que el
+                    // cambio de las tareas lo dispare: ese disparador vive en
+                    // esta ventana, y un aviso se atiende con la ventana
+                    // cerrada. Sin esto, completar desde el aviso dejaría la
+                    // insistencia sonando y aplazar no volvería nunca.
                     AvisoAcciones.alCompletar = { id in
                         guard let item = store.items.first(where: { $0.id == id }) else { return }
                         store.toggleComplete(item)
+                        Task { await Avisos.reschedule(store.items) }
+                    }
+                    AvisoAcciones.alAplazar = { id, minutos in
+                        guard let item = store.items.first(where: { $0.id == id }) else { return }
+                        store.snooze(item, minutes: minutos)
+                        Task { await Avisos.reschedule(store.items) }
                     }
                 }
                 // Al cambiar el día, lo que era «de hoy» pasa a ser atrasado y
@@ -277,6 +294,13 @@ struct PautaApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("Nueva tarea") { nav.startNewItem() }
                     .keyboardShortcut("n", modifiers: .command)
+                // El atajo no se declara aquí porque no lo lleva el menú: lo
+                // registra Carbon para que funcione con otra app delante. El
+                // botón existe para que se pueda descubrir y para decir cuál es.
+                Button(AltaRapida.shared.combinacion.map { "Alta rápida  \($0)" }
+                        ?? "Alta rápida") {
+                    AltaRapida.shared.alternar()
+                }
                 Button("Nuevo proyecto") {
                     let project = store.addProject(name: "")
                     nav.go(to: .project(project.id))
@@ -328,12 +352,7 @@ struct PautaApp: App {
             MenuBarView()
                 .environment(store)
         } label: {
-            if let icon = Brand.menuBar {
-                Image(nsImage: icon)
-            } else {
-                // Sin bundle (binario suelto) no hay monograma: un símbolo vale.
-                Image(systemName: "checklist")
-            }
+            EtiquetaDeBarra(store: store, reloj: reloj)
         }
         .menuBarExtraStyle(.window)
     }

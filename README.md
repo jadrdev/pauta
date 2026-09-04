@@ -67,6 +67,7 @@ sería contradictorio.
 
 | Atajo | Acción |
 |---|---|
+| `⌃Espacio` | [Alta rápida](#alta-rápida) a la bandeja, desde cualquier app |
 | `⌘N` | Nueva tarea en la lista actual |
 | `⌘⇧N` | Nuevo proyecto |
 | `⌘⌥N` | Nueva área |
@@ -238,9 +239,28 @@ porque no es una preferencia sino una restricción de fuera: no puedes decidir
 que las nueve van después de las seis. En un proyecto o en la bandeja no se
 aplica, que ahí comparar horas de días distintos no diría nada.
 
-Una repetitiva **hereda la hora** —y las etiquetas, y los pasos, estos sin
-marcar—: «todos los días a las nueve» exige que la segunda vuelta también sean
-las nueve.
+Una repetitiva **hereda la hora** —y el margen, y las etiquetas, y los pasos,
+estos sin marcar—: «todos los días a las nueve» exige que la segunda vuelta
+también sean las nueve.
+
+#### El margen
+
+`Hora ▸ Avisar antes` adelanta el aviso 5, 10, 15, 30 o 60 minutos. Avisar a la
+hora exacta llega tarde para casi todo: hay que cerrar lo que estabas haciendo,
+moverte, prepararte. Con margen, el aviso dice «prepárate» en vez de «ya se te
+pasó».
+
+Adelanta **el aviso y no la tarea**: las nueve siguen siendo las nueve en la
+lista, en el orden y en la cuenta atrás. Si se movieran las dos cosas, el margen
+no serviría de nada.
+
+El margen se ve en la fila —una campana junto a la hora— porque si no, el aviso
+llegaría antes de la hora escrita y parecería que la hora está mal. Y solo se
+manda **un aviso**, el adelantado: dos por tarea sería el doble de ruido para
+decir lo mismo, y el tope de 60 se gastaría al doble de velocidad.
+
+Un margen que se sale del día avisa la noche anterior —diez minutos antes de las
+0:05 son las 23:55 de ayer—, que es cuando de verdad hay que enterarse.
 
 #### El aviso
 
@@ -269,12 +289,46 @@ Hay un delegado, y hace falta para dos cosas que sin él no ocurren:
 - **El aviso se ve aunque Pauta esté delante.** El sistema lo silencia por
   defecto dando por hecho que ya estás mirando la app, y en una app de tareas ese
   es justo el momento en que más falta hace.
-- **Pulsarlo abre la tarea**, en una lista donde se vea; y trae un botón
-  **«Completar»** para despachar una rutina sin abrir nada.
+- **Pulsarlo abre la tarea**, en una lista donde se vea; y trae dos botones,
+  **«Completar»** para despachar una rutina sin abrir nada y **«Aplazar 10
+  min»**.
 
 Y si el permiso está denegado, **la app lo dice**: una franja arriba de la lista,
 con un atajo a los ajustes del sistema. Un aviso que no llega y se calla es peor
 que no tener avisos, porque la tarea parece cubierta y no lo está.
+
+#### Aplazar
+
+Un aviso que llega en mal momento se descarta, y el descarte se lo lleva hasta
+mañana. El botón **«Aplazar 10 min»** es la salida que evita eso, y está también
+en el menú contextual de la fila, porque «ahora no puedo» se piensa igual mirando
+la lista.
+
+Diez minutos y no una hora: lo bastante para terminar lo que tenías entre manos y
+lo bastante poco para que aplazar no sea otra forma de perderlo de vista.
+
+Aplazar **no toca la hora de la tarea**. Si la moviera, cada aplazamiento
+reescribiría el horario y una rutina de las nueve acabaría a las once sin que
+nadie lo decidiera. Se guarda como un instante aparte, que gana al horario
+mientras dure y lo devuelve en cuanto se cumple.
+
+Se guarda en el archivo y no solo en el centro de notificaciones, por dos
+razones: sobrevive a cerrar la app, y **la fila puede decirlo** —una luna con la
+hora—. Un aplazamiento invisible sería una tarea callada hasta las y cuarto sin
+que nada explicara por qué.
+
+Cambiar el plan lo borra: mover el día, mover la hora, aparcar o completar. Ese
+«ahora no» hablaba de otro momento.
+
+Y a diferencia del aviso de una tarea atrasada, **no insiste**: suena una vez.
+Por eso va por intervalo y no por calendario —un disparador de calendario se
+cuenta al minuto, y aplazar diez minutos a las y media y treinta segundos daría
+un momento ya pasado, que no suena nunca—.
+
+Completar o aplazar desde el aviso **reprograma al momento**, sin esperar al
+disparador que vigila los cambios: ese vive en la ventana principal, y un aviso
+se atiende con la ventana cerrada. Sin eso, completar dejaría la insistencia
+sonando y aplazar no volvería nunca.
 
 ```bash
 ./build/Pauta.app/Contents/MacOS/Pauta --avisos
@@ -391,6 +445,39 @@ heredan el fin — si no, la serie volvería a ser infinita en la segunda vuelta
 Quitar la repetición borra también su fin: un «hasta» sin repetición no significa
 nada.
 
+## Alta rápida
+
+**⌃Espacio** abre una línea para apuntar algo, esté delante lo que esté delante.
+Va a la **bandeja**; con ⇧⏎, a `Hoy`. Varias líneas pegadas de golpe son varias
+tareas, igual que en la lista.
+
+Existe porque ⌘N solo sirve con Pauta delante, y la cosa que hay que apuntar
+aparece **mientras estás en otra cosa**: leyendo un correo, al teléfono, a mitad
+de otra tarea. Si apuntarla exige cambiar de app, buscar la ventana y volver, no
+se apunta — y lo que no se apunta no lo arregla ninguna lista.
+
+Y va a la bandeja a propósito. Capturar y decidir son dos gestos distintos;
+juntarlos es lo que hace que apuntar cueste. La bandeja permite escribirlo mal,
+deprisa y sin pensar dónde va.
+
+El atajo se registra con **Carbon** (`RegisterEventHotKey`) y no con
+`NSEvent.addGlobalMonitorForEvents`: el monitor global exige permiso de
+monitorización de entrada —el mismo que se le pide a un registrador de teclas— y
+pedir eso para apuntar tareas es desproporcionado. `RegisterEventHotKey` no pide
+nada porque no ve el resto de las teclas.
+
+Si ⌃Espacio estuviera cogido —lo usa el conmutador de fuentes de entrada de
+macOS cuando hay más de un teclado configurado— se cae solo a ⌥Espacio y luego a
+⌃⌥Espacio. El que quedó puesto se lee en el menú `Archivo ▸ Alta rápida`, para no
+tener que adivinarlo.
+
+Al abrir, **la app se activa**: el sistema entrega las teclas a la que está
+delante, así que un panel de una app de fondo se ve, se puede pulsar y no recibe
+una sola letra. El precio es que la ventana principal sube detrás del panel; se
+paga porque la alternativa es un panel donde no se puede escribir, y **al cerrar
+el foco vuelve a donde estaba**, que es lo que hace que esto interrumpa un
+segundo y no un minuto.
+
 ## Barra de menús
 
 El monograma junto al reloj abre un panel con las tareas de Hoy: completarlas
@@ -398,6 +485,21 @@ con su casilla, añadir una nueva (que cae en Hoy) y reabrir la ventana
 principal, todo sin cambiar de app. Cubre casi todo lo que daría un widget sin
 necesitar extensión ni firma — WidgetKit exige un `.appex` embebido que no encaja
 con el empaquetado actual por SwiftPM y firma ad-hoc.
+
+### La cuenta atrás
+
+Cuando lo siguiente con hora está a **menos de una hora**, el monograma se
+acompaña de cuánto falta y de qué es: `En 20 min · Recoger a los niños`. Un aviso
+puntual llega, se oye y entre medias no hay forma de saber cuánto queda sin abrir
+algo y mirarlo; esto pone el dato a la vista sin preguntar.
+
+Solo dentro de esa ventana. Un rótulo puesto todo el día —«en 9 h»— se deja de
+leer, y entonces tampoco dice nada cuando falta un cuarto de hora, que es el
+único momento en que hacía falta.
+
+Cuenta **solo tareas**. Los eventos del calendario ya los avisa el sistema, y
+contarlos aquí también sería avisar dos veces de lo mismo. Y cuenta la hora de la
+tarea, no la del aviso: el margen adelanta la campana, no el momento.
 
 ## Instalar
 
@@ -770,8 +872,10 @@ Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
   Store.swift             estado + persistencia + consultas
   Avisos.swift            avisos del sistema para las tareas con hora
   Agenda.swift            eventos del calendario, solo de lectura
+  Cuenta.swift            cuánto falta para lo siguiente
 Sources/Pauta/            la app de macOS
   PautaApp.swift          punto de entrada, menús, atajos y barra de menús
+  AltaRapida.swift        atajo global y panel para apuntar sin abrir la app
   Views/Theme.swift       paleta, tipografía y filetes
   Views/SidebarView.swift barra lateral
   Views/ItemListView.swift lista y cabecera
@@ -786,6 +890,13 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
   donde encajarían sin inventar nada. Se dejó fuera para no cargar de golpe una
   ventana de semanas de calendario: primero conviene ver si en `Hoy` estorban o
   ayudan
+- **Estimación de tiempo** por tarea, y su suma en la cabecera de `Hoy`: quince
+  cosas en Hoy paralizan igual que ninguna, y «7 h comprometidas en un día de 4»
+  es un número que se ve antes de que lo demuestre el día
+- **Un repaso a hora fija**, que por la mañana diga qué quedó sin hacer en vez de
+  esperar a que abras la app y te acuerdes de abrirla
+- **Marca de rancio** en `Cualquier momento` y `Algún día`: una tarea puede llevar
+  cinco semanas ahí sin que nada lo diga
 - Widget y app de iOS — necesitan proyecto de Xcode y cuenta de desarrollador.
   `PautaCore` ya está extraído para ese salto, y la sincronización ya está
   hecha: la misma carpeta de iCloud le sirve a un iPhone sin tocar nada

@@ -117,6 +117,23 @@ public struct Item: Identifiable, Codable, Hashable {
     /// no es más que su nombre, y guardarla aparte obligaría a mantener viva una
     /// entidad que nadie edita salvo para renombrarla.
     public var tags: [String] = []
+    /// Cuántos minutos antes de la hora avisa. `nil` = a la hora en punto.
+    ///
+    /// Avisar justo a la hora llega tarde para todo lo que no se hace sentado:
+    /// hay que cerrar lo que se estaba haciendo, moverse, prepararse. El margen
+    /// es lo que convierte el aviso en «prepárate» en vez de «ya se te pasó».
+    ///
+    /// Adelanta **el aviso y no la tarea**: `timeOfDay` sigue siendo la hora a
+    /// la que toca. Mover las dos cosas dejaría el margen sin efecto.
+    public var warnBefore: Int?
+    /// Aplazado hasta este instante, si se aplazó.
+    ///
+    /// Un aviso que llega en mal momento se descarta, y descartarlo se lo lleva
+    /// hasta mañana. Aplazar es la salida que evita ese descarte, y se guarda
+    /// —en vez de vivir solo en el centro de notificaciones— para que sobreviva
+    /// a reiniciar la app y para que la fila pueda decir que está aplazada, que
+    /// si no sería estado invisible.
+    public var snoozedUntil: Date?
 
     public init(id: UUID = UUID(), title: String) {
         self.id = id
@@ -145,6 +162,8 @@ public struct Item: Identifiable, Codable, Hashable {
         timeOfDay   = try c.decodeIfPresent(Int.self,    forKey: .timeOfDay)
         checklist   = try c.decodeIfPresent([ChecklistStep].self, forKey: .checklist) ?? []
         tags        = try c.decodeIfPresent([String].self, forKey: .tags) ?? []
+        warnBefore  = try c.decodeIfPresent(Int.self,    forKey: .warnBefore)
+        snoozedUntil = try c.decodeIfPresent(Date.self,  forKey: .snoozedUntil)
         updatedAt   = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
         deletedAt   = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
         position    = try c.decodeIfPresent(Double.self, forKey: .position) ?? 0
@@ -199,27 +218,61 @@ public struct Item: Identifiable, Codable, Hashable {
     ///
     /// Solo lo de hoy y lo atrasado: una tarea de la semana que viene tiene que
     /// avisar su día, no todos los días desde hoy.
+    /// Un aplazamiento tampoco insiste: es «ahora no» una vez, no un horario
+    /// nuevo.
     public func alarmInsists(now: Date = .now, calendar: Calendar = .current) -> Bool {
         guard !isCompleted, deletedAt == nil, timeOfDay != nil, let when else { return false }
+        guard !isSnoozed(now: now) else { return false }
         return calendar.startOfDay(for: when) <= calendar.startOfDay(for: now)
     }
 
-    /// Cuándo toca avisar: su momento, si aún no ha pasado; y si ya pasó, la
-    /// próxima vez que el reloj marque esa hora.
+    /// Aplazada y todavía dentro del plazo.
+    public func isSnoozed(now: Date = .now) -> Bool {
+        guard !isCompleted, deletedAt == nil, let snoozedUntil else { return false }
+        return snoozedUntil > now
+    }
+
+    /// El próximo momento en que toca ponerse: su hora, el día que le toque.
+    ///
+    /// Es la cuenta atrás de la tarea, no la del aviso: el margen no la mueve.
+    public func nextOccurrence(after now: Date = .now, calendar: Calendar = .current) -> Date? {
+        guard !isCompleted, deletedAt == nil, let timeOfDay else { return nil }
+        return proximoReloj(aMinuto: timeOfDay, after: now, calendar: calendar)
+    }
+
+    /// Cuándo toca avisar: su momento menos el margen, si aún no ha pasado; y si
+    /// ya pasó, la próxima vez que el reloj marque esa hora.
     ///
     /// Lo atrasado sigue pendiente, así que el aviso vuelve —hoy mismo si la
     /// hora aún no ha llegado, y mañana si ya pasó—. Deja de volver cuando la
     /// tarea se completa, que es la única forma sensata de callarlo.
     public func nextAlarm(after now: Date = .now, calendar: Calendar = .current) -> Date? {
-        guard !isCompleted, deletedAt == nil, let timeOfDay else { return nil }
+        guard !isCompleted, deletedAt == nil else { return nil }
+        // El aplazamiento va primero y no exige hora: «recuérdamelo en diez
+        // minutos» tiene sentido para cualquier tarea, y mientras esté vivo es
+        // lo que la persona ha pedido, por encima de su horario.
+        if let snoozedUntil, snoozedUntil > now { return snoozedUntil }
+        guard let timeOfDay else { return nil }
+        return proximoReloj(aMinuto: timeOfDay - (warnBefore ?? 0),
+                            after: now, calendar: calendar)
+    }
+
+    /// La próxima vez que el reloj marque esa altura del día: el día de la tarea
+    /// si aún no ha llegado, hoy si toca hoy, y mañana si ya pasó.
+    ///
+    /// El minuto puede caerse fuera del día —un margen de diez sobre las 0:05—
+    /// y entonces sale la noche anterior, que es cuando de verdad hay que
+    /// enterarse.
+    private func proximoReloj(aMinuto minuto: Int, after now: Date,
+                              calendar: Calendar) -> Date? {
         // Las cuentas salen del calendario que llega y no de `scheduledAt`, que
         // usa el del sistema: un método que acepta calendario y luego usa otro
         // miente sobre lo que hace.
         if let when,
-           let momento = calendar.date(byAdding: .minute, value: timeOfDay,
+           let momento = calendar.date(byAdding: .minute, value: minuto,
                                        to: calendar.startOfDay(for: when)),
            momento > now { return momento }
-        guard let aEsaHora = calendar.date(byAdding: .minute, value: timeOfDay,
+        guard let aEsaHora = calendar.date(byAdding: .minute, value: minuto,
                                            to: calendar.startOfDay(for: now))
         else { return nil }
         if aEsaHora > now { return aEsaHora }
@@ -233,6 +286,20 @@ public struct Item: Identifiable, Codable, Hashable {
         let base = Calendar.current.startOfDay(for: .now)
         return Calendar.current.date(byAdding: .minute, value: timeOfDay, to: base)?
             .formatted(.dateTime.hour().minute())
+    }
+
+    /// «10 min antes»: el aviso tiene que poder decir por qué suena antes de la
+    /// hora, o parecerá que la hora está mal.
+    public var warnLabel: String? {
+        guard let warnBefore, warnBefore > 0 else { return nil }
+        if warnBefore % 60 == 0 { return "\(warnBefore / 60) h antes" }
+        return "\(warnBefore) min antes"
+    }
+
+    /// La hora hasta la que está aplazada, si lo está.
+    public func snoozeLabel(now: Date = .now) -> String? {
+        guard isSnoozed(now: now), let snoozedUntil else { return nil }
+        return snoozedUntil.formatted(.dateTime.hour().minute())
     }
 
     /// Cuántos pasos están hechos.

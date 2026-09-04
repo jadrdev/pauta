@@ -669,6 +669,8 @@ public final class Store {
         mutateItem(item.id) {
             $0.isCompleted.toggle()
             $0.completedAt = $0.isCompleted ? Store.stamped() : nil
+            // Si vuelve a abrirse, que no arrastre un «ahora no» de otro día.
+            $0.snoozedUntil = nil
         }
         guard let ahora = items.first(where: { $0.id == item.id }) else { return }
         if completandoAhora {
@@ -714,6 +716,7 @@ public final class Store {
         // La hora es lo que hace útil una repetitiva: «todos los días a las
         // nueve». Si no se heredara, la segunda vuelta ya no tendría hora.
         siguiente.timeOfDay = item.timeOfDay
+        siguiente.warnBefore = item.warnBefore
         siguiente.tags = item.tags
         // Los pasos vuelven sin marcar: la lista es la de esta vuelta, no la
         // de la anterior ya hecha.
@@ -755,7 +758,10 @@ public final class Store {
             $0.when = date.map { Calendar.current.startOfDay(for: $0) }
             $0.isSomeday = false
             // Quitar el día se lleva la hora: una hora sin día no dice cuándo.
-            if date == nil { $0.timeOfDay = nil }
+            if date == nil { $0.timeOfDay = nil; $0.warnBefore = nil }
+            // Cambiar el plan borra el aplazamiento: ese «ahora no» hablaba de
+            // otro momento.
+            $0.snoozedUntil = nil
         }
     }
 
@@ -770,6 +776,31 @@ public final class Store {
                 $0.when = Calendar.current.startOfDay(for: .now)
                 $0.isSomeday = false
             }
+            // Un margen sin hora no cuenta desde ninguna parte.
+            if minutes == nil { $0.warnBefore = nil }
+            $0.snoozedUntil = nil
+        }
+    }
+
+    /// Pone o quita el margen del aviso, en minutos antes de la hora.
+    ///
+    /// Cero es no tener margen y no «avisar cero minutos antes», que es lo
+    /// mismo dicho de forma que luego habría que distinguir en cinco sitios.
+    public func setWarnBefore(_ item: Item, to minutes: Int?) {
+        mutateItem(item.id) {
+            guard let minutes, minutes > 0 else { $0.warnBefore = nil; return }
+            $0.warnBefore = min(24 * 60, minutes)
+        }
+    }
+
+    /// Aplaza el aviso: vuelve a sonar dentro de esos minutos.
+    ///
+    /// No toca la hora de la tarea. Aplazar es «ahora no puedo», no un cambio
+    /// de plan: si moviera la hora, cada aplazamiento reescribiría el horario y
+    /// una rutina de las nueve acabaría a las once sin que nadie lo decidiera.
+    public func snooze(_ item: Item, minutes: Int, now: Date = .now) {
+        mutateItem(item.id) {
+            $0.snoozedUntil = Store.stamped(now.addingTimeInterval(TimeInterval(minutes * 60)))
         }
     }
 
@@ -969,6 +1000,8 @@ public final class Store {
             $0.isSomeday = true
             $0.when = nil
             $0.timeOfDay = nil
+            $0.warnBefore = nil
+            $0.snoozedUntil = nil
         }
     }
 
@@ -1247,6 +1280,7 @@ extension Store {
         // Una repetitiva con principio y fin.
         let riego = store.addItem(title: "Regar las plantas", in: .today)
         store.setTime(riego, to: 8 * 60 + 30)
+        store.setWarnBefore(riego, to: 10)
         store.setRecurrence(riego, to: .semanal)
         store.setRecurrenceEnd(store.items.last!,
                                to: calendar.date(byAdding: .day, value: 60, to: .now))
@@ -1269,6 +1303,18 @@ extension Store {
         store.setIcon(casa, to: "🏠")
         store.move(mudanza, toArea: casa.id)
         store.move(bici, toArea: casa.id)
+        // Una con la hora encima, para ver la cuenta atrás de la barra de
+        // menús, y una aplazada, para ver que se dice.
+        let recogida = store.addItem(title: "Recoger a los niños", in: .today)
+        store.setTime(recogida, to: Calendar.current.component(.hour, from: .now) * 60
+                                 + Calendar.current.component(.minute, from: .now) + 25)
+        // Con la hora ya pasada, que es cuando se aplaza de verdad: sonó, no era
+        // momento, y vuelve luego.
+        let llamada = store.addItem(title: "Llamar a la aseguradora", in: .today)
+        let haceUnaHora = Calendar.current.component(.hour, from: .now) * 60
+            + Calendar.current.component(.minute, from: .now) - 60
+        store.setTime(llamada, to: max(0, haceUnaHora))
+        store.snooze(llamada, minutes: 12)
         store.addItem(title: "Aprender a tocar el bajo", in: .someday)
         store.addItem(title: "Rehacer la estantería del salón", in: .someday)
         let done = store.addItem(title: "Reservar mesa para el viernes", in: .inbox)

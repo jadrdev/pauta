@@ -1,5 +1,65 @@
 import SwiftUI
+import Observation
 import PautaCore
+
+/// Un reloj que se mueve solo.
+///
+/// Hace falta porque nada en los datos cambia cuando pasa el tiempo: una tarea a
+/// las nueve es la misma tarea a las ocho y a las ocho y media, y sin algo que
+/// marque el minuto la cuenta atrás se quedaría escrita en el momento en que se
+/// dibujó.
+@Observable
+@MainActor
+final class Reloj {
+    private(set) var ahora = Date()
+    @ObservationIgnored private var timer: Timer?
+
+    /// Medio minuto: la cuenta se dice en minutos, así que afinar más solo
+    /// gastaría batería para escribir el mismo número.
+    init(cada segundos: TimeInterval = 30) {
+        timer = Timer.scheduledTimer(withTimeInterval: segundos, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.ahora = Date() }
+        }
+        // Con tolerancia, para que el sistema pueda agrupar el despertar con
+        // otros en vez de encender el procesador solo para esto.
+        timer?.tolerance = 10
+    }
+
+    deinit { timer?.invalidate() }
+}
+
+/// Lo que se ve en la barra de menús: el monograma y, cuando falta poco, cuánto
+/// falta y para qué.
+///
+/// El rótulo aparece solo dentro de la ventana de `Cuenta`. Un texto puesto todo
+/// el día se deja de leer, y entonces tampoco dice nada cuando falta un cuarto
+/// de hora —que es el único momento en que hacía falta—.
+struct EtiquetaDeBarra: View {
+    let store: Store
+    let reloj: Reloj
+
+    var body: some View {
+        HStack(spacing: 5) {
+            if let icon = Brand.menuBar {
+                Image(nsImage: icon)
+            } else {
+                // Sin bundle (binario suelto) no hay monograma: un símbolo vale.
+                Image(systemName: "checklist")
+            }
+            if let inminente = Cuenta.inminente(store.items, now: reloj.ahora) {
+                Text("\(Cuenta.restante(inminente.cuando, now: reloj.ahora))"
+                     + " · \(Self.recortado(inminente.item.title))")
+            }
+        }
+    }
+
+    /// La barra de menús es de todos: un título largo empujaría a los demás
+    /// iconos fuera de la pantalla.
+    static func recortado(_ titulo: String, a maximo: Int = 22) -> String {
+        titulo.count <= maximo ? titulo
+            : titulo.prefix(maximo - 1).trimmingCharacters(in: .whitespaces) + "…"
+    }
+}
 
 /// Panel de la barra de menús: ver Hoy, completar y añadir sin abrir la
 /// ventana. Cubre casi todo lo que daría un widget, sin extensión ni firma.
