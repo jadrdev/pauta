@@ -16,7 +16,14 @@ import PautaCore
 /// conoce no existe— y **los permisos**, porque tres funciones de la app las da
 /// el sistema y cuando dice no, la app se queda muda sin explicar por qué.
 struct AyudaView: View {
+    @Environment(Agenda.self) private var agenda
+
+    /// Los tres estados en memoria y no leídos al dibujar: pedir un permiso no
+    /// cambia nada observable, así que sin esto la fila seguiría diciendo «sin
+    /// preguntar» después de haberlo concedido.
     @State private var avisos: UNAuthorizationStatus = .notDetermined
+    @State private var calendario = Agenda.authorization
+    @State private var recordatorios = RemindersInbox.authorization
     /// Observable, para que cambiar el atajo en los ajustes se vea aquí.
     @State private var alta = AltaRapida.shared
 
@@ -37,7 +44,7 @@ struct AyudaView: View {
 
             Text("PERMISOS").rubricStyle().padding(.top, 22)
             Text("Tres cosas las hace el sistema y no la app. Si están en «no», "
-                 + "esa parte se queda muda.")
+                 + "esa parte se queda muda; desde aquí se piden y se arreglan.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(Paper.inkFaint)
                 .fixedSize(horizontal: false, vertical: true)
@@ -48,19 +55,34 @@ struct AyudaView: View {
                     para: "avisar de lo que tiene hora",
                     concedido: avisos == .authorized,
                     decidido: avisos != .notDetermined,
-                    ajustes: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")
+                    ajustes: "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
+                ) {
+                    await Avisos.request()
+                    avisos = await Avisos.authorization()
+                }
                 FilaDePermiso(
                     nombre: "Calendario",
                     para: "enseñar los eventos en Hoy",
-                    concedido: Agenda.isAuthorized,
-                    decidido: Agenda.authorization != .notDetermined,
-                    ajustes: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")
+                    concedido: calendario == .fullAccess,
+                    decidido: calendario != .notDetermined,
+                    ajustes: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars"
+                ) {
+                    await agenda.requestAccess()
+                    calendario = Agenda.authorization
+                    // Recargar aquí: si no, los eventos no aparecerían en Hoy
+                    // hasta el siguiente cambio de día.
+                    await agenda.load(force: true)
+                }
                 FilaDePermiso(
                     nombre: "Recordatorios",
                     para: "traer lo que dictas a Siri",
-                    concedido: RemindersInbox.authorization == .fullAccess,
-                    decidido: RemindersInbox.authorization != .notDetermined,
-                    ajustes: "x-apple.systempreferences:com.apple.preference.security?Privacy_Reminders")
+                    concedido: recordatorios == .fullAccess,
+                    decidido: recordatorios != .notDetermined,
+                    ajustes: "x-apple.systempreferences:com.apple.preference.security?Privacy_Reminders"
+                ) {
+                    _ = try? await RemindersInbox().requestAccess()
+                    recordatorios = RemindersInbox.authorization
+                }
             }
             .padding(.top, 8)
 
@@ -77,9 +99,14 @@ struct AyudaView: View {
         .padding(26)
         .frame(width: 440)
         .background(Paper.bg)
-        // Al abrirla y no una vez: el permiso se puede haber concedido o
-        // revocado en los ajustes mientras la ventana estaba cerrada.
-        .task { avisos = await Avisos.authorization() }
+        // Al abrirla y no una vez: los permisos se pueden haber concedido o
+        // revocado en los ajustes del sistema mientras la ventana estaba
+        // cerrada.
+        .task {
+            avisos = await Avisos.authorization()
+            calendario = Agenda.authorization
+            recordatorios = RemindersInbox.authorization
+        }
     }
 
     /// El atajo del alta rápida se lee del que quedó **registrado**, no del que
@@ -124,6 +151,7 @@ private struct FilaDePermiso: View {
     let concedido: Bool
     let decidido: Bool
     let ajustes: String
+    let pedir: () async -> Void
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
@@ -141,10 +169,12 @@ private struct FilaDePermiso: View {
                     .foregroundStyle(Paper.inkFaint)
             }
             Spacer(minLength: 8)
-            // Solo cuando ya se dijo que no: una decisión denegada no se cambia
-            // volviendo a preguntar, solo en los ajustes. Y si aún no se ha
-            // preguntado, la app lo hará ella cuando toque.
-            if decidido && !concedido {
+            // Sin preguntar, se pregunta. Denegado, no: esa decisión no se
+            // cambia volviendo a preguntar —el sistema no vuelve a mostrar el
+            // diálogo— y el único sitio donde se toca es en los ajustes.
+            if !decidido {
+                EnlaceDeTexto("Pedir acceso") { Task { await pedir() } }
+            } else if !concedido {
                 EnlaceDeTexto("Ajustes") {
                     if let url = URL(string: ajustes) { NSWorkspace.shared.open(url) }
                 }

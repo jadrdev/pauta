@@ -78,6 +78,17 @@ func runOnMainLoop(_ work: @escaping () async throws -> Void) {
 @main
 @MainActor
 struct Entry {
+    /// Lo que hay que decir al lado de un permiso leído desde el terminal.
+    ///
+    /// TCC no atribuye el permiso al binario que pregunta, sino al **proceso
+    /// responsable**, que ejecutando esto a mano es el terminal. Así que lo que
+    /// sale aquí es el permiso del terminal y no el de Pauta: pueden discrepar
+    /// —y discrepan— sin que ninguno esté roto. Los avisos no van por TCC y sí
+    /// se leen bien.
+    static let avisoDeTCC =
+        "  (ojo: lanzado a mano, esto es el permiso del terminal y no el de "
+        + "Pauta;\n   el de verdad se ve en Ayuda ▸ Permisos)"
+
     /// `--dump` imprime el estado y sale: comprueba persistencia y filtros sin
     /// abrir la interfaz. Con `--demo` inspecciona la maqueta en memoria en vez
     /// de los datos reales.
@@ -109,6 +120,7 @@ struct Entry {
                     .fullAccess: "fullAccess (listo)", .writeOnly: "writeOnly (insuficiente)",
                 ]
                 print("Calendario: \(estados[Agenda.authorization] ?? "desconocido")")
+                print(Entry.avisoDeTCC)
                 let agenda = Agenda()
                 await agenda.load()
                 print("eventos de hoy: \(agenda.eventos.count)")
@@ -163,6 +175,7 @@ struct Entry {
             }
             print("Recordatorios: \(estado)")
             print("lista dedicada: «\(RemindersInbox.listName)»")
+            print(avisoDeTCC)
             return
         }
         if CommandLine.arguments.contains("--import-reminders") {
@@ -264,10 +277,6 @@ struct PautaApp: App {
     @State private var agenda = Agenda()
     @State private var reloj = Reloj()
     @State private var ajustes = Ajustes.shared
-    /// El registrador del atajo, para que el rótulo del menú diga cuál está
-    /// puesto: los menús se construyen antes de que el atajo exista, y sin algo
-    /// observable el rótulo se quedaría mudo para siempre.
-    @State private var alta = AltaRapida.shared
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
 
@@ -394,12 +403,6 @@ struct PautaApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("Nueva tarea") { nav.startNewItem() }
                     .keyboardShortcut("n", modifiers: .command)
-                // El atajo no se declara aquí porque no lo lleva el menú: lo
-                // registra Carbon para que funcione con otra app delante. El
-                // botón existe para que se pueda descubrir y para decir cuál es.
-                Button(alta.combinacion.map { "Alta rápida  ·  \($0)" } ?? "Alta rápida") {
-                    alta.alternar()
-                }
                 Button("Nuevo proyecto") {
                     let project = store.addProject(name: "")
                     nav.go(to: .project(project.id))
@@ -417,21 +420,11 @@ struct PautaApp: App {
                 Button("Ventana principal") { openWindow(id: "main") }
                     .keyboardShortcut("0", modifiers: .command)
             }
+            // Archivo se queda con lo que crea cosas y con la importación, que
+            // es lo que un menú de archivo hace. Los permisos del calendario
+            // estaban aquí por no tener otro sitio: ahora lo tienen en la
+            // ayuda, junto a los otros dos, y en Hoy sigue la invitación.
             CommandGroup(after: .newItem) {
-                Button("Eventos del calendario…") {
-                    Task {
-                        // Si ya se dijo que no, pedirlo otra vez no abre nada:
-                        // esa decisión solo se cambia en los ajustes.
-                        if Agenda.authorization == .notDetermined {
-                            await agenda.requestAccess()
-                            await agenda.load(force: true)
-                        } else if !Agenda.isAuthorized {
-                            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
-                                NSWorkspace.shared.open(url)
-                            }
-                        }
-                    }
-                }
                 Button("Importar de Recordatorios") {
                     Task { await importFromReminders(into: store, nav: nav) }
                 }
@@ -470,7 +463,7 @@ struct PautaApp: App {
         .defaultPosition(.center)
 
         Window("Ayuda de Pauta", id: "ayuda") {
-            AyudaView()
+            AyudaView().environment(agenda)
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)

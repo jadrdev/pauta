@@ -372,7 +372,24 @@ no, duraría hasta el siguiente arranque.
 # permiso de avisos: authorized
 # avisos programados: 3
 # repaso del día: a las 8:30 (programado)
+# botones de «tarea»: Completar, Aplazar 10 min
+# avisos entregados y sin descartar: 1
 ```
+
+Dice lo **programado** y lo **entregado**, que no es lo mismo: lo primero es lo
+que va a pasar y lo segundo lo que pasó. Sin lo segundo, «probar los avisos» era
+mirar el código y confiar. Y los botones se leen del sistema, porque que estén
+escritos en el código no significa que estén registrados.
+
+### Cuidado con leer permisos desde el terminal
+
+`--eventos` y `--reminders-status` **mienten cuando se lanzan a mano**, y lo
+dicen. TCC no atribuye el permiso al binario que pregunta sino al *proceso
+responsable*, que ejecutando el ejecutable desde una shell es el terminal: lo que
+sale es el permiso del terminal, no el de Pauta. Pueden discrepar —y discrepan—
+sin que ninguno esté roto. El estado de verdad se ve en `Ayuda ▸ Permisos`, que
+corre dentro de la app. Los avisos no van por TCC y sí se leen bien desde
+cualquier sitio.
 
 ### Listas de comprobación
 
@@ -556,8 +573,14 @@ nada porque no ve el resto de las teclas.
 ### Cambiar el atajo
 
 ⌃Espacio es el de fábrica, y **se cambia en los ajustes**: se pulsa el campo y se
-teclea la combinación que sea. El que esté puesto se lee en el menú `Archivo ▸
-Alta rápida` y en la ayuda, para no tener que adivinarlo.
+teclea la combinación que sea. El que esté puesto se lee ahí mismo y en la
+ayuda, para no tener que adivinarlo.
+
+No hay botón de menú para el alta rápida. Un atajo global no se declara en el
+menú —lo registra Carbon, para que funcione con otra app delante— y un botón
+que abre un panel flotante estando ya dentro de la app no hace nada que ⌘N no
+haga mejor. `Archivo` se queda con lo que crea cosas y con la importación, que
+es lo que un menú de archivo hace.
 
 Se exige **⌃, ⌥ o ⌘**. Sin uno de esos, el atajo se comería una tecla en todas
 las apps: dejar «A» como alta rápida es dejar de poder escribir una a en
@@ -576,6 +599,10 @@ Y una cosa que no se puede detectar y por eso se dice: cuando otra app o el
 sistema se queda una combinación, **`RegisterEventHotKey` no falla** —devuelve
 que sí— pero la tecla nunca llega. Si al pulsar no pasa nada, es eso; los ajustes
 lo advierten y hay que elegir otra.
+
+Los permisos del calendario también salieron de `Archivo`: estaban ahí por no
+tener otro sitio, y ahora lo tienen en la [ayuda](#acerca-de-y-ayuda) junto a los
+otros dos, donde además se piden.
 
 Al abrir, **la app se activa**: el sistema entrega las teclas a la que está
 delante, así que un panel de una app de fondo se ve, se puede pulsar y no recibe
@@ -664,8 +691,10 @@ ningún otro sitio:
 - **Los atajos**, empezando por el global — que si no se conoce, no existe. Y se
   enseña el que quedó **registrado**, no el que se pidió: si ⌃Espacio estaba
   cogido, la app cayó a otro, y decir el primero sería mentir.
-- **Los permisos**, con su estado leído en vivo y un enlace a los ajustes cuando
-  están denegados. Tres funciones de la app las da el sistema, y cuando dice no,
+- **Los permisos** —avisos, calendario, recordatorios— con su estado leído en
+  vivo. Sin preguntar, se piden desde ahí; denegados, se enlaza a los ajustes del
+  sistema, que es el único sitio donde esa decisión se cambia: el diálogo no
+  vuelve a salir. Tres funciones de la app las da el sistema, y cuando dice no,
   esa parte se queda muda; una app que no lo explica parece rota.
 
 No es un **libro de ayuda de Apple**. Un help book exige empaquetar un bundle de
