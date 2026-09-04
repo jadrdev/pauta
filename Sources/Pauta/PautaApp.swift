@@ -263,7 +263,13 @@ struct PautaApp: App {
     /// La hora del repaso vive en las preferencias; aquí se guarda una copia
     /// para que el menú pueda decir cuál está puesta y cambiar al elegir otra.
     @State private var horaRepaso: Int? = Repaso.hora()
+    /// El atajo que quedó registrado. En estado y no leído del registrador cada
+    /// vez: los menús se construyen antes de que el atajo exista, así que sin
+    /// algo que provoque el redibujado el rótulo se quedaría para siempre sin
+    /// decir cuál es.
+    @State private var atajoDeAlta: String?
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some Scene {
         // `Window` y no `WindowGroup`: esta app es de una sola ventana, y con
@@ -289,10 +295,23 @@ struct PautaApp: App {
                 // de otro dispositivo—: reconstruir es más barato que razonar
                 // sobre qué aviso quedó suelto.
                 .task {
+                    // macOS restaura las ventanas que estaban abiertas al
+                    // salir. Para la principal está bien —es donde estabas—,
+                    // pero arrancar con el «Acerca de» delante se lee como un
+                    // fallo. `isRestorable` de la ventana no sirve: la
+                    // restauración la lleva SwiftUI por el id de la escena, así
+                    // que hay que cerrarlas por ahí. Con una espera, porque
+                    // vuelven un poco después de que aparezca esta.
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(400))
+                        dismissWindow(id: "acerca")
+                        dismissWindow(id: "ayuda")
+                    }
                     // El atajo global se registra aquí y no se suelta al cerrar
                     // la ventana: apuntar tiene que funcionar con la app en la
                     // barra de menús y nada abierto.
                     AltaRapida.shared.instalar(store: store)
+                    atajoDeAlta = AltaRapida.shared.combinacion
                     if Launch.altaRapida { AltaRapida.shared.alternar() }
 
                     AvisoAcciones.alAbrir = { id in
@@ -354,14 +373,32 @@ struct PautaApp: App {
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1000, height: 680)
         .commands {
+            // El del sistema enseña icono, nombre y versión y para ahí; el
+            // nuestro dice además dónde están los datos, que es lo que se viene
+            // a preguntar en una app que guarda archivos sueltos.
+            CommandGroup(replacing: .appInfo) {
+                Button("Acerca de Pauta") { openWindow(id: "acerca") }
+            }
+            // Sin esto, «Ayuda de Pauta» sale en el menú y no abre nada: el
+            // sistema busca un libro de ayuda que esta app no lleva.
+            CommandGroup(replacing: .help) {
+                Button("Ayuda de Pauta") { openWindow(id: "ayuda") }
+                    .keyboardShortcut("?", modifiers: .command)
+                Divider()
+                Button("Guía completa en GitHub") {
+                    NSWorkspace.shared.open(Enlaces.guia)
+                }
+                Button("Informar de un problema") {
+                    NSWorkspace.shared.open(Enlaces.problemas)
+                }
+            }
             CommandGroup(replacing: .newItem) {
                 Button("Nueva tarea") { nav.startNewItem() }
                     .keyboardShortcut("n", modifiers: .command)
                 // El atajo no se declara aquí porque no lo lleva el menú: lo
                 // registra Carbon para que funcione con otra app delante. El
                 // botón existe para que se pueda descubrir y para decir cuál es.
-                Button(AltaRapida.shared.combinacion.map { "Alta rápida  \($0)" }
-                        ?? "Alta rápida") {
+                Button(atajoDeAlta.map { "Alta rápida  ·  \($0)" } ?? "Alta rápida") {
                     AltaRapida.shared.alternar()
                 }
                 Button("Nuevo proyecto") {
@@ -427,6 +464,20 @@ struct PautaApp: App {
             EtiquetaDeBarra(store: store, reloj: reloj)
         }
         .menuBarExtraStyle(.window)
+
+        // Del tamaño de su contenido y sin poder estirarse: son dos fichas de
+        // lectura, y una ficha con la mitad de la ventana en blanco se lee peor.
+        Window("Acerca de Pauta", id: "acerca") {
+            AcercaDeView().environment(store)
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
+
+        Window("Ayuda de Pauta", id: "ayuda") {
+            AyudaView()
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
     }
 
     /// Cambia la hora del repaso y lo reprograma en el momento: si esperara al

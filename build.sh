@@ -20,6 +20,11 @@ cp "$BIN" "$APP/Contents/MacOS/Pauta"
 cp "Resources/$ICON.icns" "$APP/Contents/Resources/AppIcon.icns"
 cp "Resources/monogram.png"     "$APP/Contents/Resources/monogram.png"
 cp "Resources/monogram-ink.png" "$APP/Contents/Resources/monogram-ink.png"
+# El idioma no es decoración: AppKit localiza sus propios menús según los
+# idiomas que declara el bundle, y sin ninguno los deja en inglés dentro de una
+# app escrita entera en español.
+mkdir -p "$APP/Contents/Resources/es.lproj"
+cp "Resources/es.lproj/InfoPlist.strings" "$APP/Contents/Resources/es.lproj/InfoPlist.strings"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -35,6 +40,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleShortVersionString</key><string>0.1.0</string>
     <key>CFBundleVersion</key>           <string>1</string>
     <key>LSMinimumSystemVersion</key>    <string>14.0</string>
+    <key>CFBundleDevelopmentRegion</key>  <string>es</string>
+    <key>CFBundleLocalizations</key>      <array><string>es</string></array>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2026 Joshua A. Díaz Robayna · Licencia MIT</string>
     <key>NSPrincipalClass</key>          <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>   <true/>
     <!-- Sin estas cadenas, pedir acceso a Recordatorios aborta el proceso. -->

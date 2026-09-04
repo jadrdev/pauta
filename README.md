@@ -75,6 +75,7 @@ sería contradictorio.
 | `esc` | Cancelar la tarea nueva |
 | `⌘⇧R` | Importar de Recordatorios |
 | `⌘1` … `⌘6` | Bandeja / Hoy / Próximamente / Cualquier momento / Algún día / Completadas |
+| `⌘?` | Ayuda: los atajos y el estado de los permisos |
 
 Una tarea nueva nace ya encajada en la lista donde la creas: en Hoy sale con la
 fecha de hoy, en Próximamente con la de mañana, en Algún día aparcada, y dentro
@@ -586,6 +587,53 @@ Cuenta **solo tareas**. Los eventos del calendario ya los avisa el sistema, y
 contarlos aquí también sería avisar dos veces de lo mismo. Y cuenta la hora de la
 tarea, no la del aviso: el margen adelanta la campana, no el momento.
 
+## Acerca de y ayuda
+
+Dos fichas de lectura, del tamaño de su contenido y sin poder estirarse: una
+ficha con media ventana en blanco se lee peor.
+
+**`Pauta ▸ Acerca de Pauta`** sustituye al panel del sistema, que enseña icono,
+nombre y versión y para ahí. Además dice **dónde están tus datos** —la ruta, si
+va por iCloud, y un enlace para abrir la carpeta—, que es la pregunta que de
+verdad se hace quien abre esto en una app que guarda archivos sueltos en una
+carpeta y no en una base de datos escondida. La versión sale del `Info.plist` y
+no de una constante en el código: la pone el empaquetado, y escribirla dos veces
+es garantizar que un día discrepen.
+
+**`Ayuda ▸ Ayuda de Pauta`** (`⌘?`) lleva las dos cosas que no se pueden leer en
+ningún otro sitio:
+
+- **Los atajos**, empezando por el global — que si no se conoce, no existe. Y se
+  enseña el que quedó **registrado**, no el que se pidió: si ⌃Espacio estaba
+  cogido, la app cayó a otro, y decir el primero sería mentir.
+- **Los permisos**, con su estado leído en vivo y un enlace a los ajustes cuando
+  están denegados. Tres funciones de la app las da el sistema, y cuando dice no,
+  esa parte se queda muda; una app que no lo explica parece rota.
+
+No es un **libro de ayuda de Apple**. Un help book exige empaquetar un bundle de
+HTML con su índice hecho con `hiutil` y confiar en el visor del sistema, para un
+contenido que cabe en una pantalla. La guía larga es este README, y desde la
+ventana se abre.
+
+Y no se restauran al arrancar. macOS reabre lo que estaba abierto al salir, que
+para la ventana principal está bien —es donde estabas— pero arrancar con el
+«Acerca de» delante se lee como un fallo. `isRestorable` de la ventana no sirve:
+la restauración la lleva SwiftUI por el id de la escena, así que se cierran por
+ahí al arrancar.
+
+### El idioma de los menús
+
+`Archivo`, `Edición`, `Ventana`, `Ayuda`… los pone AppKit, y los deja **en
+inglés** salvo que el bundle declare algún idioma. En una app escrita entera en
+español eso se lee como un descuido, así que el paquete lleva un `es.lproj` y
+declara `es` en `CFBundleDevelopmentRegion`. El archivo de cadenas apenas tiene
+contenido: lo que hace falta es la declaración.
+
+Lo único que queda en manos del sistema es el `Enviar opinión sobre Pauta a
+Apple` que macOS inserta en el menú de ayuda. Apple no tiene nada que ver con
+esta app; al lado está `Informar de un problema`, que va a las incidencias del
+repositorio.
+
 ## Instalar
 
 El disco `.dmg` va en la [página de versiones](https://github.com/jadrdev/pauta/releases).
@@ -972,7 +1020,9 @@ Sources/Pauta/            la app de macOS
   Views/SidebarView.swift barra lateral
   Views/ItemListView.swift lista y cabecera
   Views/ItemRowView.swift fila, casilla y editor desplegado (Liquid Glass)
-  Views/MenuBarView.swift panel de la barra de menús
+  Views/MenuBarView.swift panel de la barra de menús y cuenta atrás
+  Views/AcercaDe.swift    el panel «Acerca de» y los enlaces
+  Views/Ayuda.swift       atajos y estado de los permisos
 Tests/PautaCoreTests/     tests del núcleo (swift test)
 ```
 

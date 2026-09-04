@@ -1,0 +1,6 @@
+/* El contenido apenas importa: lo que hace falta es que el bundle **declare**
+   el español. AppKit localiza sus propios menús —Archivo, Edición, Ventana,
+   Ayuda— según los idiomas que la app dice tener, y sin ninguno se queda en
+   inglés, que en una app escrita entera en español se lee como un descuido. */
+"CFBundleName" = "Pauta";
+"CFBundleDisplayName" = "Pauta";
