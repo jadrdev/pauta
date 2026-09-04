@@ -13,7 +13,7 @@ y con tus datos en tu propia carpeta de iCloud.</p>
 <img src="https://img.shields.io/badge/Swift-6-10E888?style=flat-square&labelColor=0E1114" alt="Swift 6">
 <img src="https://img.shields.io/badge/dependencias-ninguna-10E888?style=flat-square&labelColor=0E1114" alt="sin dependencias">
 <img src="https://img.shields.io/badge/tus%20datos-en%20tu%20carpeta-10E888?style=flat-square&labelColor=0E1114" alt="tus datos en tu carpeta">
-<a href="LICENSE"><img src="https://img.shields.io/badge/licencia-MIT-10E888?style=flat-square&labelColor=0E1114" alt="licencia MIT"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/c%C3%B3digo-a%20la%20vista-10E888?style=flat-square&labelColor=0E1114" alt="código a la vista, no de código abierto"></a>
 </p>
 
 <img src="docs/arrastrar-entre-dias.gif" width="760" alt="Arrastrar una tarea de un día a otro en Próximamente">
@@ -1129,7 +1129,36 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
 
 ## Licencia
 
-[MIT](LICENSE). Cógelo, cámbialo y haz lo que quieras con ello, incluso venderlo;
-lo único que se pide es que el aviso de copyright viaje con las copias. Y como en
-toda licencia permisiva: **sin garantía de nada**, que aquí los datos son tuyos y
-el que responde por ellos también.
+**Código a la vista, no de código abierto.** El repositorio es público para que se
+pueda leer, estudiar y comprobar qué hace la app con tus datos — que en una app
+que guarda tu vida en archivos sueltos es lo menos que se puede ofrecer. Pero no
+es de dominio público: ver los [términos](LICENSE).
+
+Lo que sí puedes hacer sin pedir nada: leerlo, estudiarlo, citarlo,
+**compilarlo y usarlo en tus dispositivos**, y cambiarlo para ese uso tuyo.
+
+Lo que no: redistribuirlo, publicar una obra derivada —tampoco con otro nombre y
+otro diseño— ni meterlo en un producto o servicio para terceros. Para eso hace
+falta permiso, y se pide [abriendo una incidencia](https://github.com/jadrdev/pauta/issues).
+
+### Por qué no MIT
+
+Estuvo bajo MIT hasta el 4 de septiembre de 2026, y se cambió por lo que la MIT
+permite: coger esto, cambiarle el diseño, ponerle otro nombre, cerrarlo y
+venderlo, cumpliendo solo con dejar el aviso de copyright en un archivo que
+nadie abre. Es una licencia que está bien para una biblioteca que quieres que
+acabe en todas partes, y no para una app que igual algún día se
+[cobra](#y-si-algún-día-se-cobrara).
+
+Tampoco vale una copyleft aquí. La GPL obligaría a abrir las modificaciones,
+pero **no impide el clon con otro nombre** —solo lo obliga a ser abierto
+también—, y encima es incompatible con la App Store, que es justo el sitio donde
+esto podría acabar.
+
+Un cambio de licencia **no se aplica hacia atrás**: quien tuviera el código antes
+de esa fecha lo conserva bajo la MIT para esa versión. No hay forma de retirar un
+permiso ya dado, y pretender lo contrario sería mentir. Lo que rige de aquí en
+adelante es el aviso nuevo.
+
+Y como siempre: **sin garantía de nada**, que aquí los datos son tuyos y el que
+responde por ellos también.

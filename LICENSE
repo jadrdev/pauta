@@ -1,21 +1,32 @@
-MIT License
-
 Copyright (c) 2026 Joshua A. Díaz Robayna
+Todos los derechos reservados.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+El código de Pauta es público para que se pueda leer, estudiar y comprobar lo
+que hace la app con tus datos. No es de dominio público ni de código abierto.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+SE PERMITE, sin permiso adicional:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  · leer el código, estudiarlo y citarlo con atribución;
+  · compilarlo y ejecutarlo en tus propios dispositivos, para tu uso personal;
+  · modificarlo para ese uso personal.
+
+NO SE PERMITE sin permiso escrito del titular:
+
+  · redistribuir el código o la app, con o sin cambios;
+  · publicar, ceder o vender obras derivadas, ni bajo otro nombre ni con otro
+    diseño;
+  · usarlo en un producto o servicio ofrecido a terceros, gratis o de pago.
+
+Para pedir permiso, o preguntar si algo entra en lo anterior, abre una
+incidencia en https://github.com/jadrdev/pauta/issues.
+
+Nota histórica: hasta el 4 de septiembre de 2026 este código se publicó bajo la
+licencia MIT. Ese permiso no se puede retirar de las copias que ya se
+distribuyeron: quien obtuvo el código antes de esa fecha lo conserva bajo la
+MIT para esa versión. Este aviso rige de aquí en adelante.
+
+EL PROGRAMA SE ENTREGA «TAL CUAL», SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O
+IMPLÍCITA, INCLUIDAS ENTRE OTRAS LAS DE COMERCIABILIDAD, IDONEIDAD PARA UN FIN
+DETERMINADO Y NO INFRACCIÓN. EN NINGÚN CASO EL TITULAR RESPONDERÁ POR NINGUNA
+RECLAMACIÓN, DAÑO U OTRA RESPONSABILIDAD, DERIVE DE CONTRATO, AGRAVIO O
+CUALQUIER OTRA CAUSA, QUE SURJA DE O EN RELACIÓN CON EL PROGRAMA O SU USO.

@@ -43,7 +43,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleDevelopmentRegion</key>  <string>es</string>
     <key>CFBundleLocalizations</key>      <array><string>es</string></array>
     <key>NSHumanReadableCopyright</key>
-    <string>© 2026 Joshua A. Díaz Robayna · Licencia MIT</string>
+    <string>© 2026 Joshua A. Díaz Robayna · Todos los derechos reservados</string>
     <key>NSPrincipalClass</key>          <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>   <true/>
     <!-- Sin estas cadenas, pedir acceso a Recordatorios aborta el proceso. -->

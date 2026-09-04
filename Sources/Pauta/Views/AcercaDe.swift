@@ -81,7 +81,8 @@ struct AcercaDeView: View {
                 EnlaceDeTexto("Código") { NSWorkspace.shared.open(Enlaces.repositorio) }
                 EnlaceDeTexto("Novedades") { NSWorkspace.shared.open(Enlaces.novedades) }
                 Spacer(minLength: 0)
-                Text(Acercade.copyright.isEmpty ? "Licencia MIT" : Acercade.copyright)
+                Text(Acercade.copyright.isEmpty ? "Todos los derechos reservados"
+                                                 : Acercade.copyright)
                     .font(.system(size: 10.5))
                     .foregroundStyle(Paper.inkFaint)
             }
