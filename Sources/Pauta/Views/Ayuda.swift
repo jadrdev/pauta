@@ -17,6 +17,8 @@ import PautaCore
 /// el sistema y cuando dice no, la app se queda muda sin explicar por qué.
 struct AyudaView: View {
     @State private var avisos: UNAuthorizationStatus = .notDetermined
+    /// Observable, para que cambiar el atajo en los ajustes se vea aquí.
+    @State private var alta = AltaRapida.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -27,7 +29,7 @@ struct AyudaView: View {
 
             Text("ATAJOS").rubricStyle().padding(.top, 18)
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(Self.atajos, id: \.0) { atajo, que in
+                ForEach(atajos, id: \.0) { atajo, que in
                     FilaDeAtajo(atajo: atajo, que: que)
                 }
             }
@@ -83,8 +85,9 @@ struct AyudaView: View {
     /// El atajo del alta rápida se lee del que quedó **registrado**, no del que
     /// se pidió: si ⌃Espacio estaba cogido, la app cayó a otro y decir el
     /// primero sería mentir.
-    private static var atajos: [(String, String)] {
-        [(AltaRapida.shared.combinacion ?? "⌃Espacio", "Apuntar algo desde cualquier app"),
+    private var atajos: [(String, String)] {
+        [(alta.combinacion ?? Ajustes.shared.atajo.descripcion,
+          "Apuntar algo desde cualquier app"),
          ("⌘N", "Nueva tarea en la lista de delante"),
          ("⌘⇧N", "Nuevo proyecto"),
          ("⌘⌥N", "Nueva área"),

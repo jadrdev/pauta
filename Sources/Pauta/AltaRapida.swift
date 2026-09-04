@@ -1,5 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
+import Observation
 import SwiftUI
 import os
 import PautaCore
@@ -14,17 +15,23 @@ import PautaCore
 /// Va a la bandeja a propósito. Capturar y decidir son dos gestos distintos, y
 /// juntarlos es lo que hace que apuntar cueste: la bandeja permite escribirlo
 /// mal, deprisa y sin pensar dónde va.
+@Observable
 @MainActor
 final class AltaRapida {
     static let shared = AltaRapida()
 
-    private var atajo: AtajoGlobal?
-    private var panel: PanelFlotante?
-    private var store: Store?
-    private var testigo: (any NSObjectProtocol)?
+    /// Cómo se escribe el atajo que está puesto ahora mismo. Observable porque
+    /// lo enseñan el menú, la ayuda y los ajustes, y cambiarlo tiene que
+    /// actualizarlos a los tres.
+    private(set) var combinacion: String?
+
+    @ObservationIgnored private var atajo: AtajoGlobal?
+    @ObservationIgnored private var panel: PanelFlotante?
+    @ObservationIgnored private var store: Store?
+    @ObservationIgnored private var testigo: (any NSObjectProtocol)?
     /// Quién tenía el foco antes de abrir, para devolverlo al cerrar.
-    private var anterior: NSRunningApplication?
-    private var ultimoAtajo = Date.distantPast
+    @ObservationIgnored private var anterior: NSRunningApplication?
+    @ObservationIgnored private var ultimoAtajo = Date.distantPast
     private let log = Logger(subsystem: "dev.jadrdev.pauta", category: "alta-rápida")
 
     private init() {}
@@ -35,19 +42,50 @@ final class AltaRapida {
     func instalar(store: Store) {
         self.store = store
         guard atajo == nil else { return }
-        atajo = AtajoGlobal(candidatos: AtajoGlobal.paraAltaRapida) { [weak self] in
-            self?.alternar()
+        atajo = AtajoGlobal { [weak self] in self?.alternar() }
+
+        // El elegido primero. Si no entra —lo tiene otra app, o la preferencia
+        // quedó en algo imposible— se prueban los de siempre, porque quedarse
+        // sin atajo es quedarse sin la mitad de la app.
+        let candidatos = [Ajustes.shared.atajo] + AltaRapida.reservas
+        for candidato in candidatos where poner(candidato) {
+            if candidato != Ajustes.shared.atajo {
+                log.notice("el atajo guardado no entró; puesto \(candidato.descripcion, privacy: .public)")
+                Ajustes.shared.atajo = candidato
+            }
+            return
         }
-        if let combinacion = atajo?.combinacion {
-            log.notice("alta rápida en \(combinacion, privacy: .public)")
-        } else {
-            log.error("no se pudo registrar ningún atajo para el alta rápida")
-        }
+        log.error("no se pudo registrar ningún atajo para el alta rápida")
     }
 
-    /// Cómo se escribe el atajo que quedó registrado, para poder decirlo en la
-    /// interfaz en vez de que el usuario lo adivine.
-    var combinacion: String? { atajo?.combinacion }
+    /// Si el elegido falla. ⌃Espacio lo puede tener cogido el conmutador de
+    /// fuentes de entrada de macOS cuando hay más de un teclado configurado.
+    private static let reservas = [
+        Atajo.porDefecto,
+        Atajo(tecla: 49, modificadores: Atajo.option),
+        Atajo(tecla: 49, modificadores: Atajo.control | Atajo.option),
+    ]
+
+    /// Cambia el atajo. Devuelve si el sistema lo aceptó; si no, se queda el de
+    /// antes, que es mejor que dejar al usuario sin ninguno.
+    @discardableResult
+    func cambiar(a nuevo: Atajo) -> Bool {
+        guard nuevo.esUsable else { return false }
+        let antes = Ajustes.shared.atajo
+        if poner(nuevo) {
+            Ajustes.shared.atajo = nuevo
+            return true
+        }
+        poner(antes)
+        return false
+    }
+
+    @discardableResult
+    private func poner(_ nuevo: Atajo) -> Bool {
+        guard atajo?.registrar(nuevo) == true else { return false }
+        combinacion = nuevo.descripcion
+        return true
+    }
 
     /// El mismo atajo abre y cierra: si abriera solamente, pulsarlo dos veces
     /// dejaría un panel que hay que quitar de en medio a mano.
@@ -247,40 +285,39 @@ private struct VistaAltaRapida: View {
 /// `RegisterEventHotKey` no pide nada porque no ve el resto de las teclas.
 @MainActor
 final class AtajoGlobal {
-    /// Los candidatos, en orden de preferencia.
-    ///
-    /// ⌃Espacio es el atajo que usa Things y el que la gente ya tiene en los
-    /// dedos. Si estuviera cogido —lo usa el conmutador de fuentes de entrada
-    /// de macOS cuando hay más de un teclado configurado— se cae a ⌥Espacio.
-    static let paraAltaRapida: [(nombre: String, tecla: Int, modificadores: Int)] = [
-        ("⌃Espacio", kVK_Space, controlKey),
-        ("⌥Espacio", kVK_Space, optionKey),
-        ("⌃⌥Espacio", kVK_Space, controlKey | optionKey),
-    ]
-
     private var referencia: EventHotKeyRef?
     private var manejador: EventHandlerRef?
-    /// Cómo se escribe el que quedó puesto.
-    private(set) var combinacion: String?
+    private var siguienteID: UInt32 = 1
 
-    init(candidatos: [(nombre: String, tecla: Int, modificadores: Int)],
-         accion: @escaping () -> Void) {
+    init(accion: @escaping () -> Void) {
         alPulsar = accion
-
         var tipo = EventTypeSpec(eventClass: OSType(kEventClassKeyboard),
                                  eventKind: UInt32(kEventHotKeyPressed))
         InstallEventHandler(GetApplicationEventTarget(), atajoPulsado, 1, &tipo, nil, &manejador)
+    }
 
-        for (i, candidato) in candidatos.enumerated() {
-            let id = EventHotKeyID(signature: OSType(0x50415554), id: UInt32(i))
-            let estado = RegisterEventHotKey(UInt32(candidato.tecla),
-                                             UInt32(candidato.modificadores),
-                                             id, GetApplicationEventTarget(), 0, &referencia)
-            if estado == noErr, referencia != nil {
-                combinacion = candidato.nombre
-                return
-            }
+    /// Suelta el que hubiera y registra este. Devuelve si entró.
+    ///
+    /// Cada registro lleva un identificador nuevo: reutilizar el mismo mientras
+    /// el anterior aún vive devuelve «ese atajo ya existe» y el cambio se
+    /// quedaría sin hacer.
+    @discardableResult
+    func registrar(_ atajo: Atajo) -> Bool {
+        soltar()
+        let id = EventHotKeyID(signature: OSType(0x50415554), id: siguienteID)
+        siguienteID += 1
+        let estado = RegisterEventHotKey(UInt32(atajo.tecla), UInt32(atajo.modificadores),
+                                        id, GetApplicationEventTarget(), 0, &referencia)
+        guard estado == noErr, referencia != nil else {
+            referencia = nil
+            return false
         }
+        return true
+    }
+
+    private func soltar() {
+        if let referencia { UnregisterEventHotKey(referencia) }
+        referencia = nil
     }
 
     deinit {

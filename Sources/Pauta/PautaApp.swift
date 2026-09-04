@@ -264,11 +264,10 @@ struct PautaApp: App {
     @State private var agenda = Agenda()
     @State private var reloj = Reloj()
     @State private var ajustes = Ajustes.shared
-    /// El atajo que quedó registrado. En estado y no leído del registrador cada
-    /// vez: los menús se construyen antes de que el atajo exista, así que sin
-    /// algo que provoque el redibujado el rótulo se quedaría para siempre sin
-    /// decir cuál es.
-    @State private var atajoDeAlta: String?
+    /// El registrador del atajo, para que el rótulo del menú diga cuál está
+    /// puesto: los menús se construyen antes de que el atajo exista, y sin algo
+    /// observable el rótulo se quedaría mudo para siempre.
+    @State private var alta = AltaRapida.shared
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
 
@@ -312,7 +311,6 @@ struct PautaApp: App {
                     // la ventana: apuntar tiene que funcionar con la app en la
                     // barra de menús y nada abierto.
                     AltaRapida.shared.instalar(store: store)
-                    atajoDeAlta = AltaRapida.shared.combinacion
                     if Launch.altaRapida { AltaRapida.shared.alternar() }
 
                     AvisoAcciones.alAbrir = { id in
@@ -399,8 +397,8 @@ struct PautaApp: App {
                 // El atajo no se declara aquí porque no lo lleva el menú: lo
                 // registra Carbon para que funcione con otra app delante. El
                 // botón existe para que se pueda descubrir y para decir cuál es.
-                Button(atajoDeAlta.map { "Alta rápida  ·  \($0)" } ?? "Alta rápida") {
-                    AltaRapida.shared.alternar()
+                Button(alta.combinacion.map { "Alta rápida  ·  \($0)" } ?? "Alta rápida") {
+                    alta.alternar()
                 }
                 Button("Nuevo proyecto") {
                     let project = store.addProject(name: "")

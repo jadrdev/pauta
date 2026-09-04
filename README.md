@@ -553,10 +553,29 @@ monitorización de entrada —el mismo que se le pide a un registrador de teclas
 pedir eso para apuntar tareas es desproporcionado. `RegisterEventHotKey` no pide
 nada porque no ve el resto de las teclas.
 
+### Cambiar el atajo
+
+⌃Espacio es el de fábrica, y **se cambia en los ajustes**: se pulsa el campo y se
+teclea la combinación que sea. El que esté puesto se lee en el menú `Archivo ▸
+Alta rápida` y en la ayuda, para no tener que adivinarlo.
+
+Se exige **⌃, ⌥ o ⌘**. Sin uno de esos, el atajo se comería una tecla en todas
+las apps: dejar «A» como alta rápida es dejar de poder escribir una a en
+cualquier sitio. Mayúsculas no cuenta, que ⇧A sigue siendo escribir.
+
+El nombre de la tecla se le pregunta **al teclado de verdad**, con
+`UCKeyTranslate`. Un código de tecla es físico: con una tabla fija saldría el
+QWERTY americano, y en un teclado español la tecla de la ñ diría «;».
+
 Si ⌃Espacio estuviera cogido —lo usa el conmutador de fuentes de entrada de
-macOS cuando hay más de un teclado configurado— se cae solo a ⌥Espacio y luego a
-⌃⌥Espacio. El que quedó puesto se lee en el menú `Archivo ▸ Alta rápida`, para no
-tener que adivinarlo.
+macOS cuando hay más de un teclado configurado— la app se cae sola a ⌥Espacio y
+luego a ⌃⌥Espacio, y guarda el que quedó: quedarse sin atajo es quedarse sin la
+mitad de la app.
+
+Y una cosa que no se puede detectar y por eso se dice: cuando otra app o el
+sistema se queda una combinación, **`RegisterEventHotKey` no falla** —devuelve
+que sí— pero la tecla nunca llega. Si al pulsar no pasa nada, es eso; los ajustes
+lo advierten y hay que elegir otra.
 
 Al abrir, **la app se activa**: el sistema entrega las teclas a la que está
 delante, así que un panel de una app de fondo se ve, se puede pulsar y no recibe
@@ -613,6 +632,8 @@ persona**.
   10 min» y aplazando quince.
 - **La cuenta atrás en la barra de menús**, o solo el icono. La barra de menús es
   de todos y hay pantallas donde no sobra sitio.
+- **El atajo del alta rápida**. Se graba pulsándolo: el campo escucha la
+  siguiente combinación y la registra.
 
 Lo que no está y no va a estar: el umbral de lo rancio, la ventana de la cuenta
 atrás, la duración de una jornada contra la que medir el día. Son juicios de la
@@ -1049,7 +1070,8 @@ Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
   Agenda.swift            eventos del calendario, solo de lectura
   Cuenta.swift            cuánto falta para lo siguiente
   Duracion.swift          cuánto dura cada cosa y cuánto suma el día
-  Ajustes.swift           las cinco preferencias, en UserDefaults
+  Ajustes.swift           las preferencias, en UserDefaults
+  Atajo.swift             una combinación de teclas y si sirve como atajo
   Repaso.swift            el repaso de la mañana
 Sources/Pauta/            la app de macOS
   PautaApp.swift          punto de entrada, menús, atajos y barra de menús
@@ -1062,6 +1084,7 @@ Sources/Pauta/            la app de macOS
   Views/AcercaDe.swift    el panel «Acerca de» y los enlaces
   Views/Ayuda.swift       atajos y estado de los permisos
   Views/AjustesView.swift ajustes y arranque al iniciar sesión
+  Views/GrabadorDeAtajo.swift  grabar una combinación y nombrar las teclas
 Tests/PautaCoreTests/     tests del núcleo (swift test)
 ```
 

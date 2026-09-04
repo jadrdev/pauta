@@ -2465,3 +2465,45 @@ struct AjustesTests {
         #expect(s.items.first { $0.id == a.id }?.warnBefore == nil)
     }
 }
+
+/// El atajo del alta rápida: es suyo y no mío, así que hay que poder cambiarlo
+/// y que sobreviva al arranque.
+@MainActor
+struct AtajoTests {
+    @Test func theDefaultIsControlSpace() {
+        #expect(Atajo.porDefecto.tecla == 49)
+        #expect(Atajo.porDefecto.modificadores == Atajo.control)
+        #expect(Atajo.porDefecto.simbolos == "⌃")
+    }
+
+    /// Sin ⌃, ⌥ ni ⌘ el atajo se comería una tecla en todas las apps.
+    @Test func itNeedsARealModifier() {
+        #expect(Atajo(tecla: 0, modificadores: 0).esUsable == false)
+        #expect(Atajo(tecla: 0, modificadores: Atajo.shift).esUsable == false)
+        #expect(Atajo(tecla: 0, modificadores: Atajo.control).esUsable)
+        #expect(Atajo(tecla: 0, modificadores: Atajo.command).esUsable)
+        #expect(Atajo(tecla: 0, modificadores: Atajo.option).esUsable)
+        #expect(Atajo(tecla: 0, modificadores: Atajo.shift | Atajo.command).esUsable)
+    }
+
+    /// En el orden en que los escribe macOS, no en el que se pulsan.
+    @Test func theSymbolsComeInTheSystemOrder() {
+        let todo = Atajo(tecla: 0, modificadores: Atajo.command | Atajo.shift
+                                                | Atajo.option | Atajo.control)
+        #expect(todo.simbolos == "⌃⌥⇧⌘")
+    }
+
+    @Test func itIsRememberedBetweenLaunches() {
+        let nombre = "pauta.tests.ajustes.atajo"
+        let d = UserDefaults(suiteName: nombre)!
+        d.removePersistentDomain(forName: nombre)
+        let a = Ajustes(defaults: d)
+        #expect(a.atajo == Atajo.porDefecto)
+        a.atajo = Atajo(tecla: 40, modificadores: Atajo.command | Atajo.option)
+        let otra = Ajustes(defaults: d)
+        #expect(otra.atajo == Atajo(tecla: 40, modificadores: Atajo.command | Atajo.option))
+        otra.restaurar()
+        #expect(Ajustes(defaults: d).atajo == Atajo.porDefecto)
+        d.removePersistentDomain(forName: nombre)
+    }
+}

@@ -49,6 +49,15 @@ public final class Ajustes {
         margenPorDefecto = Ajustes.leer(defaults, .margen) ?? 0
         minutosAplazados = Ajustes.leer(defaults, .aplazar) ?? 10
         barraConCuenta = defaults.object(forKey: Clave.barra.rawValue) as? Bool ?? true
+        // Dos enteros y no un objeto codificado: son dos números, y en las
+        // preferencias del sistema se pueden leer y arreglar a mano si un día
+        // alguien se deja el teclado en una combinación imposible.
+        if let tecla = Ajustes.leer(defaults, .atajoTecla),
+           let mods = Ajustes.leer(defaults, .atajoModificadores) {
+            atajo = Atajo(tecla: tecla, modificadores: mods)
+        } else {
+            atajo = Atajo.porDefecto
+        }
     }
 
     private enum Clave: String {
@@ -56,6 +65,8 @@ public final class Ajustes {
         case margen = "aviso.margen"
         case aplazar = "aviso.aplazar"
         case barra = "barra.cuenta"
+        case atajoTecla = "atajo.tecla"
+        case atajoModificadores = "atajo.modificadores"
     }
 
     /// El apagado se guarda como valor propio y no como ausencia: sin
@@ -92,6 +103,18 @@ public final class Ajustes {
                               forKey: Clave.aplazar.rawValue) }
     }
 
+    /// El atajo del alta rápida.
+    ///
+    /// Guardarlo es lo que permite que sea suyo y no mío: ⌃Espacio está bien
+    /// hasta que choca con otra app, y entonces el usuario no tiene por qué
+    /// quedarse sin atajo.
+    public var atajo: Atajo {
+        didSet {
+            defaults.set(atajo.tecla, forKey: Clave.atajoTecla.rawValue)
+            defaults.set(atajo.modificadores, forKey: Clave.atajoModificadores.rawValue)
+        }
+    }
+
     /// Si la barra de menús enseña la cuenta atrás además del icono.
     public var barraConCuenta: Bool {
         didSet { defaults.set(barraConCuenta, forKey: Clave.barra.rawValue) }
@@ -103,5 +126,6 @@ public final class Ajustes {
         margenPorDefecto = 0
         minutosAplazados = 10
         barraConCuenta = true
+        atajo = Atajo.porDefecto
     }
 }

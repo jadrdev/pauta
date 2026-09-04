@@ -37,6 +37,7 @@ struct AjustesView: View {
 
     @State private var alArrancar = Arranque.activo
     @State private var falloDeArranque = false
+    @State private var grabandoAtajo = false
 
     private static let horasDeRepaso = [7 * 60, 7 * 60 + 30, 8 * 60, 8 * 60 + 30,
                                         9 * 60, 9 * 60 + 30, 10 * 60]
@@ -63,6 +64,17 @@ struct AjustesView: View {
                          + "en Aplicaciones.")
                         .ajusteNota(Paper.warning)
                 }
+            }
+
+            grupo("ALTA RÁPIDA") {
+                GrabadorDeAtajo(grabando: $grabandoAtajo, actual: ajustes.atajo) { nuevo in
+                    AltaRapida.shared.cambiar(a: nuevo)
+                }
+                Text("Abre la línea para apuntar algo sin ir a buscar la ventana. "
+                     + "Si al pulsarlo no pasa nada, es que otra app o el propio "
+                     + "sistema se queda esa combinación: el registro no falla, "
+                     + "pero la tecla no llega. Elige otra.")
+                    .ajusteNota()
             }
 
             grupo("REPASO DEL DÍA") {
