@@ -119,6 +119,14 @@ struct Entry {
                 print("permiso de avisos: \(i < nombres.count ? nombres[i] : "\(i)")")
                 let pendientes = await Avisos.pending()
                 print("avisos programados: \(pendientes.count)")
+                if let hora = Repaso.hora() {
+                    let puesto = pendientes.contains(Repaso.identificador)
+                    print("repaso del día: a las \(hora / 60):"
+                          + String(format: "%02d", hora % 60)
+                          + (puesto ? " (programado)" : " (nada que repasar)"))
+                } else {
+                    print("repaso del día: desactivado")
+                }
                 for id in pendientes.prefix(5) { print("  · \(id)") }
             }
             return
@@ -207,6 +215,9 @@ struct PautaApp: App {
     @State private var watcher: FolderWatcher?
     @State private var agenda = Agenda()
     @State private var reloj = Reloj()
+    /// La hora del repaso vive en las preferencias; aquí se guarda una copia
+    /// para que el menú pueda decir cuál está puesta y cambiar al elegir otra.
+    @State private var horaRepaso: Int? = Repaso.hora()
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
@@ -251,6 +262,12 @@ struct PautaApp: App {
                         guard let item = store.items.first(where: { $0.id == id }) else { return }
                         store.toggleComplete(item)
                         Task { await Avisos.reschedule(store.items) }
+                    }
+                    // El repaso no lleva tarea: abre Hoy, que es donde se
+                    // decide el día.
+                    AvisoAcciones.alRepasar = {
+                        openWindow(id: "main")
+                        nav.go(to: .today)
                     }
                     AvisoAcciones.alAplazar = { id, minutos in
                         guard let item = store.items.first(where: { $0.id == id }) else { return }
@@ -333,6 +350,15 @@ struct PautaApp: App {
                         }
                     }
                 }
+                Menu(horaRepaso.map { "Repaso del día  ·  \(ItemRowView.hora($0))" }
+                        ?? "Repaso del día  ·  desactivado") {
+                    ForEach([7 * 60, 7 * 60 + 30, 8 * 60, 8 * 60 + 30,
+                             9 * 60, 10 * 60], id: \.self) { m in
+                        Button(ItemRowView.hora(m)) { ponerRepaso(m) }
+                    }
+                    Divider()
+                    Button("Desactivado") { ponerRepaso(nil) }
+                }
                 Button("Importar de Recordatorios") {
                     Task { await importFromReminders(into: store, nav: nav) }
                 }
@@ -355,6 +381,14 @@ struct PautaApp: App {
             EtiquetaDeBarra(store: store, reloj: reloj)
         }
         .menuBarExtraStyle(.window)
+    }
+
+    /// Cambia la hora del repaso y lo reprograma en el momento: si esperara al
+    /// siguiente cambio en las tareas, la hora nueva no valdría hasta mañana.
+    private func ponerRepaso(_ minutos: Int?) {
+        horaRepaso = minutos
+        Repaso.setHora(minutos)
+        Task { await Avisos.reschedule(store.items) }
     }
 }
 

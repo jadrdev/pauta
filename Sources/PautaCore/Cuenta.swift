@@ -59,9 +59,6 @@ public enum Cuenta {
         // Hacia arriba: faltando treinta segundos, «en 1 min» se entiende y «en
         // 0 min» no dice nada.
         let minutos = Int((segundos / 60).rounded(.up))
-        if minutos < 60 { return "En \(minutos) min" }
-        let horas = minutos / 60
-        let resto = minutos % 60
-        return resto == 0 ? "En \(horas) h" : "En \(horas) h \(resto) min"
+        return "En \(Duracion.etiqueta(minutos))"
     }
 }

@@ -2162,3 +2162,235 @@ struct CuentaTests {
                     .item.title == "cena")
     }
 }
+
+/// Lo que dura cada cosa, escrito en palabras.
+struct DuracionTests {
+    @Test func minutesUnderAnHour() {
+        #expect(Duracion.etiqueta(45) == "45 min")
+        #expect(Duracion.etiqueta(5) == "5 min")
+    }
+
+    @Test func roundHoursDropTheMinutes() {
+        #expect(Duracion.etiqueta(120) == "2 h")
+        #expect(Duracion.etiqueta(60) == "1 h")
+    }
+
+    @Test func andBothWhenThereAreBoth() {
+        #expect(Duracion.etiqueta(65) == "1 h 5 min")
+        #expect(Duracion.etiqueta(200) == "3 h 20 min")
+    }
+
+    @Test func nothingIsNothing() {
+        #expect(Duracion.etiqueta(0) == "0 min")
+    }
+
+    /// La suma es de lo abierto: lo hecho ya no ocupa el día.
+    @MainActor
+    @Test func theTotalOnlyCountsWhatIsStillOpen() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "a", in: .today)
+        let b = s.addItem(title: "b", in: .today)
+        let c = s.addItem(title: "c", in: .today)
+        s.setEstimate(a, to: 30)
+        s.setEstimate(b, to: 90)
+        s.setEstimate(c, to: 15)
+        s.toggleComplete(c)
+        #expect(Duracion.total(s.items) == 120)
+        #expect(Duracion.etiqueta(Duracion.total(s.items)) == "2 h")
+    }
+
+    /// Y hay que poder decir cuántas no cuentan, o la suma daría a entender que
+    /// el día está medido cuando no lo está.
+    @MainActor
+    @Test func itAlsoSaysHowManyAreNotEstimated() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "a", in: .today)
+        s.addItem(title: "b", in: .today)
+        s.addItem(title: "c", in: .today)
+        s.setEstimate(a, to: 30)
+        #expect(Duracion.sinEstimar(s.items) == 2)
+    }
+
+    @MainActor
+    @Test func theStoreClampsTheEstimateAndTreatsZeroAsNone() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "a", in: .today)
+        s.setEstimate(a, to: 30)
+        #expect(s.items.first { $0.id == a.id }?.estimate == 30)
+        s.setEstimate(a, to: 0)
+        #expect(s.items.first { $0.id == a.id }?.estimate == nil)
+        s.setEstimate(a, to: 99_999)
+        #expect(s.items.first { $0.id == a.id }?.estimate == 24 * 60)
+    }
+
+    /// Una repetitiva hereda la estimación: la vuelta que viene dura lo mismo.
+    @MainActor
+    @Test func aRecurringTaskInheritsTheEstimate() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "regar", in: .today)
+        s.setEstimate(a, to: 20)
+        s.setRecurrence(s.items.first { $0.id == a.id }!, to: .diaria)
+        s.toggleComplete(s.items.first { $0.id == a.id }!)
+        let sucesora = s.items.first { $0.spawnedFrom == a.id }
+        #expect(sucesora?.estimate == 20)
+    }
+}
+
+/// Lo que se queda quieto: una tarea sin fecha puede llevar meses ahí sin que
+/// nada lo diga.
+struct RancioTests {
+    private var cal: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }
+    private func fecha(_ y: Int, _ m: Int, _ d: Int) -> Date {
+        cal.date(from: DateComponents(year: y, month: m, day: d))!
+    }
+    private func tarea(creada: Date) -> Item {
+        var i = Item(title: "aprender el bajo")
+        i.createdAt = creada
+        return i
+    }
+
+    @Test func threeWeeksIsTheLine() {
+        let t = tarea(creada: fecha(2026, 9, 1))
+        #expect(t.estaRancia(now: fecha(2026, 9, 21), calendar: cal) == false)
+        #expect(t.estaRancia(now: fecha(2026, 9, 22), calendar: cal))
+    }
+
+    /// Lo que tiene fecha no está rancio: si se pasó, ya lo dice el retraso, y
+    /// dos marcas para lo mismo no dicen el doble.
+    @Test func whatHasADateIsNeverStale() {
+        var t = tarea(creada: fecha(2026, 9, 1))
+        t.when = fecha(2026, 9, 2)
+        #expect(t.estaRancia(now: fecha(2026, 11, 1), calendar: cal) == false)
+    }
+
+    @Test func neitherIsWhatIsDoneOrBuried() {
+        var hecha = tarea(creada: fecha(2026, 9, 1))
+        hecha.isCompleted = true
+        var borrada = tarea(creada: fecha(2026, 9, 1))
+        borrada.deletedAt = fecha(2026, 9, 5)
+        #expect(hecha.estaRancia(now: fecha(2026, 11, 1), calendar: cal) == false)
+        #expect(borrada.estaRancia(now: fecha(2026, 11, 1), calendar: cal) == false)
+    }
+
+    /// Lo aparcado a propósito también cuenta: aparcarlo fue decir «no ahora»,
+    /// no «no me lo recuerdes nunca».
+    @Test func parkedCountsToo() {
+        var t = tarea(creada: fecha(2026, 9, 1))
+        t.isSomeday = true
+        #expect(t.estaRancia(now: fecha(2026, 10, 1), calendar: cal))
+    }
+
+    @Test func itSaysWeeksAndThenMonths() {
+        let t = tarea(creada: fecha(2026, 9, 1))
+        #expect(t.staleLabel(now: fecha(2026, 9, 22), calendar: cal) == "3 sem")
+        #expect(t.staleLabel(now: fecha(2026, 10, 20), calendar: cal) == "7 sem")
+        #expect(t.staleLabel(now: fecha(2026, 10, 2), calendar: cal) == "4 sem")
+        // Nueve semanas: a partir de ahí la cuenta exacta ya no aporta.
+        #expect(t.staleLabel(now: fecha(2026, 11, 3), calendar: cal) == "2 meses")
+        #expect(t.staleLabel(now: fecha(2026, 11, 10), calendar: cal) == "2 meses")
+    }
+
+    @Test func andNothingWhenItIsNotStale() {
+        let t = tarea(creada: fecha(2026, 9, 1))
+        #expect(t.staleLabel(now: fecha(2026, 9, 10), calendar: cal) == nil)
+    }
+}
+
+/// El repaso: nada te dice por la mañana qué quedó sin hacer si no abres la app
+/// y te acuerdas de abrirla.
+struct RepasoTests {
+    private var cal: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }
+    private func fecha(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ m2: Int = 0) -> Date {
+        cal.date(from: DateComponents(year: y, month: m, day: d, hour: h, minute: m2))!
+    }
+    private func tarea(_ t: String, dia: Date?, creada: Date? = nil) -> Item {
+        var i = Item(title: t)
+        i.when = dia
+        if let creada { i.createdAt = creada }
+        return i
+    }
+
+    @Test func itCountsWhatIsLateWhatIsForTodayAndWhatIsStuck() {
+        let items = [tarea("a", dia: fecha(2026, 8, 30)),
+                     tarea("b", dia: fecha(2026, 8, 31)),
+                     tarea("c", dia: fecha(2026, 9, 1)),
+                     tarea("d", dia: nil, creada: fecha(2026, 7, 1)),
+                     tarea("e", dia: fecha(2026, 9, 5))]
+        let r = Repaso.resumen(items, para: fecha(2026, 9, 1), calendar: cal)
+        #expect(r.atrasadas == 2)
+        #expect(r.deHoy == 1)
+        #expect(r.rancias == 1)
+        #expect(r.vacio == false)
+    }
+
+    /// Se cuenta **para el día del repaso** y no para hoy: el aviso se programa
+    /// la noche antes, y si contara desde el momento de programarlo diría que
+    /// algo es «de hoy» cuando por la mañana ya será de ayer.
+    @Test func itCountsForTheDayOfTheReviewAndNotForToday() {
+        let items = [tarea("a", dia: fecha(2026, 9, 1))]
+        let manana = Repaso.resumen(items, para: fecha(2026, 9, 2), calendar: cal)
+        #expect(manana.atrasadas == 1)
+        #expect(manana.deHoy == 0)
+    }
+
+    @Test func nothingPendingMeansNoReview() {
+        let items = [tarea("a", dia: fecha(2026, 9, 5))]
+        let r = Repaso.resumen(items, para: fecha(2026, 9, 1), calendar: cal)
+        #expect(r.vacio)
+    }
+
+    @Test func completedAndBuriedDoNotCount() {
+        var hecha = tarea("a", dia: fecha(2026, 8, 30))
+        hecha.isCompleted = true
+        var borrada = tarea("b", dia: fecha(2026, 8, 30))
+        borrada.deletedAt = fecha(2026, 8, 31)
+        let r = Repaso.resumen([hecha, borrada], para: fecha(2026, 9, 1), calendar: cal)
+        #expect(r.vacio)
+    }
+
+    @Test func theBodySaysItInWords() {
+        let items = [tarea("a", dia: fecha(2026, 8, 30)),
+                     tarea("b", dia: fecha(2026, 8, 31)),
+                     tarea("c", dia: fecha(2026, 9, 1)),
+                     tarea("d", dia: nil, creada: fecha(2026, 7, 1))]
+        let r = Repaso.resumen(items, para: fecha(2026, 9, 1), calendar: cal)
+        #expect(r.cuerpo == "2 sin hacer de días pasados · 1 para hoy · 1 parada desde hace semanas")
+    }
+
+    @Test func andInSingularWhenThereIsOne() {
+        let items = [tarea("a", dia: fecha(2026, 8, 30))]
+        let r = Repaso.resumen(items, para: fecha(2026, 9, 1), calendar: cal)
+        #expect(r.cuerpo == "1 sin hacer de días pasados")
+    }
+
+    /// La hora se guarda en las preferencias y se puede apagar: un repaso a una
+    /// hora que no te sirve es un aviso que se aprende a ignorar.
+    @Test func theHourIsAPreferenceAndCanBeTurnedOff() {
+        let defaults = UserDefaults(suiteName: "pauta.tests.repaso")!
+        defaults.removePersistentDomain(forName: "pauta.tests.repaso")
+        #expect(Repaso.hora(in: defaults) == Repaso.horaPorDefecto)
+        Repaso.setHora(7 * 60, in: defaults)
+        #expect(Repaso.hora(in: defaults) == 7 * 60)
+        Repaso.setHora(nil, in: defaults)
+        #expect(Repaso.hora(in: defaults) == nil)
+        defaults.removePersistentDomain(forName: "pauta.tests.repaso")
+    }
+
+    /// Y cuándo toca el siguiente: hoy si su hora no ha llegado, y mañana si ya
+    /// pasó.
+    @Test func theNextReviewIsTodayOrTomorrow() {
+        #expect(Repaso.proximo(hora: 8 * 60 + 30, after: fecha(2026, 9, 1, 7, 0), calendar: cal)
+                == fecha(2026, 9, 1, 8, 30))
+        #expect(Repaso.proximo(hora: 8 * 60 + 30, after: fecha(2026, 9, 1, 9, 0), calendar: cal)
+                == fecha(2026, 9, 2, 8, 30))
+        #expect(Repaso.proximo(hora: nil, after: fecha(2026, 9, 1), calendar: cal) == nil)
+    }
+}

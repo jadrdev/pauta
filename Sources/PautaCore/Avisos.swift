@@ -34,6 +34,8 @@ public enum AvisoAcciones {
     public static var alAbrir: ((UUID) -> Void)?
     public static var alCompletar: ((UUID) -> Void)?
     public static var alAplazar: ((UUID, Int) -> Void)?
+    /// El repaso no lleva tarea dentro: abre la app para decidir el día.
+    public static var alRepasar: (() -> Void)?
 }
 
 /// Delegado del centro de notificaciones.
@@ -54,7 +56,12 @@ public final class AvisoDelegado: NSObject, UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        guard let id = UUID(uuidString: response.notification.request.identifier) else { return }
+        let peticion = response.notification.request.identifier
+        if peticion == Repaso.identificador {
+            await MainActor.run { AvisoAcciones.alRepasar?() }
+            return
+        }
+        guard let id = UUID(uuidString: peticion) else { return }
         let accion = response.actionIdentifier
         await MainActor.run {
             switch accion {
@@ -145,6 +152,8 @@ public enum Avisos {
     public static func reschedule(_ items: [Item], now: Date = .now) async {
         guard let centro else { return }
 
+        // El repaso primero, porque decide cuántos huecos quedan para tareas.
+        let repaso = Avisos.repasoPendiente(items, now: now)
         let pendientes = items
             .filter { $0.deletedAt == nil && !$0.isCompleted }
             .compactMap { item -> (Item, Date)? in
@@ -152,10 +161,10 @@ public enum Avisos {
                 return (item, cuando)
             }
             .sorted { $0.1 < $1.1 }
-            .prefix(tope)
+            .prefix(repaso == nil ? tope : tope - 1)
 
         centro.removeAllPendingNotificationRequests()
-        guard !pendientes.isEmpty else {
+        guard !pendientes.isEmpty || repaso != nil else {
             await AvisoEstado.set(false)
             return
         }
@@ -214,5 +223,38 @@ public enum Avisos {
                 trigger: disparador)
             try? await centro.add(peticion)
         }
+
+        if let (cuando, resumen) = repaso {
+            let contenido = UNMutableNotificationContent()
+            contenido.title = resumen.titulo
+            contenido.body = resumen.cuerpo
+            contenido.sound = .default
+            // Sin categoría: no lleva una tarea dentro, así que «Completar» no
+            // tendría a qué aplicarse y «Aplazar» solo serviría para aplazar la
+            // decisión, que es lo contrario de para lo que existe.
+            let peticion = UNNotificationRequest(
+                identifier: Repaso.identificador,
+                content: contenido,
+                trigger: UNCalendarNotificationTrigger(
+                    dateMatching: Calendar.current.dateComponents(
+                        [.year, .month, .day, .hour, .minute], from: cuando),
+                    repeats: false))
+            try? await centro.add(peticion)
+        }
+    }
+
+    /// El repaso que toca, si toca alguno.
+    ///
+    /// **Uno solo y sin repetición**, aunque el repaso sea diario: el texto lleva
+    /// las cuentas dentro, y un disparador repetitivo seguiría cantando las de
+    /// hoy dentro de un mes. El siguiente se programa en cuanto algo cambia o
+    /// cambia el día, que es lo que mantiene el texto verdadero.
+    static func repasoPendiente(_ items: [Item],
+                                now: Date) -> (Date, Repaso.Resumen)? {
+        guard let cuando = Repaso.proximo(hora: Repaso.hora(), after: now) else { return nil }
+        let resumen = Repaso.resumen(items, para: cuando)
+        // Un repaso que dice «nada» enseña a ignorar los repasos.
+        guard !resumen.vacio else { return nil }
+        return (cuando, resumen)
     }
 }

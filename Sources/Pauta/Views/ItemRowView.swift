@@ -238,6 +238,26 @@ struct ItemRowView: View {
                 }
                 .foregroundStyle(item.deadlineIsDue ? Paper.warning : Paper.inkFaint)
             }
+            if let minutos = item.estimate, !item.isCompleted {
+                HStack(spacing: 3) {
+                    Image(systemName: "timer").font(.system(size: 9))
+                    Text(Duracion.etiqueta(minutos))
+                        .font(.system(size: 11, weight: .medium).monospacedDigit())
+                }
+                .foregroundStyle(Paper.inkFaint)
+            }
+            // Lo que no tiene fecha no se mueve solo: sin esta marca, una tarea
+            // puede llevar cinco semanas ahí sin que nada lo diga.
+            if let parada = item.staleLabel() {
+                HStack(spacing: 3) {
+                    Image(systemName: "hourglass.bottomhalf.filled").font(.system(size: 9))
+                    Text(parada)
+                        .font(.system(size: 11, weight: .medium).monospacedDigit())
+                }
+                .foregroundStyle(Paper.inkFaint)
+                .help("Apuntada hace \(parada.replacingOccurrences(of: "sem", with: "semanas"))"
+                      + " y todavía sin fecha")
+            }
             if item.recurrence != nil {
                 Image(systemName: "repeat")
                     .font(.system(size: 9, weight: .semibold))
@@ -439,6 +459,30 @@ struct ItemRowView: View {
                         eligiendoLimite = false
                     }
                 }
+
+                // La duración se dice con un icono cuando no está puesta y con la
+                // cifra cuando sí. Un rótulo «SIN ESTIMAR» en cada fila pesaría
+                // más que el dato que falta, y la tira ya iba llena.
+                Menu {
+                    ForEach([5, 15, 30, 45, 60, 90, 120, 240], id: \.self) { m in
+                        Button(Duracion.etiqueta(m)) { store.setEstimate(item, to: m) }
+                    }
+                    if item.estimate != nil {
+                        Divider()
+                        Button("Sin estimar") { store.setEstimate(item, to: nil) }
+                    }
+                } label: {
+                    if let minutos = item.estimate {
+                        Text(Duracion.etiqueta(minutos).uppercased()).rubricStyle()
+                    } else {
+                        Image(systemName: "timer").font(.system(size: 11, weight: .semibold))
+                    }
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .tint(item.estimate == nil ? Paper.inkSoft : Paper.accentInk)
+                .help(item.estimate == nil ? "Cuánto crees que va a costar" : "Duración estimada")
 
                 Menu {
                     Button("No se repite") { store.setRecurrence(item, to: nil) }

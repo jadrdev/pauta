@@ -95,6 +95,7 @@ struct ItemListView: View {
             if !items.isEmpty || !eventosDeHoy.isEmpty {
                 Text(countLabel)
                     .rubricStyle()
+                    .help(ayudaDeLaCuenta)
             }
         }
     }
@@ -139,7 +140,28 @@ struct ItemListView: View {
         // Los eventos no se suman a las tareas abiertas: no son cosas que hacer
         // ni se completan, así que se cuentan aparte o no se cuentan.
         let cola = eventos == 0 ? "" : (eventos == 1 ? "1 EVENTO · " : "\(eventos) EVENTOS · ")
-        return cola + tareasLabel
+        return cola + tareasLabel + estimado
+    }
+
+    /// Lo que suman las estimaciones de la lista.
+    ///
+    /// Va en la cabecera y no en un pie: la pregunta «¿cabe esto en el día?» se
+    /// hace **antes** de leer la lista, no después de haberla leído.
+    private var estimado: String {
+        let minutos = Duracion.total(items)
+        guard minutos > 0 else { return "" }
+        return " · \(Duracion.etiqueta(minutos).uppercased())"
+    }
+
+    /// La suma sola podría dar a entender que el día está medido cuando de diez
+    /// tareas solo se midieron tres. Al pasar el cursor se dice cuántas faltan.
+    private var ayudaDeLaCuenta: String {
+        let minutos = Duracion.total(items)
+        guard minutos > 0 else { return "" }
+        let sin = Duracion.sinEstimar(items)
+        let suma = "\(Duracion.etiqueta(minutos)) en lo estimado"
+        guard sin > 0 else { return suma }
+        return suma + (sin == 1 ? ", 1 tarea sin estimar" : ", \(sin) tareas sin estimar")
     }
 
     private var tareasLabel: String {

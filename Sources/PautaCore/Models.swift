@@ -126,6 +126,13 @@ public struct Item: Identifiable, Codable, Hashable {
     /// Adelanta **el aviso y no la tarea**: `timeOfDay` sigue siendo la hora a
     /// la que toca. Mover las dos cosas dejaría el margen sin efecto.
     public var warnBefore: Int?
+    /// Cuánto se cree que va a costar, en minutos. `nil` = sin estimar.
+    ///
+    /// Es una **creencia y no un dato**: nadie mide después si acertó, y el
+    /// valor no cambia solo. Sirve para que la suma del día se pueda ver antes
+    /// de vivirlo, que es lo único que evita planificar quince cosas para una
+    /// tarde.
+    public var estimate: Int?
     /// Aplazado hasta este instante, si se aplazó.
     ///
     /// Un aviso que llega en mal momento se descarta, y descartarlo se lo lleva
@@ -163,6 +170,7 @@ public struct Item: Identifiable, Codable, Hashable {
         checklist   = try c.decodeIfPresent([ChecklistStep].self, forKey: .checklist) ?? []
         tags        = try c.decodeIfPresent([String].self, forKey: .tags) ?? []
         warnBefore  = try c.decodeIfPresent(Int.self,    forKey: .warnBefore)
+        estimate    = try c.decodeIfPresent(Int.self,    forKey: .estimate)
         snoozedUntil = try c.decodeIfPresent(Date.self,  forKey: .snoozedUntil)
         updatedAt   = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
         deletedAt   = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
@@ -294,6 +302,42 @@ public struct Item: Identifiable, Codable, Hashable {
         guard let warnBefore, warnBefore > 0 else { return nil }
         if warnBefore % 60 == 0 { return "\(warnBefore / 60) h antes" }
         return "\(warnBefore) min antes"
+    }
+
+    /// Cuántos días lleva sin hacerse desde que se apuntó, para lo que no tiene
+    /// fecha.
+    ///
+    /// Desde `createdAt` y no desde `updatedAt`: si contara desde la última
+    /// modificación, cambiarle una coma al título la dejaría como nueva y una
+    /// tarea que se toquetea sin hacerse nunca no llegaría a estar rancia jamás.
+    public func staleDays(now: Date = .now, calendar: Calendar = .current) -> Int? {
+        guard !isCompleted, deletedAt == nil, when == nil else { return nil }
+        return calendar.dateComponents([.day],
+                                       from: calendar.startOfDay(for: createdAt),
+                                       to: calendar.startOfDay(for: now)).day
+    }
+
+    /// Tres semanas quietas.
+    ///
+    /// Lo que tiene fecha no cuenta nunca: si se pasó, ya lo dice el retraso, y
+    /// dos marcas para lo mismo no dicen el doble. Lo aparcado en «Algún día» sí,
+    /// porque aparcarlo fue decir «no ahora», no «no me lo recuerdes nunca».
+    public static let diasParaRancia = 21
+
+    public func estaRancia(now: Date = .now, calendar: Calendar = .current) -> Bool {
+        guard let dias = staleDays(now: now, calendar: calendar) else { return false }
+        return dias >= Item.diasParaRancia
+    }
+
+    /// «3 sem», «2 meses». En semanas mientras se cuenten con los dedos y en
+    /// meses cuando ya da vergüenza contarlas.
+    public func staleLabel(now: Date = .now, calendar: Calendar = .current) -> String? {
+        guard estaRancia(now: now, calendar: calendar),
+              let dias = staleDays(now: now, calendar: calendar) else { return nil }
+        // En semanas hasta las nueve: «7 sem» dice más que «1 mes», y a partir
+        // de ahí la cuenta exacta ya da igual porque el mensaje es el mismo.
+        if dias < 63 { return "\(dias / 7) sem" }
+        return "\(dias / 30) meses"
     }
 
     /// La hora hasta la que está aplazada, si lo está.

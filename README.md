@@ -334,6 +334,44 @@ sonando y aplazar no volvería nunca.
 ./build/Pauta.app/Contents/MacOS/Pauta --avisos
 ```
 
+#### El repaso del día
+
+Un aviso a hora fija —**8:30** por defecto— que dice qué quedó sin hacer:
+
+```
+Repaso del día
+2 sin hacer de días pasados · 1 para hoy · 4 paradas desde hace semanas
+```
+
+Existe porque nada te lo cuenta si no abres la app, y antes, si no te acuerdas
+de abrirla. Ese «acordarse» es justo lo que una app de tareas no puede pedir.
+
+No es un aviso de tarea: no lleva una dentro, no se completa y no trae
+«Aplazar» —aplazar el repaso solo sería aplazar la decisión, que es lo contrario
+de para lo que existe—. Al pulsarlo se abre `Hoy`, que es donde se decide el día.
+
+**Se programa uno solo y sin repetición**, aunque sea diario. El texto lleva las
+cuentas dentro, y un disparador repetitivo seguiría cantando las de hoy dentro
+de un mes. El siguiente se programa en cuanto algo cambia o cambia el día, que es
+lo que mantiene el texto verdadero. Y las cuentas se hacen **para el día del
+repaso** y no para hoy: el aviso se prepara la noche antes, y contar desde ese
+momento llamaría «de hoy» a algo que por la mañana ya será de ayer.
+
+Si no hay nada que decir, no suena. Un repaso que dice «nada» enseña a ignorar
+los repasos, y de ahí a ignorar los demás avisos hay un paso.
+
+La hora se elige en `Archivo ▸ Repaso del día` —de 7:00 a 10:00— y se puede
+**desactivar**: un repaso a una hora que no te sirve es un aviso que se aprende
+a ignorar. Apagarlo se guarda como decisión y no como ausencia de dato, porque si
+no, duraría hasta el siguiente arranque.
+
+```bash
+./build/Pauta.app/Contents/MacOS/Pauta --avisos
+# permiso de avisos: authorized
+# avisos programados: 3
+# repaso del día: a las 8:30 (programado)
+```
+
 ### Listas de comprobación
 
 Una tarea puede llevar pasos. Se ven al desplegarla, y en la fila cerrada aparece
@@ -366,6 +404,53 @@ entidad más que mantener viva. Renombrar y quitar están en su menú contextual
 
 Cada proyecto puede llevar un emoji: se elige pulsando el círculo junto a su
 título, de una paleta corta, y sustituye a su símbolo en la barra lateral.
+
+### Cuánto dura cada cosa
+
+Cada tarea puede llevar una **estimación** —de 5 minutos a 4 horas—, y la
+cabecera de la lista suma lo estimado:
+
+```
+4 EVENTOS · 9 ABIERTAS · 3 H 30 MIN
+```
+
+Quince cosas en `Hoy` paralizan igual que ninguna, y la razón es que una lista no
+dice cuánto ocupa: cabe todo hasta que se demuestra que no. Con la suma arriba, el
+número se ve **antes** de que lo demuestre el día — y arriba y no en un pie,
+porque la pregunta «¿cabe esto?» se hace antes de leer la lista, no después.
+
+La app **no inventa una jornada de ocho horas** contra la que comparar. No sabe
+cuántas horas tienes ni tendría cómo saberlo, y una barra roja apoyada en una
+cifra inventada sería una regañina sin fundamento. «7 h 30 min» en un martes se
+lee solo.
+
+Solo suma lo abierto —lo hecho ya no ocupa el día que queda— y al pasar el cursor
+dice cuántas van sin estimar, porque si no la suma daría a entender que el día
+está medido cuando de diez tareas solo se midieron tres.
+
+Es una creencia y no un dato: nadie mide después si acertaste. En la fila cerrada
+se ve con un cronómetro —`⏱ 45 min`—; en la desplegada, el mismo icono es el
+botón para ponerla. Un rótulo «SIN ESTIMAR» en cada fila pesaría más que el dato
+que falta.
+
+### Lo que se queda quieto
+
+Una tarea **sin fecha** puede llevar cinco semanas ahí sin que nada lo diga.
+Pasadas **tres semanas** desde que se apuntó, la fila lo dice: `⌛ 6 sem`. En
+semanas hasta las nueve, y en meses cuando ya da vergüenza contarlas.
+
+Se cuenta desde que se creó y no desde la última modificación: si contara desde
+ahí, cambiarle una coma al título la dejaría como nueva, y una tarea que se
+toquetea sin hacerse nunca no llegaría a estar rancia jamás.
+
+Lo que tiene fecha no cuenta nunca — si se pasó, ya lo dice el retraso, y dos
+marcas para lo mismo no dicen el doble. Lo aparcado en `Algún día` sí, porque
+aparcarlo fue decir «no ahora», no «no me lo recuerdes nunca». Y el
+[repaso](#el-repaso-del-día) las saca a la superficie, que es lo que evita que la
+marca se convierta en parte del paisaje.
+
+No se reordena la lista por esto. La prioridad manual es la que pusiste tú; una
+marca informa, y reordenar sería decidir por ti.
 
 ## Captura desde Recordatorios
 
@@ -873,6 +958,8 @@ Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
   Avisos.swift            avisos del sistema para las tareas con hora
   Agenda.swift            eventos del calendario, solo de lectura
   Cuenta.swift            cuánto falta para lo siguiente
+  Duracion.swift          cuánto dura cada cosa y cuánto suma el día
+  Repaso.swift            el repaso de la mañana
 Sources/Pauta/            la app de macOS
   PautaApp.swift          punto de entrada, menús, atajos y barra de menús
   AltaRapida.swift        atajo global y panel para apuntar sin abrir la app
@@ -890,13 +977,6 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
   donde encajarían sin inventar nada. Se dejó fuera para no cargar de golpe una
   ventana de semanas de calendario: primero conviene ver si en `Hoy` estorban o
   ayudan
-- **Estimación de tiempo** por tarea, y su suma en la cabecera de `Hoy`: quince
-  cosas en Hoy paralizan igual que ninguna, y «7 h comprometidas en un día de 4»
-  es un número que se ve antes de que lo demuestre el día
-- **Un repaso a hora fija**, que por la mañana diga qué quedó sin hacer en vez de
-  esperar a que abras la app y te acuerdes de abrirla
-- **Marca de rancio** en `Cualquier momento` y `Algún día`: una tarea puede llevar
-  cinco semanas ahí sin que nada lo diga
 - Widget y app de iOS — necesitan proyecto de Xcode y cuenta de desarrollador.
   `PautaCore` ya está extraído para ese salto, y la sincronización ya está
   hecha: la misma carpeta de iCloud le sirve a un iPhone sin tocar nada

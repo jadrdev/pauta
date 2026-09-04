@@ -717,6 +717,7 @@ public final class Store {
         // nueve». Si no se heredara, la segunda vuelta ya no tendría hora.
         siguiente.timeOfDay = item.timeOfDay
         siguiente.warnBefore = item.warnBefore
+        siguiente.estimate = item.estimate
         siguiente.tags = item.tags
         // Los pasos vuelven sin marcar: la lista es la de esta vuelta, no la
         // de la anterior ya hecha.
@@ -790,6 +791,14 @@ public final class Store {
         mutateItem(item.id) {
             guard let minutes, minutes > 0 else { $0.warnBefore = nil; return }
             $0.warnBefore = min(24 * 60, minutes)
+        }
+    }
+
+    /// Pone o quita la estimación, en minutos.
+    public func setEstimate(_ item: Item, to minutes: Int?) {
+        mutateItem(item.id) {
+            guard let minutes, minutes > 0 else { $0.estimate = nil; return }
+            $0.estimate = min(24 * 60, minutes)
         }
     }
 
@@ -1315,7 +1324,20 @@ extension Store {
             + Calendar.current.component(.minute, from: .now) - 60
         store.setTime(llamada, to: max(0, haceUnaHora))
         store.snooze(llamada, minutes: 12)
-        store.addItem(title: "Aprender a tocar el bajo", in: .someday)
+        // Estimaciones en unas cuantas, para que la cabecera sume algo.
+        for (titulo, minutos) in [("Llamar al fontanero", 15),
+                                  ("Revisar el presupuesto del trimestre", 90),
+                                  ("Recoger a los niños", 45),
+                                  ("Renovar el pasaporte", 60)] {
+            if let t = store.items.first(where: { $0.title == titulo }) {
+                store.setEstimate(t, to: minutos)
+            }
+        }
+        // Y una apuntada hace mes y medio y todavía sin fecha, para ver la marca
+        // de lo que se queda quieto.
+        var bajo = store.addItem(title: "Aprender a tocar el bajo", in: .someday)
+        bajo.createdAt = calendar.date(byAdding: .day, value: -45, to: .now) ?? bajo.createdAt
+        store.update(bajo)
         store.addItem(title: "Rehacer la estantería del salón", in: .someday)
         let done = store.addItem(title: "Reservar mesa para el viernes", in: .inbox)
         store.toggleComplete(done)
