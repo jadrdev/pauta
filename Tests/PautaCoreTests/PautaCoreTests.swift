@@ -2371,19 +2371,6 @@ struct RepasoTests {
         #expect(r.cuerpo == "1 sin hacer de días pasados")
     }
 
-    /// La hora se guarda en las preferencias y se puede apagar: un repaso a una
-    /// hora que no te sirve es un aviso que se aprende a ignorar.
-    @Test func theHourIsAPreferenceAndCanBeTurnedOff() {
-        let defaults = UserDefaults(suiteName: "pauta.tests.repaso")!
-        defaults.removePersistentDomain(forName: "pauta.tests.repaso")
-        #expect(Repaso.hora(in: defaults) == Repaso.horaPorDefecto)
-        Repaso.setHora(7 * 60, in: defaults)
-        #expect(Repaso.hora(in: defaults) == 7 * 60)
-        Repaso.setHora(nil, in: defaults)
-        #expect(Repaso.hora(in: defaults) == nil)
-        defaults.removePersistentDomain(forName: "pauta.tests.repaso")
-    }
-
     /// Y cuándo toca el siguiente: hoy si su hora no ha llegado, y mañana si ya
     /// pasó.
     @Test func theNextReviewIsTodayOrTomorrow() {
@@ -2392,5 +2379,89 @@ struct RepasoTests {
         #expect(Repaso.proximo(hora: 8 * 60 + 30, after: fecha(2026, 9, 1, 9, 0), calendar: cal)
                 == fecha(2026, 9, 2, 8, 30))
         #expect(Repaso.proximo(hora: nil, after: fecha(2026, 9, 1), calendar: cal) == nil)
+    }
+}
+
+/// Las preferencias. Pocas y de este Mac: la hora a la que te levantas aquí, el
+/// sitio que te sobra en esta pantalla.
+@MainActor
+struct AjustesTests {
+    private func limpios(_ nombre: String) -> (Ajustes, UserDefaults) {
+        let d = UserDefaults(suiteName: nombre)!
+        d.removePersistentDomain(forName: nombre)
+        return (Ajustes(defaults: d), d)
+    }
+
+    @Test func theDefaultsAreTheOnesTheAppShipsWith() {
+        let (a, _) = limpios("pauta.tests.ajustes.fabrica")
+        #expect(a.repasoHora == Ajustes.repasoPorDefecto)
+        #expect(a.margenPorDefecto == 0)
+        #expect(a.minutosAplazados == 10)
+        #expect(a.barraConCuenta)
+    }
+
+    /// Se guardan al cambiarlos, sin botón de guardar.
+    @Test func changesSurviveARelaunch() {
+        let (a, d) = limpios("pauta.tests.ajustes.persistencia")
+        a.repasoHora = 7 * 60
+        a.margenPorDefecto = 15
+        a.minutosAplazados = 30
+        a.barraConCuenta = false
+
+        let otra = Ajustes(defaults: d)
+        #expect(otra.repasoHora == 7 * 60)
+        #expect(otra.margenPorDefecto == 15)
+        #expect(otra.minutosAplazados == 30)
+        #expect(otra.barraConCuenta == false)
+        d.removePersistentDomain(forName: "pauta.tests.ajustes.persistencia")
+    }
+
+    /// Apagar el repaso tiene que sobrevivir al arranque. Si «apagado» se
+    /// guardara como ausencia de dato, la siguiente lectura no lo distinguiría
+    /// de «no se ha tocado nunca» y lo daría por encendido.
+    @Test func turningTheReviewOffIsRemembered() {
+        let (a, d) = limpios("pauta.tests.ajustes.apagado")
+        a.repasoHora = nil
+        #expect(Ajustes(defaults: d).repasoHora == nil)
+        d.removePersistentDomain(forName: "pauta.tests.ajustes.apagado")
+    }
+
+    @Test func valuesOutOfRangeAreClamped() {
+        let (a, d) = limpios("pauta.tests.ajustes.limites")
+        a.repasoHora = 99_999
+        a.minutosAplazados = 0
+        #expect(Ajustes(defaults: d).repasoHora == 24 * 60 - 1)
+        #expect(Ajustes(defaults: d).minutosAplazados == 1)
+        d.removePersistentDomain(forName: "pauta.tests.ajustes.limites")
+    }
+
+    @Test func restoringPutsEverythingBack() {
+        let (a, _) = limpios("pauta.tests.ajustes.restaurar")
+        a.repasoHora = nil
+        a.margenPorDefecto = 60
+        a.restaurar()
+        #expect(a.repasoHora == Ajustes.repasoPorDefecto)
+        #expect(a.margenPorDefecto == 0)
+    }
+
+    /// El margen de los ajustes es un valor de partida y no una regla viva: se
+    /// aplica al poner una hora nueva y respeta el que la tarea ya tuviera.
+    @Test func theDefaultMarginOnlyAppliesWhenTheTaskHasNone() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "reunión", in: .today)
+        s.setTime(a, to: 9 * 60, margenInicial: 15)
+        #expect(s.items.first { $0.id == a.id }?.warnBefore == 15)
+
+        // Ya tiene el suyo: cambiar la hora no lo pisa.
+        s.setWarnBefore(s.items.first { $0.id == a.id }!, to: 5)
+        s.setTime(s.items.first { $0.id == a.id }!, to: 10 * 60, margenInicial: 15)
+        #expect(s.items.first { $0.id == a.id }?.warnBefore == 5)
+    }
+
+    @Test func withoutADefaultAnHourComesWithNoMargin() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "reunión", in: .today)
+        s.setTime(a, to: 9 * 60)
+        #expect(s.items.first { $0.id == a.id }?.warnBefore == nil)
     }
 }

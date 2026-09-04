@@ -84,6 +84,9 @@ struct Entry {
     static func main() {
         Launch.demo = CommandLine.arguments.contains("--demo")
         Launch.altaRapida = CommandLine.arguments.contains("--alta-rapida")
+        // Antes de que nada las lea: en maqueta las preferencias también son de
+        // mentira, o mirar el diseño acabaría cambiando los ajustes de verdad.
+        if Launch.demo { Ajustes.shared = Ajustes.paraMaqueta() }
         if CommandLine.arguments.contains("--light") { Launch.appearance = .aqua }
         if CommandLine.arguments.contains("--dark")  { Launch.appearance = .darkAqua }
         if let i = CommandLine.arguments.firstIndex(of: "--view"),
@@ -126,7 +129,7 @@ struct Entry {
                 print("permiso de avisos: \(i < nombres.count ? nombres[i] : "\(i)")")
                 let pendientes = await Avisos.pending()
                 print("avisos programados: \(pendientes.count)")
-                if let hora = Repaso.hora() {
+                if let hora = Repaso.hora {
                     let puesto = pendientes.contains(Repaso.identificador)
                     print("repaso del día: a las \(hora / 60):"
                           + String(format: "%02d", hora % 60)
@@ -260,9 +263,7 @@ struct PautaApp: App {
     @State private var watcher: FolderWatcher?
     @State private var agenda = Agenda()
     @State private var reloj = Reloj()
-    /// La hora del repaso vive en las preferencias; aquí se guarda una copia
-    /// para que el menú pueda decir cuál está puesta y cambiar al elegir otra.
-    @State private var horaRepaso: Int? = Repaso.hora()
+    @State private var ajustes = Ajustes.shared
     /// El atajo que quedó registrado. En estado y no leído del registrador cada
     /// vez: los menús se construyen antes de que el atajo exista, así que sin
     /// algo que provoque el redibujado el rótulo se quedaría para siempre sin
@@ -433,15 +434,6 @@ struct PautaApp: App {
                         }
                     }
                 }
-                Menu(horaRepaso.map { "Repaso del día  ·  \(ItemRowView.hora($0))" }
-                        ?? "Repaso del día  ·  desactivado") {
-                    ForEach([7 * 60, 7 * 60 + 30, 8 * 60, 8 * 60 + 30,
-                             9 * 60, 10 * 60], id: \.self) { m in
-                        Button(ItemRowView.hora(m)) { ponerRepaso(m) }
-                    }
-                    Divider()
-                    Button("Desactivado") { ponerRepaso(nil) }
-                }
                 Button("Importar de Recordatorios") {
                     Task { await importFromReminders(into: store, nav: nav) }
                 }
@@ -461,12 +453,18 @@ struct PautaApp: App {
             MenuBarView()
                 .environment(store)
         } label: {
-            EtiquetaDeBarra(store: store, reloj: reloj)
+            EtiquetaDeBarra(store: store, reloj: reloj, ajustes: ajustes)
         }
         .menuBarExtraStyle(.window)
 
         // Del tamaño de su contenido y sin poder estirarse: son dos fichas de
         // lectura, y una ficha con la mitad de la ventana en blanco se lee peor.
+        // `Settings` y no una ventana más: así el sistema pone el «Ajustes…» en
+        // el menú de la app y le da ⌘, sin que haya que declararlos.
+        Settings {
+            AjustesView(ajustes: ajustes, store: store)
+        }
+
         Window("Acerca de Pauta", id: "acerca") {
             AcercaDeView().environment(store)
         }
@@ -480,13 +478,6 @@ struct PautaApp: App {
         .defaultPosition(.center)
     }
 
-    /// Cambia la hora del repaso y lo reprograma en el momento: si esperara al
-    /// siguiente cambio en las tareas, la hora nueva no valdría hasta mañana.
-    private func ponerRepaso(_ minutos: Int?) {
-        horaRepaso = minutos
-        Repaso.setHora(minutos)
-        Task { await Avisos.reschedule(store.items) }
-    }
 }
 
 struct RootView: View {

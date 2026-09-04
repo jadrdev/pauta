@@ -388,7 +388,10 @@ struct ItemRowView: View {
                     // controles ya iba llena.
                     Menu("Hora") {
                         ForEach([8 * 60, 9 * 60, 12 * 60, 15 * 60, 18 * 60, 21 * 60], id: \.self) { m in
-                            Button(Self.hora(m)) { store.setTime(item, to: m) }
+                            Button(Self.hora(m)) {
+                                store.setTime(item, to: m,
+                                              margenInicial: Ajustes.shared.margenPorDefecto)
+                            }
                         }
                         Button("Otra hora…") { eligiendoHora = true }
                         if item.timeOfDay != nil {
@@ -428,7 +431,8 @@ struct ItemRowView: View {
                 }
                 .popover(isPresented: $eligiendoHora, arrowEdge: .bottom) {
                     SelectorDeHora(inicial: item.timeOfDay ?? 9 * 60) { minutos in
-                        store.setTime(item, to: minutos)
+                        store.setTime(item, to: minutos,
+                                      margenInicial: Ajustes.shared.margenPorDefecto)
                         eligiendoHora = false
                     }
                 }

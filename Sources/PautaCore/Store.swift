@@ -770,7 +770,11 @@ public final class Store {
     ///
     /// Ponérsela a algo sin fecha lo programa para hoy: una hora suelta no
     /// significa nada, y «a las nueve» sin más quiere decir las nueve de hoy.
-    public func setTime(_ item: Item, to minutes: Int?) {
+    /// `margenInicial` es el de los ajustes, y se aplica **solo si la tarea no
+    /// tenía margen propio**: es un valor de partida, no una regla viva. Si
+    /// mandara siempre, cambiar la preferencia reescribiría en silencio el
+    /// margen de todo lo ya puesto.
+    public func setTime(_ item: Item, to minutes: Int?, margenInicial: Int = 0) {
         mutateItem(item.id) {
             $0.timeOfDay = minutes.map { max(0, min(24 * 60 - 1, $0)) }
             if minutes != nil, $0.when == nil {
@@ -778,7 +782,11 @@ public final class Store {
                 $0.isSomeday = false
             }
             // Un margen sin hora no cuenta desde ninguna parte.
-            if minutes == nil { $0.warnBefore = nil }
+            if minutes == nil {
+                $0.warnBefore = nil
+            } else if $0.warnBefore == nil, margenInicial > 0 {
+                $0.warnBefore = min(24 * 60, margenInicial)
+            }
             $0.snoozedUntil = nil
         }
     }

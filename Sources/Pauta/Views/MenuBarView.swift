@@ -37,6 +37,7 @@ final class Reloj {
 struct EtiquetaDeBarra: View {
     let store: Store
     let reloj: Reloj
+    let ajustes: Ajustes
 
     var body: some View {
         HStack(spacing: 5) {
@@ -46,7 +47,8 @@ struct EtiquetaDeBarra: View {
                 // Sin bundle (binario suelto) no hay monograma: un símbolo vale.
                 Image(systemName: "checklist")
             }
-            if let inminente = Cuenta.inminente(store.items, now: reloj.ahora) {
+            if ajustes.barraConCuenta,
+               let inminente = Cuenta.inminente(store.items, now: reloj.ahora) {
                 Text("\(Cuenta.restante(inminente.cuando, now: reloj.ahora))"
                      + " · \(Self.recortado(inminente.item.title))")
             }

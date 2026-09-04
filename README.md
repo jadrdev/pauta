@@ -76,6 +76,7 @@ sería contradictorio.
 | `⌘⇧R` | Importar de Recordatorios |
 | `⌘1` … `⌘6` | Bandeja / Hoy / Próximamente / Cualquier momento / Algún día / Completadas |
 | `⌘?` | Ayuda: los atajos y el estado de los permisos |
+| `⌘,` | Ajustes |
 
 Una tarea nueva nace ya encajada en la lista donde la creas: en Hoy sale con la
 fecha de hoy, en Próximamente con la de mañana, en Algún día aparcada, y dentro
@@ -361,7 +362,7 @@ momento llamaría «de hoy» a algo que por la mañana ya será de ayer.
 Si no hay nada que decir, no suena. Un repaso que dice «nada» enseña a ignorar
 los repasos, y de ahí a ignorar los demás avisos hay un paso.
 
-La hora se elige en `Archivo ▸ Repaso del día` —de 7:00 a 10:00— y se puede
+La hora se elige en los [ajustes](#ajustes) —de 7:00 a 10:00— y se puede
 **desactivar**: un repaso a una hora que no te sirve es un aviso que se aprende
 a ignorar. Apagarlo se guarda como decisión y no como ausencia de dato, porque si
 no, duraría hasta el siguiente arranque.
@@ -586,6 +587,42 @@ leer, y entonces tampoco dice nada cuando falta un cuarto de hora, que es el
 Cuenta **solo tareas**. Los eventos del calendario ya los avisa el sistema, y
 contarlos aquí también sería avisar dos veces de lo mismo. Y cuenta la hora de la
 tarea, no la del aviso: el margen adelanta la campana, no el momento.
+
+## Ajustes
+
+`⌘,`. Cinco cosas, y son pocas a propósito: un ajuste por cada decisión de
+diseño convierte la app en un panel de control y hace que todos los valores por
+defecto parezcan arbitrarios. Aquí solo está lo que **cambia de persona a
+persona**.
+
+- **Abrir Pauta al iniciar sesión.** No es comodidad: con la app cerrada no hay
+  atajo global, el repaso no se reprograma y la cuenta atrás no está en ninguna
+  parte. Una app que hay que acordarse de abrir para que te acuerde de las cosas
+  no sirve. Va por `SMAppService`, y si el sistema lo rechaza —suele ser porque
+  la app no está en `Aplicaciones`— el interruptor vuelve solo y lo dice, en vez
+  de quedarse encendido mintiendo.
+- **La hora del repaso**, o apagarlo. Antes vivía en el menú `Archivo`, entre
+  acciones; una preferencia no es una acción.
+- **Margen de aviso por defecto**, para no ponerlo tarea por tarea. Es un valor
+  **de partida y no una regla viva**: se aplica al poner una hora nueva y respeta
+  el margen que la tarea ya tuviera. Si mandara siempre, cambiarlo reescribiría
+  en silencio el de todo lo ya planificado.
+- **Cuánto aplaza** el botón. Los diez minutos eran una decisión escondida en el
+  código. Al cambiarlo se vuelve a registrar la categoría del aviso, porque el
+  título del botón se congela al registrarla: sin eso seguiría diciendo «Aplazar
+  10 min» y aplazando quince.
+- **La cuenta atrás en la barra de menús**, o solo el icono. La barra de menús es
+  de todos y hay pantallas donde no sobra sitio.
+
+Lo que no está y no va a estar: el umbral de lo rancio, la ventana de la cuenta
+atrás, la duración de una jornada contra la que medir el día. Son juicios de la
+app, y volverlos ajustables sería pedirte que los tomes tú sin darte con qué.
+
+Se guardan en `UserDefaults` y no en la carpeta de datos: son preferencias de
+**este Mac** —la hora a la que te levantas aquí, el sitio que te sobra en esta
+pantalla— y no cosas que deban viajar con las tareas. En [maqueta](#modo-maqueta)
+son de mentira y en su propio dominio: mirar el diseño no debe cambiarte los
+ajustes de verdad.
 
 ## Acerca de y ayuda
 
@@ -1012,6 +1049,7 @@ Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
   Agenda.swift            eventos del calendario, solo de lectura
   Cuenta.swift            cuánto falta para lo siguiente
   Duracion.swift          cuánto dura cada cosa y cuánto suma el día
+  Ajustes.swift           las cinco preferencias, en UserDefaults
   Repaso.swift            el repaso de la mañana
 Sources/Pauta/            la app de macOS
   PautaApp.swift          punto de entrada, menús, atajos y barra de menús
@@ -1023,6 +1061,7 @@ Sources/Pauta/            la app de macOS
   Views/MenuBarView.swift panel de la barra de menús y cuenta atrás
   Views/AcercaDe.swift    el panel «Acerca de» y los enlaces
   Views/Ayuda.swift       atajos y estado de los permisos
+  Views/AjustesView.swift ajustes y arranque al iniciar sesión
 Tests/PautaCoreTests/     tests del núcleo (swift test)
 ```
 

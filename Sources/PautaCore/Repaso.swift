@@ -63,27 +63,9 @@ public enum Repaso {
     public static let identificador = "repaso"
 
     /// Las ocho y media: después de levantarse y antes de que el día empiece a
-    /// mandar. Se puede cambiar y se puede apagar, porque un repaso a una hora
-    /// que no te sirve es un aviso que se aprende a ignorar —y un aviso que se
-    /// ignora enseña a ignorar los demás—.
-    public static let horaPorDefecto = 8 * 60 + 30
-
-    private static let clave = "repaso.hora"
-    /// Lo apagado se guarda como valor propio y no como ausencia: sin
-    /// distinguirlos, apagar el repaso duraría hasta el siguiente arranque, que
-    /// volvería a leer «no hay nada guardado» y lo daría por encendido.
-    private static let apagado = -1
-
-    public static func hora(in defaults: UserDefaults = .standard) -> Int? {
-        guard let guardada = defaults.object(forKey: clave) as? Int else {
-            return horaPorDefecto
-        }
-        return guardada == apagado ? nil : guardada
-    }
-
-    public static func setHora(_ minutos: Int?, in defaults: UserDefaults = .standard) {
-        defaults.set(minutos.map { max(0, min(24 * 60 - 1, $0)) } ?? apagado, forKey: clave)
-    }
+    /// mandar. La hora y el apagado viven en `Ajustes`, que es donde el usuario
+    /// los cambia; aquí solo se leen.
+    @MainActor public static var hora: Int? { Ajustes.shared.repasoHora }
 
     /// Cuándo toca el siguiente: hoy si su hora no ha llegado, y mañana si pasó.
     public static func proximo(hora: Int?, after now: Date = .now,

@@ -79,21 +79,32 @@ public enum Avisos {
     static let accionAplazar = "aplazar"
     static let categoria = "tarea"
 
-    /// Cuánto aplaza el botón de aplazar.
-    ///
-    /// Diez minutos y no una hora: lo bastante para terminar lo que se tenía
-    /// entre manos, y lo bastante poco para que aplazar no sea otra forma de
-    /// perderlo de vista.
-    public static let minutosAplazados = 10
+    /// Cuánto aplaza el botón de aplazar. Diez minutos de fábrica: lo bastante
+    /// para terminar lo que tenías entre manos y lo bastante poco para que
+    /// aplazar no sea otra forma de perderlo de vista. Se cambia en los ajustes.
+    @MainActor
+    public static var minutosAplazados: Int { Ajustes.shared.minutosAplazados }
 
     nonisolated(unsafe) private static let delegado = AvisoDelegado()
 
     /// Se llama al arrancar, antes de que la app termine de lanzarse: puesto
     /// más tarde, el sistema ya habría entregado sin delegado los avisos que
     /// esperaban.
+    @MainActor
     public static func hookUp() {
         guard let centro else { return }
         centro.delegate = delegado
+        actualizarCategorias()
+    }
+
+    /// Vuelve a registrar los botones.
+    ///
+    /// Hace falta al cambiar los minutos de aplazamiento: el título del botón se
+    /// congela al registrar la categoría, así que sin esto seguiría diciendo
+    /// «Aplazar 10 min» y aplazando quince.
+    @MainActor
+    public static func actualizarCategorias() {
+        guard let centro else { return }
         // Poder completar desde el propio aviso es lo que hace que una rutina
         // diaria no obligue a abrir la app para nada.
         // Y aplazar es lo que evita el descarte: un aviso que llega en mal
@@ -175,7 +186,7 @@ public enum Avisos {
         guard let centro else { return }
 
         // El repaso primero, porque decide cuántos huecos quedan para tareas.
-        let repaso = Avisos.repasoPendiente(items, now: now)
+        let repaso = await Avisos.repasoPendiente(items, now: now)
         let pendientes = items
             .filter { $0.deletedAt == nil && !$0.isCompleted }
             .compactMap { item -> (Item, Date)? in
@@ -271,9 +282,10 @@ public enum Avisos {
     /// las cuentas dentro, y un disparador repetitivo seguiría cantando las de
     /// hoy dentro de un mes. El siguiente se programa en cuanto algo cambia o
     /// cambia el día, que es lo que mantiene el texto verdadero.
+    @MainActor
     static func repasoPendiente(_ items: [Item],
                                 now: Date) -> (Date, Repaso.Resumen)? {
-        guard let cuando = Repaso.proximo(hora: Repaso.hora(), after: now) else { return nil }
+        guard let cuando = Repaso.proximo(hora: Repaso.hora, after: now) else { return nil }
         let resumen = Repaso.resumen(items, para: cuando)
         // Un repaso que dice «nada» enseña a ignorar los repasos.
         guard !resumen.vacio else { return nil }
