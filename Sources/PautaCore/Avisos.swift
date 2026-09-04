@@ -139,6 +139,28 @@ public enum Avisos {
         return (try? await centro.requestAuthorization(options: [.alert, .sound])) ?? false
     }
 
+    /// Lo que el sistema ya ha entregado y sigue en el centro de
+    /// notificaciones. Es la única forma de comprobar que un aviso llegó de
+    /// verdad: lo programado dice lo que va a pasar, no lo que pasó.
+    public static func delivered() async -> [(id: String, titulo: String,
+                                              subtitulo: String, cuando: Date)] {
+        guard let centro else { return [] }
+        return await centro.deliveredNotifications().map {
+            (id: $0.request.identifier,
+             titulo: $0.request.content.title,
+             subtitulo: $0.request.content.subtitle,
+             cuando: $0.date)
+        }
+    }
+
+    /// Los botones que lleva cada categoría, tal como los tiene registrados el
+    /// sistema. Que estén en el código no significa que estén puestos.
+    public static func categories() async -> [(String, [String])] {
+        guard let centro else { return [] }
+        return await centro.notificationCategories()
+            .map { ($0.identifier, $0.actions.map(\.title)) }
+    }
+
     public static func pending() async -> [String] {
         guard let centro else { return [] }
         return await centro.pendingNotificationRequests().map(\.identifier)

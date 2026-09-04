@@ -135,6 +135,16 @@ struct Entry {
                     print("repaso del día: desactivado")
                 }
                 for id in pendientes.prefix(5) { print("  · \(id)") }
+                for (categoria, botones) in await Avisos.categories() {
+                    print("botones de «\(categoria)»: \(botones.joined(separator: ", "))")
+                }
+                let entregados = await Avisos.delivered()
+                print("avisos entregados y sin descartar: \(entregados.count)")
+                for a in entregados {
+                    print("  · \(a.cuando.formatted(.dateTime.hour().minute().second()))"
+                          + "  \(a.titulo)"
+                          + (a.subtitulo.isEmpty ? "" : "  —  \(a.subtitulo)"))
+                }
             }
             return
         }
@@ -175,6 +185,34 @@ struct Entry {
                 try inbox.seedForTesting(title: title)
                 print("recordatorio creado en la lista «\(RemindersInbox.listName)»: \(title)")
             }
+            return
+        }
+        // Sembrar un aviso de verdad es la única forma de comprobar la cadena
+        // entera —programación, margen, texto y botones—: el disparador lo
+        // resuelve el sistema, así que sin esperar a que suene no se ha probado
+        // nada. Crea la tarea en los datos reales a propósito, y dice cómo
+        // borrarla, porque una tarea de prueba que se queda es basura.
+        if let i = CommandLine.arguments.firstIndex(of: "--seed-alarm") {
+            let resto = CommandLine.arguments.dropFirst(i + 1).compactMap(Int.init)
+            let minutos = resto.first ?? 3
+            let margen = resto.dropFirst().first
+            let cal = Calendar.current
+            let ahora = cal.component(.hour, from: .now) * 60 + cal.component(.minute, from: .now)
+            let store = Store()
+            let tarea = store.addItem(title: "Prueba de aviso", in: .today)
+            store.setTime(tarea, to: ahora + minutos)
+            if let margen { store.setWarnBefore(tarea, to: margen) }
+            guard let puesta = store.items.first(where: { $0.id == tarea.id }) else { return }
+            print("tarea: \(puesta.id)")
+            print("hora: \(puesta.timeLabel ?? "—")"
+                  + (puesta.warnLabel.map { "  ·  aviso \($0)" } ?? ""))
+            if let cuando = puesta.nextAlarm() {
+                print("suena: \(cuando.formatted(.dateTime.hour().minute().second()))")
+            }
+            let archivo = store.storageURL
+                .appendingPathComponent("items")
+                .appendingPathComponent("\(puesta.id).json")
+            print("para borrarla: rm '\(archivo.path)'")
             return
         }
         if CommandLine.arguments.contains("--dump") {
