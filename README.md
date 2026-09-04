@@ -75,6 +75,7 @@ sería contradictorio.
 | `esc` | Cancelar la tarea nueva |
 | `⌘⇧R` | Importar de Recordatorios |
 | `⌘1` … `⌘6` | Bandeja / Hoy / Próximamente / Cualquier momento / Algún día / Completadas |
+| `⌘0` | Volver a la ventana principal si se cerró |
 | `⌘?` | Ayuda: los atajos y el estado de los permisos |
 | `⌘,` | Ajustes |
 
@@ -278,13 +279,23 @@ borró o llegó de otro dispositivo. Se reprograma un segundo después del últi
 cambio, porque escribir un título cambia las tareas en cada tecla.
 
 Hay un tope de **60**: el sistema descarta lo que pase de 64 por app, y sin tope
-propio se perderían avisos sin decirlo. Se quedan los más cercanos.
+propio se perderían avisos sin decirlo. Se quedan los más cercanos, y el
+[repaso](#el-repaso-del-día) ocupa uno de los sesenta cuando está encendido.
 
-Es la API vigente, `UNUserNotificationCenter` con un disparador de calendario —
-`NSUserNotification` está obsoleta desde macOS 11. El disparador **no se repite**
-aunque la tarea sí: la sucesora nace al completar la anterior y trae su propio
-aviso, mientras que un disparador repetitivo seguiría sonando después de que la
-serie hubiera acabado.
+Es la API vigente, `UNUserNotificationCenter` — `NSUserNotification` está obsoleta
+desde macOS 11 —, y con **tres disparadores distintos** según lo que haya que
+hacer:
+
+| Cuándo | Disparador |
+|---|---|
+| Algo de más adelante | Calendario con fecha completa, una sola vez |
+| Algo de hoy o atrasado | Calendario de hora y minuto, **repitiendo** cada día |
+| Algo [aplazado](#aplazar) | Por intervalo, una sola vez |
+
+La repetición es de la **insistencia** y nunca de la serie repetitiva. Una serie
+avanza creando la sucesora al completar la anterior, y esa trae su propio aviso;
+un disparador repetitivo atado a la serie seguiría sonando cuando la serie ya
+hubiera acabado.
 
 Hay un delegado, y hace falta para dos cosas que sin él no ocurren:
 
@@ -292,8 +303,8 @@ Hay un delegado, y hace falta para dos cosas que sin él no ocurren:
   defecto dando por hecho que ya estás mirando la app, y en una app de tareas ese
   es justo el momento en que más falta hace.
 - **Pulsarlo abre la tarea**, en una lista donde se vea; y trae dos botones,
-  **«Completar»** para despachar una rutina sin abrir nada y **«Aplazar 10
-  min»**.
+  **«Completar»** para despachar una rutina sin abrir nada y **«Aplazar»**, con
+  los minutos que digan los [ajustes](#ajustes).
 
 Y si el permiso está denegado, **la app lo dice**: una franja arriba de la lista,
 con un atajo a los ajustes del sistema. Un aviso que no llega y se calla es peor
@@ -375,6 +386,21 @@ no, duraría hasta el siguiente arranque.
 # botones de «tarea»: Completar, Aplazar 10 min
 # avisos entregados y sin descartar: 1
 ```
+
+Y para comprobarlo de punta a punta hay que hacer sonar uno:
+
+```bash
+./build/Pauta.app/Contents/MacOS/Pauta --seed-alarm 12 10
+# tarea: CF52FCCE-…
+# hora: 13:46  ·  aviso 10 min antes
+# suena: 13:36:00
+# para borrarla: rm '…/Pauta/items/CF52FCCE-….json'
+```
+
+Crea una tarea con hora dentro de esos minutos, con el margen que se le diga.
+Escribe en los datos de verdad a propósito —un aviso solo se puede probar
+sonando— y dice el comando para borrarla, porque una tarea de prueba que se
+queda es basura.
 
 Dice lo **programado** y lo **entregado**, que no es lo mismo: lo primero es lo
 que va a pasar y lo segundo lo que pasó. Sin lo segundo, «probar los avisos» era
