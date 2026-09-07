@@ -5,6 +5,7 @@ import PautaCore
 /// Enlaces de la app. En un solo sitio para que no se dupliquen a medias.
 enum Enlaces {
     static let repositorio = URL(string: "https://github.com/jadrdev/pauta")!
+    static let autor = URL(string: "https://github.com/jadrdev")!
     static let guia = URL(string: "https://github.com/jadrdev/pauta#readme")!
     static let novedades = URL(string: "https://github.com/jadrdev/pauta/releases")!
     static let problemas = URL(string: "https://github.com/jadrdev/pauta/issues")!
@@ -77,15 +78,41 @@ struct AcercaDeView: View {
 
             Rectangle().fill(Paper.hairline).frame(height: 1).padding(.vertical, 16)
 
+            // Quién hay detrás y por dónde se le habla. En una app sin cuentas
+            // ni servidor, este panel es el único sitio donde el usuario puede
+            // saber a quién le está confiando sus datos.
             HStack(spacing: 14) {
                 EnlaceDeTexto("Código") { NSWorkspace.shared.open(Enlaces.repositorio) }
                 EnlaceDeTexto("Novedades") { NSWorkspace.shared.open(Enlaces.novedades) }
+                EnlaceDeTexto("Escribir al desarrollador") {
+                    NSWorkspace.shared.open(Enlaces.problemas)
+                }
                 Spacer(minLength: 0)
-                Text(Acercade.copyright.isEmpty ? "Todos los derechos reservados"
-                                                 : Acercade.copyright)
+            }
+            // En líneas propias y no en una sola: el nombre y el aviso de
+            // copyright juntos no caben en 420 puntos, y lo que hacían era
+            // cortarse por la mitad.
+            HStack(spacing: 5) {
+                Text("Hecho por")
                     .font(.system(size: 10.5))
                     .foregroundStyle(Paper.inkFaint)
+                Button {
+                    NSWorkspace.shared.open(Enlaces.autor)
+                } label: {
+                    Text("@jadrdev")
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .foregroundStyle(Paper.accentInk)
+                }
+                .buttonStyle(.plain)
+                Spacer(minLength: 0)
             }
+            .padding(.top, 10)
+            Text(Acercade.copyright.isEmpty ? "Todos los derechos reservados"
+                                            : Acercade.copyright)
+                .font(.system(size: 10.5))
+                .foregroundStyle(Paper.inkFaint)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
         }
         .padding(26)
         .frame(width: 420)

@@ -21,6 +21,8 @@ y con tus datos en tu propia carpeta de iCloud.</p>
 <p><em>Arrastrar entre días: la fila que señalas dice dos cosas,<br>
 la prioridad y el día.</em></p>
 
+<p><sub>Hecho por <a href="https://github.com/jadrdev">@jadrdev</a></sub></p>
+
 </div>
 
 Pauta organiza el trabajo en dos ejes: **cuándo** y **de qué**. Una tarea entra
@@ -1160,12 +1162,26 @@ pueda leer, estudiar y comprobar qué hace la app con tus datos — que en una a
 que guarda tu vida en archivos sueltos es lo menos que se puede ofrecer. Pero no
 es de dominio público: ver los [términos](LICENSE).
 
-Lo que sí puedes hacer sin pedir nada: leerlo, estudiarlo, citarlo,
-**compilarlo y usarlo en tus dispositivos**, y cambiarlo para ese uso tuyo.
+**Puedes** leerlo, estudiarlo, **compilarlo y usarlo en tus propios equipos**,
+cambiarlo para ese uso tuyo, y proponer cambios aquí.
 
-Lo que no: redistribuirlo, publicar una obra derivada —tampoco con otro nombre y
-otro diseño— ni meterlo en un producto o servicio para terceros. Para eso hace
-falta permiso, y se pide [abriendo una incidencia](https://github.com/jadrdev/pauta/issues).
+**No puedes** copiarlo, redistribuirlo ni venderlo; publicar obras derivadas,
+adaptaciones o bifurcaciones para distribuir —tampoco con otro nombre y otro
+diseño—; meter ninguna parte en otro producto o servicio; ni usarlo para
+**entrenar modelos**. Para cualquiera de esas cosas hace falta permiso escrito.
+
+Esa última no es una manía: hoy el mayor destino de un repositorio público es
+acabar en un corpus de entrenamiento, y quien lo hace no pide permiso a nadie.
+Prohibirlo puede no detener a quien ya raspa sin mirar la licencia, pero deja
+dicho que no había permiso.
+
+Y al revés: los **cambios que propongas** aquí quedan licenciados al titular para
+usarlos en el programa. Sin esa línea, aceptar una mejora ajena dejaría un trozo
+del código con dueño distinto al resto y sin permiso claro para venderlo algún
+día.
+
+Para pedir permiso o preguntar: [@jadrdev](https://github.com/jadrdev), o
+[abriendo una incidencia](https://github.com/jadrdev/pauta/issues).
 
 ### Por qué no MIT
 
@@ -1188,3 +1204,5 @@ adelante es el aviso nuevo.
 
 Y como siempre: **sin garantía de nada**, que aquí los datos son tuyos y el que
 responde por ellos también.
+
+Hecho por [@jadrdev](https://github.com/jadrdev) · © 2026 Joshua A. Díaz Robayna

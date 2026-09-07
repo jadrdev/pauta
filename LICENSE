@@ -1,32 +1,40 @@
 Copyright (c) 2026 Joshua A. Díaz Robayna
 Todos los derechos reservados.
 
-El código de Pauta es público para que se pueda leer, estudiar y comprobar lo
-que hace la app con tus datos. No es de dominio público ni de código abierto.
+Este programa y su código son privativos. Se publican aquí para que cualquiera
+pueda leerlos y comprobar qué hace la app con su ordenador y con sus datos, no
+para que se reutilicen.
 
-SE PERMITE, sin permiso adicional:
+PUEDES:
 
-  · leer el código, estudiarlo y citarlo con atribución;
-  · compilarlo y ejecutarlo en tus propios dispositivos, para tu uso personal;
-  · modificarlo para ese uso personal.
+  · leer el código y estudiarlo;
+  · compilarlo y ejecutarlo en tus propios equipos, para tu uso personal;
+  · modificarlo para ese uso personal;
+  · abrir incidencias y proponer cambios a este mismo repositorio.
 
-NO SE PERMITE sin permiso escrito del titular:
+NO PUEDES, sin permiso escrito del titular:
 
-  · redistribuir el código o la app, con o sin cambios;
-  · publicar, ceder o vender obras derivadas, ni bajo otro nombre ni con otro
-    diseño;
-  · usarlo en un producto o servicio ofrecido a terceros, gratis o de pago.
+  · copiar, publicar, redistribuir ni vender el programa o su código, entero o
+    en partes, con cambios o sin ellos;
+  · crear obras derivadas, adaptaciones o bifurcaciones destinadas a
+    distribuirse, ni bajo otro nombre ni con otro diseño;
+  · incorporar ninguna parte a otro producto o servicio, gratuito o de pago;
+  · usarlo, ni ninguna parte, para entrenar o ajustar modelos de aprendizaje
+    automático.
 
-Para pedir permiso, o preguntar si algo entra en lo anterior, abre una
-incidencia en https://github.com/jadrdev/pauta/issues.
+Los cambios que se propongan a este repositorio quedan licenciados al titular
+del copyright para usarlos en este programa sin restricciones.
 
-Nota histórica: hasta el 4 de septiembre de 2026 este código se publicó bajo la
-licencia MIT. Ese permiso no se puede retirar de las copias que ya se
-distribuyeron: quien obtuvo el código antes de esa fecha lo conserva bajo la
-MIT para esa versión. Este aviso rige de aquí en adelante.
+Hasta el 4 de septiembre de 2026 este código se publicó bajo la licencia MIT.
+Ese permiso no se puede retirar de las copias que ya se obtuvieron con él: rige
+para aquellas versiones y no para nada publicado después.
+
+Para pedir permiso más allá de esta licencia, o para preguntar si algo entra en
+lo anterior: @jadrdev — https://github.com/jadrdev/pauta/issues
 
 EL PROGRAMA SE ENTREGA «TAL CUAL», SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O
 IMPLÍCITA, INCLUIDAS ENTRE OTRAS LAS DE COMERCIABILIDAD, IDONEIDAD PARA UN FIN
 DETERMINADO Y NO INFRACCIÓN. EN NINGÚN CASO EL TITULAR RESPONDERÁ POR NINGUNA
 RECLAMACIÓN, DAÑO U OTRA RESPONSABILIDAD, DERIVE DE CONTRATO, AGRAVIO O
-CUALQUIER OTRA CAUSA, QUE SURJA DE O EN RELACIÓN CON EL PROGRAMA O SU USO.
+CUALQUIER OTRA CAUSA, QUE SURJA DE O EN RELACIÓN CON EL PROGRAMA, SU USO O
+CUALQUIER OTRO TRATO CON ÉL.
