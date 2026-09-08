@@ -12,6 +12,9 @@ import PautaCore
 struct PautaIOSApp: App {
     @State private var store = Store()
     @State private var agenda = Agenda()
+    /// La bandeja de Recordatorios: el único puente que hoy funciona entre el
+    /// teléfono y el Mac, mientras la carpeta de iCloud siga fuera de alcance.
+    @State private var recordatorios = RemindersInbox()
 
     init() {
         // Antes de la interfaz: un aviso pulsado con la app cerrada se entrega
@@ -21,7 +24,7 @@ struct PautaIOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RaizView()
+            RaizView(recordatorios: recordatorios)
                 .environment(store)
                 .environment(agenda)
                 .tint(Papel.accentInk)
@@ -40,6 +43,8 @@ struct PautaIOSApp: App {
 /// resto —las listas de fondo, los proyectos, las áreas, las etiquetas— vive en
 /// «Más», porque una barra de siete iconos no se lee: se adivina.
 struct RaizView: View {
+    let recordatorios: RemindersInbox
+
     @Environment(Store.self) private var store
     @Environment(Agenda.self) private var agenda
     @Environment(\.scenePhase) private var fase
@@ -66,6 +71,9 @@ struct RaizView: View {
             Task {
                 await Avisos.reschedule(store.items)
                 await agenda.load(force: true)
+                // Al volver del fondo, porque en un teléfono es lo que pasa
+                // entre dictarle algo a Siri y abrir la app.
+                await importar()
             }
         }
         .task(id: store.items) {
@@ -74,6 +82,30 @@ struct RaizView: View {
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
             await Avisos.reschedule(store.items)
+        }
+        .task {
+            await importar()
+            // Y a partir de aquí, cada vez que cambie algo en Recordatorios:
+            // con la app abierta, lo dictado aparece sin tocar nada.
+            recordatorios.observar { Task { await importar() } }
+        }
+    }
+
+    /// Trae lo pendiente de la lista de Recordatorios a la bandeja.
+    ///
+    /// Silencioso: si no hay permiso todavía, o la lista está vacía, no
+    /// interrumpe. Y **no cambia de pestaña** aunque entre algo: mover la
+    /// pantalla debajo del dedo es peor que no avisar; la cuenta de la bandeja
+    /// ya lo dice.
+    private func importar() async {
+        do {
+            guard try await recordatorios.requestAccess() else { return }
+            let capturado = try await recordatorios.drain()
+            guard !capturado.isEmpty else { return }
+            store.addCaptured(capturado)
+        } catch {
+            // La captura remota es un extra: si falla, la app sigue siendo
+            // usable.
         }
     }
 }

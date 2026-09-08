@@ -25,8 +25,37 @@ public final class RemindersInbox {
 
     private let ek = EKEventStore()
     private let log = Logger(subsystem: "dev.jadrdev.pauta", category: "recordatorios")
+    /// El testigo del observador, en una caja: `deinit` no puede entrar en el
+    /// actor principal, y la caja —que sí es constante— permite soltarlo al
+    /// morir en vez de dejarlo avisando al vacío.
+    private let testigo = Testigo()
+
+    private final class Testigo: @unchecked Sendable {
+        var valor: (any NSObjectProtocol)?
+    }
 
     public init() {}
+
+    deinit {
+        if let valor = testigo.valor { NotificationCenter.default.removeObserver(valor) }
+    }
+
+    /// Avisa cuando algo cambia en Recordatorios.
+    ///
+    /// Sin esto la captura remota solo funcionaba **al arrancar la app**: dictabas
+    /// algo a Siri, no aparecía, y no había forma de saber que había que reiniciar.
+    /// Un puente que solo cruza una vez al día no es un puente.
+    ///
+    /// El aviso llega también cuando la propia importación marca el recordatorio
+    /// como completado, así que la segunda pasada no encuentra nada y para: quien
+    /// llame debe aguantar esa vuelta de más, que es más barata que razonar sobre
+    /// quién tocó qué.
+    public func observar(cambios: @escaping () -> Void) {
+        guard testigo.valor == nil else { return }
+        testigo.valor = NotificationCenter.default.addObserver(
+            forName: .EKEventStoreChanged, object: ek, queue: .main
+        ) { _ in cambios() }
+    }
 
     public static var authorization: EKAuthorizationStatus {
         EKEventStore.authorizationStatus(for: .reminder)

@@ -276,6 +276,9 @@ struct PautaApp: App {
     @State private var watcher: FolderWatcher?
     @State private var agenda = Agenda()
     @State private var reloj = Reloj()
+    /// La bandeja de Recordatorios vive aquí y no se crea en cada importación:
+    /// tiene que sobrevivir para poder vigilar los cambios.
+    @State private var recordatorios = RemindersInbox()
     @State private var ajustes = Ajustes.shared
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
@@ -303,6 +306,18 @@ struct PautaApp: App {
                 // Da igual qué cambió —hora, día, completada, borrada, llegada
                 // de otro dispositivo—: reconstruir es más barato que razonar
                 // sobre qué aviso quedó suelto.
+                // La captura remota se monta aquí y no en `RootView`: esa
+                // vista muere al cerrar la ventana, y con ella moriría el
+                // vigilante. Lo que dictas a Siri tiene que llegar también con
+                // la app viviendo en la barra de menús.
+                .task {
+                    guard !Launch.demo else { return }
+                    await importFromReminders(recordatorios, into: store, nav: nav)
+                    recordatorios.observar {
+                        Task { await importFromReminders(recordatorios, into: store,
+                                                         nav: nav) }
+                    }
+                }
                 .task {
                     // macOS restaura las ventanas que estaban abiertas al
                     // salir. Para la principal está bien —es donde estabas—,
@@ -426,7 +441,7 @@ struct PautaApp: App {
             // ayuda, junto a los otros dos, y en Hoy sigue la invitación.
             CommandGroup(after: .newItem) {
                 Button("Importar de Recordatorios") {
-                    Task { await importFromReminders(into: store, nav: nav) }
+                    Task { await importFromReminders(recordatorios, into: store, nav: nav) }
                 }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
             }
@@ -489,7 +504,6 @@ struct RootView: View {
         .background(Paper.bg)
         .task {
             // Al arrancar, para que lo apuntado en el iPhone esté ya aquí.
-            if !Launch.demo { await importFromReminders(into: store, nav: nav) }
             if let name = Launch.appearance {
                 NSApp?.appearance = NSAppearance(named: name)
             }
@@ -528,9 +542,9 @@ func mostrar(_ id: UUID, in store: Store, nav: Navigation) {
 }
 
 @MainActor
-func importFromReminders(into store: Store, nav: Navigation) async {
+func importFromReminders(_ inbox: RemindersInbox, into store: Store,
+                         nav: Navigation) async {
     do {
-        let inbox = RemindersInbox()
         guard try await inbox.requestAccess() else { return }
         let captured = try await inbox.drain()
         guard !captured.isEmpty else { return }

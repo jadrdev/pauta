@@ -517,10 +517,26 @@ bandeja y **se marca completado en Recordatorios**, para que fluya en vez de
 acumularse. Cada tarea guarda el identificador de origen, así que si el marcado
 fallara no se duplicaría en la siguiente importación.
 
-Se importa al arrancar la app y con `⌘⇧R`. El permiso se pide la primera vez; si
-lo deniegas, la app funciona igual sin la captura remota. Ojo: **una vez
-denegado, macOS no vuelve a preguntar** y hay que activarlo a mano en Ajustes →
-Privacidad y seguridad → Recordatorios.
+Se importa **en cuanto cambia algo en Recordatorios**, al arrancar la app, y a
+mano con `⌘⇧R`. Lo del cambio hizo falta arreglarlo: al principio solo se
+importaba al arrancar, así que dictabas algo a Siri, no aparecía, y no había
+manera de saber que la app tenía que reiniciarse. Un puente que solo cruza una
+vez al día no es un puente.
+
+El vigilante se monta con `.EKEventStoreChanged` sobre el propio almacén, y vive
+en la app y no en la ventana: lo que dictes tiene que llegar también con Pauta
+viviendo en la barra de menús y nada abierto. El aviso llega también cuando la
+importación marca el recordatorio como completado, así que hay una segunda pasada
+que no encuentra nada y para — más barata que razonar sobre quién tocó qué.
+
+**También funciona en el [teléfono](docs/ios.md)**, que es donde de verdad se le
+dicta a Siri: importa al abrir, al volver del fondo y al cambiar la lista. Ahí no
+cambia de pestaña cuando entra algo —mover la pantalla debajo del dedo es peor
+que no avisar—; la cuenta de la bandeja ya lo dice.
+
+El permiso se pide la primera vez; si lo deniegas, la app funciona igual sin la
+captura remota. Ojo: **una vez denegado, macOS no vuelve a preguntar** y hay que
+activarlo a mano en Ajustes → Privacidad y seguridad → Recordatorios.
 
 ```bash
 ./build/Pauta.app/Contents/MacOS/Pauta --reminders-status
