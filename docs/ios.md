@@ -63,6 +63,19 @@ que permite tener algo instalable hoy sin cuenta de desarrollador. El guion es
 además el único sitio que compila estas fuentes: no están en `Package.swift`,
 porque un objetivo que importa UIKit rompería `swift build` en el Mac.
 
+## Lo que dicta Siri llega aquí
+
+La [captura desde Recordatorios](../README.md#captura-desde-recordatorios)
+funciona igual que en el Mac, y en un teléfono es donde tiene sentido de verdad:
+importa al abrir la app, al volver del fondo y **en cuanto cambia la lista**, así
+que lo que le dictes a Siri aparece en la bandeja sin tocar nada.
+
+No cambia de pestaña cuando entra algo. Mover la pantalla debajo del dedo es peor
+que no avisar; la cuenta de la bandeja ya lo dice.
+
+Mientras la carpeta de iCloud siga fuera de alcance, esto es **el único puente
+que hay entre el teléfono y el Mac**, y funciona sin pagar nada.
+
 ## Lo que el teléfono todavía no puede
 
 - **Sincronizar.** En iOS la app va en sandbox y no puede entrar en la carpeta de
