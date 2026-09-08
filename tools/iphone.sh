@@ -25,29 +25,28 @@ INFO=$(xcrun devicectl list devices --json-output /dev/stdout --quiet 2>/dev/nul
     | /usr/bin/python3 -c '
 import json, sys
 
-# Qué cuenta como «ese iPhone está delante». Ha costado dos intentos:
+# Vale **cualquier iPhone físico emparejado**, y esta es la tercera versión de
+# este filtro. Las dos anteriores intentaban adivinar si estaba alcanzable a
+# partir de la foto que da `devicectl`, y las dos se equivocaron:
 #
-#   · `physical` descarta los simuladores, que también son iPhone para
-#     devicectl y aparecen conectados. Sin esto se instala en el simulador y el
-#     error habla de rutas que no existen.
-#   · `tunnelState` **no** vale por sí solo: es el túnel de depuración, se
-#     duerme y solo despierta cuando algo le habla. Por cable suele estar
-#     dormido, y un teléfono enchufado se declaraba ausente.
-#   · `transportType == wired` tampoco: por Wi-Fi el mismo teléfono aparece
-#     como `localNetwork`, y volvía a declararse ausente con la app en la mano.
+#   · `tunnelState == connected` — es el túnel de depuración: se duerme y solo
+#     despierta cuando algo le habla. Por cable suele estar dormido.
+#   · `transportType == wired` — por Wi-Fi el mismo teléfono es `localNetwork`.
 #
-# Lo que decide es que esté **emparejado** y alcanzable de alguna forma. El
-# cable primero, que es más rápido y no depende de la red.
+# Y por red puede estar emparejado, despierto y con el túnel caído a la vez. Ese
+# estado no se puede leer sin intentar hablarle, así que no se lee: se elige el
+# mejor candidato y **que decida el intento de instalar**, que sabe más que
+# nosotros y da un error de verdad si no llega. `physical` se queda, que sin él
+# se instala en el simulador y el error habla de rutas que no existen.
 def puntos(x):
     c = x.get("connectionProperties", {})
-    return (2 if c.get("transportType") == "wired" else
-            1 if c.get("tunnelState") == "connected" else 0)
+    return ((2 if c.get("transportType") == "wired" else 0)
+            + (1 if c.get("tunnelState") == "connected" else 0))
 
 candidatos = [x for x in json.load(sys.stdin)["result"]["devices"]
               if x.get("hardwareProperties", {}).get("deviceType") == "iPhone"
               and x.get("hardwareProperties", {}).get("reality") == "physical"
-              and x.get("connectionProperties", {}).get("pairingState") == "paired"
-              and puntos(x) > 0]
+              and x.get("connectionProperties", {}).get("pairingState") == "paired"]
 if candidatos:
     mejor = max(candidatos, key=puntos)
     print(mejor["hardwareProperties"]["udid"],
@@ -56,7 +55,7 @@ if candidatos:
 ')
 UDID=${INFO%% *}
 [[ -n "$UDID" ]] || {
-    echo "no veo ningún iPhone emparejado y alcanzable" >&2
+    echo "no hay ningún iPhone emparejado con este Mac" >&2
     echo "  (enchúfalo, o compruébalo con: xcrun devicectl list devices)" >&2
     exit 1
 }

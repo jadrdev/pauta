@@ -117,17 +117,20 @@ exige además que el dispositivo sea `physical`, porque para `devicectl` los
 simuladores también son iPhone y aparecen conectados — sin eso, instala en el
 simulador y el error habla de rutas que no existen.
 
-Lo que decide es que esté **emparejado y alcanzable**, y eso costó dos intentos
-porque cada señal por separado miente:
+Lo que decide es que esté **emparejado**, y nada más. Esta es la tercera versión
+del filtro; las dos anteriores intentaban adivinar si el teléfono estaba
+alcanzable leyendo la foto que da `devicectl`, y las dos se equivocaron:
 
 | Señal | Por qué no basta |
 |---|---|
 | `tunnelState == connected` | Es el túnel de depuración: se duerme y solo despierta cuando algo le habla. Por cable suele estar dormido, y el teléfono enchufado se declaraba ausente |
-| `transportType == wired` | Por Wi-Fi el mismo teléfono aparece como `localNetwork`, y volvía a declararse ausente con la app en la mano |
+| `transportType == wired` | Por Wi-Fi el mismo teléfono es `localNetwork`, y volvía a declararse ausente con la app en la mano |
 
-Así que valen las dos: cable, o túnel vivo. El cable primero, que es más rápido y
-no depende de la red. Y el guion **dice a qué teléfono va y por dónde**, para que
-el fallo se vea antes de instalar en el sitio equivocado.
+Y por red puede estar emparejado, despierto y con el túnel caído **a la vez**.
+Ese estado no se puede leer sin intentar hablarle, así que no se lee: se elige el
+mejor candidato —cable primero, luego túnel vivo— y **decide el intento de
+instalar**, que sabe más y da un error de verdad si no llega. El guion dice a qué
+teléfono va y por dónde, para que un fallo así se vea antes y no después.
 
 En el proyecto el núcleo va como **objetivo propio** y no como dependencia del
 paquete: dependiendo del paquete, Xcode intenta compilar todos sus objetivos
