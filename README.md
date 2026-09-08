@@ -18,6 +18,7 @@ y con tus datos en tu propia carpeta de iCloud.</p>
 
 <p>
 <a href="docs/ios.md"><strong>La app de iOS</strong></a>&nbsp; ·&nbsp;
+<a href="docs/compilar.md"><strong>Compilar y firmar</strong></a>&nbsp; ·&nbsp;
 <a href="docs/tecnica.md"><strong>Cómo se guarda y se sincroniza</strong></a>
 </p>
 
@@ -701,7 +702,7 @@ app, y volverlos ajustables sería pedirte que los tomes tú sin darte con qué.
 
 Se guardan en `UserDefaults` y no en la carpeta de datos: son preferencias de
 **este Mac** —la hora a la que te levantas aquí, el sitio que te sobra en esta
-pantalla— y no cosas que deban viajar con las tareas. En [maqueta](#modo-maqueta)
+pantalla— y no cosas que deban viajar con las tareas. En [maqueta](docs/compilar.md#modo-maqueta)
 son de mentira y en su propio dominio: mirar el diseño no debe cambiarte los
 ajustes de verdad.
 
@@ -782,62 +783,19 @@ xattr -dr com.apple.quarantine /Applications/Pauta.app
 No lo hagas con una app que no sepas de dónde viene. Aquí el código está entero
 a la vista y puedes compilarlo tú, que es la otra salida y la mejor.
 
-Para generar el disco:
-
-```bash
-./tools/make-dmg.sh
-```
-
-Avisa de si la firma sirve para repartir o solo para probar, y escupe el sha256
-para poder publicarlo junto al archivo.
-
+Y si prefieres compilarla: **[compilar, firmar y empaquetar →](docs/compilar.md)**.
 ## Compilar y ejecutar
 
 ```bash
-./run.sh
+./run.sh      # compila y abre la app
+swift test    # los 194 tests del núcleo
 ```
 
-Compila y abre la app. Solo `./build.sh` genera `build/Pauta.app` sin lanzarla —
-puedes arrastrarla a `/Applications` cuando te guste cómo va.
+Eso es todo lo que hace falta para verla funcionando. La firma, el empaquetado
+del disco y el modo maqueta —datos de muestra en memoria para revisar el diseño
+sin tocar los tuyos— tienen su propio capítulo:
 
-```bash
-swift test
-```
-
-Los tests cubren `PautaCore`, que no depende de la interfaz.
-
-### Firma
-
-`build.sh` firma con la primera identidad «Apple Development» del llavero que no
-esté revocada, o con la que fuerces en `SIGN_ID`. Si no encuentra ninguna, cae a
-firma ad-hoc y lo avisa.
-
-No es un detalle cosmético. Con firma ad-hoc el hash del binario cambia con cada
-cambio de código, y TCC —el sistema de permisos— identifica las apps por su
-firma: cada build sería una app nueva para el sistema, así que los permisos de
-calendario, recordatorios o accesibilidad se pedirían otra vez en cada
-compilación, dejando entradas basura en Ajustes de Privacidad.
-
-Con una identidad de desarrollador el requisito designado pasa a basarse en el
-identificador y el certificado:
-
-```
-designated => identifier "dev.jadrdev.pauta" and anchor apple generic
-              and certificate leaf[subject.CN] = "Apple Development: …"
-```
-
-Comprobado: tras un cambio real de código el `cdhash` cambia y ese requisito no,
-así que los permisos concedidos sobreviven a las recompilaciones. Esto es lo que
-desbloquea las integraciones con Calendario y Recordatorios.
-
-La letra pequeña: los certificados «Apple Development» caducan (el actual, en
-mayo de 2027). Cuando caduque habrá que renovarlo y volver a conceder permisos.
-
-No hace falta abrir Xcode, pero sí tenerlo instalado: los scripts usan
-`DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer` porque
-`xcode-select` de este equipo apunta a las Command Line Tools. Si algún día
-cambias eso (`sudo xcode-select -s /Applications/Xcode-beta.app`), los scripts
-siguen funcionando.
+**[Compilar, firmar y empaquetar →](docs/compilar.md)**
 
 ## Dónde se guardan los datos
 
@@ -1032,25 +990,6 @@ representar. A tamaño de Dock (128 px) no se ven.
 
 Con un SVG o un PNG a 1024+ con fondo transparente se regenera todo perfecto en
 un comando: sustituye `Resources/monogram.png` y ejecuta `make-icon.py`.
-
-## Modo maqueta
-
-Para revisar el diseño sin tocar tus datos reales: arranca con tareas de muestra
-en memoria, que no se escriben en disco, y permite forzar la apariencia.
-
-```bash
-./build/Pauta.app/Contents/MacOS/Pauta --demo --light
-./build/Pauta.app/Contents/MacOS/Pauta --demo --dark --view 3
-```
-
-`--view 1…6` elige la lista de arranque, en el orden de la barra lateral.
-Combinado con `--dump` inspecciona la maqueta en vez de los datos reales.
-
-`--alta-rapida` abre el panel del atajo al arrancar. Está para poder mirarlo y
-comprobar que el foco cae en el campo sin inyectar el atajo por debajo: un
-⌃Espacio sintético obliga a que el foco salte entre apps, y eso ni prueba lo que
-hay que probar ni sale gratis.
-
 ## Estructura
 
 ```
@@ -1090,6 +1029,7 @@ Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
   DetalleView.swift       la ficha de una tarea
 Tests/PautaCoreTests/     tests del núcleo (swift test)
 docs/ios.md               el capítulo del teléfono
+docs/compilar.md          compilar, firmar, empaquetar y el modo maqueta
 docs/tecnica.md           persistencia, orden, sincronización y decodificación
 ```
 
