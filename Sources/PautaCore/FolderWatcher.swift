@@ -1,5 +1,12 @@
 import Foundation
 
+// FSEvents no existe en iOS. En el teléfono el equivalente para una carpeta
+// sincronizada es `NSMetadataQuery`, y hará falta el día que iOS pueda entrar en
+// el contenedor de iCloud —que exige entitlements y cuenta de pago—. Hasta
+// entonces no hay carpeta compartida que vigilar, así que el vigilante entero se
+// queda fuera en vez de existir sin hacer nada.
+#if os(macOS)
+
 /// Avisa cuando algo cambia dentro de una carpeta, incluidos los subdirectorios.
 ///
 /// Se usa FSEvents y no `DispatchSource.makeFileSystemObjectSource`: este último
@@ -60,3 +67,4 @@ public final class FolderWatcher {
 
     deinit { stop() }
 }
+#endif

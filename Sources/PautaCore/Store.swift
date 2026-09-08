@@ -92,12 +92,20 @@ public final class Store {
     /// entitlements y un perfil de aprovisionamiento embebido, que no encajan con
     /// un bundle montado a mano. iCloud Drive es una carpeta normal, y la app no
     /// está en sandbox, así que puede escribir en ella directamente.
+    /// En iOS es siempre `nil`: la app va en sandbox y no puede entrar en la
+    /// carpeta de iCloud Drive por ruta. Ahí hace falta el contenedor de
+    /// ubicuidad, que exige entitlements y cuenta de desarrollador de pago. Sin
+    /// eso el teléfono guarda en su propia carpeta, que es local pero funciona.
     public static var iCloudRoot: URL? {
+        #if os(macOS)
         let drive = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs",
                                     isDirectory: true)
         guard FileManager.default.fileExists(atPath: drive.path) else { return nil }
         return drive.appendingPathComponent("Pauta", isDirectory: true)
+        #else
+        nil
+        #endif
     }
 
     /// Carpeta local, que es también el respaldo si iCloud no está disponible.

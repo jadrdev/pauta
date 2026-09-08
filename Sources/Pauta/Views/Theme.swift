@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import PautaCore
 
 extension NSColor {
     /// Color a partir de un hexadecimal 0xRRGGBB.
@@ -13,6 +14,8 @@ extension NSColor {
 
 extension Color {
     /// Color dinámico: resuelve claro u oscuro según la apariencia del sistema.
+    static func dyn(_ par: Paleta.Par) -> Color { dyn(par.claro, par.oscuro) }
+
     static func dyn(_ light: UInt32, _ dark: UInt32) -> Color {
         Color(nsColor: NSColor(name: nil) { appearance in
             let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
@@ -27,23 +30,25 @@ extension Color {
 /// WCAG AA (>= 4.5) sobre los fondos de contenido y de barra lateral en ambos
 /// temas. Si tocas un fondo, recalcula los grises.
 enum Paper {
-    static let bg       = Color.dyn(0xFAFAF8, 0x101317)
-    static let bgSide   = Color.dyn(0xF1F2EF, 0x0A0D11)
-    static let ink      = Color.dyn(0x0E1114, 0xEDEFF2)
-    static let inkSoft  = Color.dyn(0x5A5F66, 0xA0A6AE)
-    static let inkFaint = Color.dyn(0x676D75, 0x8B929B)
-    static let hairline = Color.dyn(0xE3E4E0, 0x22262B)
+    // Los números viven en `Paleta`, dentro del núcleo, para que la interfaz del
+    // teléfono use exactamente los mismos y no una copia que se quede atrás.
+    static let bg       = Color.dyn(Paleta.bg)
+    static let bgSide   = Color.dyn(Paleta.bgSide)
+    static let ink      = Color.dyn(Paleta.ink)
+    static let inkSoft  = Color.dyn(Paleta.inkSoft)
+    static let inkFaint = Color.dyn(Paleta.inkFaint)
+    static let hairline = Color.dyn(Paleta.hairline)
 
     /// Verde de marca. Solo para rellenos, bordes y fondos de selección.
-    static let accent   = Color.dyn(0x10E888, 0x10E888)
+    static let accent   = Color.dyn(Paleta.accent)
     /// Verde para texto. El puro sobre fondo claro da contraste 1.56, así que
     /// en tema claro se oscurece a un verde profundo.
-    static let accentInk = Color.dyn(0x097D49, 0x10E888)
+    static let accentInk = Color.dyn(Paleta.accentInk)
     /// Aviso: fecha límite vencida o de hoy. Calculado para pasar AA sobre los
     /// cuatro fondos, igual que los grises — el rojo puro se queda en 3.89.
-    static let warning  = Color.dyn(0xC13E34, 0xE2493D)
+    static let warning  = Color.dyn(Paleta.warning)
     /// Lo que va encima del verde: el negro de marca.
-    static let onAccent = Color.dyn(0x080C10, 0x080C10)
+    static let onAccent = Color.dyn(Paleta.onAccent)
 }
 
 /// Tipografía: sans geométrica, como el wordmark de la identidad.

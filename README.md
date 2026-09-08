@@ -749,6 +749,62 @@ Apple` que macOS inserta en el menú de ayuda. Apple no tiene nada que ver con
 esta app; al lado está `Informar de un problema`, que va a las incidencias del
 repositorio.
 
+## La app de iOS
+
+Existe y arranca. Comparte con el Mac **todo el núcleo y ninguna vista**:
+
+```
+PautaCore    3.010 líneas   modelo, almacén, consultas, avisos, sincronización
+Pauta        3.857 líneas   la interfaz de macOS
+PautaIOS       ~400 líneas   la interfaz del teléfono
+```
+
+Ninguna vista compartida es una decisión, no una pereza. Un teléfono no se maneja
+como un Mac: no cabe la barra lateral, no hay clic derecho y la mano tapa media
+pantalla. Así que las listas son las mismas —las de verdad, calculadas por el
+mismo código— y la forma de andar por ellas es distinta: **fichas que se
+deslizan** en vez de barra lateral, y el campo de alta **fijo abajo**, donde
+llega el pulgar, porque apuntar es lo que más se hace y esconderlo tras un «+»
+añade un gesto a lo único que no puede costar nada.
+
+Lo que sí se comparte del diseño son los colores, y por eso salieron del tema de
+macOS a [`Paleta`](Sources/PautaCore/Paleta.swift) en el núcleo: números en
+crudo, que cada plataforma convierte a su manera —`NSColor` con apariencias,
+`UIColor` con rasgos—. Con dos tablas, la primera corrección de contraste dejaría
+una interfaz atrás sin que nadie se enterase.
+
+```bash
+./tools/ios.sh              # compila e instala en el simulador
+./tools/ios.sh "iPhone Air" # en otro modelo
+```
+
+Sin proyecto de Xcode, igual que el Mac: se compila con `swiftc` y el `.app` se
+monta a mano. **Para el simulador eso basta y no hay que firmar nada**, que es lo
+que permite tener algo instalable hoy sin cuenta de desarrollador. El guion es
+además el único sitio que compila estas fuentes: no están en `Package.swift`,
+porque un objetivo que importa UIKit rompería `swift build` en el Mac.
+
+### Lo que el teléfono todavía no puede
+
+- **Sincronizar.** En iOS la app va en sandbox y no puede entrar en la carpeta de
+  iCloud Drive por ruta, que es como lo hace el Mac. Ahí hace falta el contenedor
+  de ubicuidad, con entitlements y **cuenta de desarrollador de pago**. Sin eso
+  `Store.iCloudRoot` es `nil` por construcción y el teléfono guarda en su propia
+  carpeta: funciona, pero solo. Hasta entonces el puente real entre los dos es
+  [Recordatorios](#captura-desde-recordatorios), que sí sincroniza gratis.
+- **Enterarse de cambios de fuera.** `FolderWatcher` usa FSEvents, que no existe
+  en iOS, así que se compila fuera. En su lugar recarga al volver del fondo. El
+  equivalente para una carpeta sincronizada sería `NSMetadataQuery`, y hace falta
+  el día que haya iCloud.
+- **Instalarse en un iPhone de verdad.** El simulador no pide firma; un teléfono,
+  sí. Con una cuenta gratuita Xcode firma para siete días; sin límite, con la de
+  pago. Ese día toca crear un `.xcodeproj`, que es donde se configura la firma.
+
+Lo que sí hace ya: las cinco listas con sus cuentas, apuntar, completar, borrar
+deslizando, una ficha por tarea para cambiarle el día, y **los avisos** — el
+repaso del día se programó solo en el simulador y pidió permiso, que es la señal
+de que el núcleo entero está vivo ahí.
+
 ## Instalar
 
 El disco `.dmg` va en la [página de versiones](https://github.com/jadrdev/pauta/releases).
@@ -1128,6 +1184,7 @@ Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
   Cuenta.swift            cuánto falta para lo siguiente
   Duracion.swift          cuánto dura cada cosa y cuánto suma el día
   Ajustes.swift           las preferencias, en UserDefaults
+  Paleta.swift            los colores en crudo, que usan las dos interfaces
   Atajo.swift             una combinación de teclas y si sirve como atajo
   Repaso.swift            el repaso de la mañana
 Sources/Pauta/            la app de macOS
@@ -1142,6 +1199,9 @@ Sources/Pauta/            la app de macOS
   Views/Ayuda.swift       atajos y estado de los permisos
   Views/AjustesView.swift ajustes y arranque al iniciar sesión
   Views/GrabadorDeAtajo.swift  grabar una combinación y nombrar las teclas
+Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
+  Tema.swift              la paleta compartida, resuelta con UIKit
+  PautaIOSApp.swift       listas, alta, ficha de tarea
 Tests/PautaCoreTests/     tests del núcleo (swift test)
 ```
 
@@ -1151,9 +1211,12 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
   donde encajarían sin inventar nada. Se dejó fuera para no cargar de golpe una
   ventana de semanas de calendario: primero conviene ver si en `Hoy` estorban o
   ayudan
-- Widget y app de iOS — necesitan proyecto de Xcode y cuenta de desarrollador.
-  `PautaCore` ya está extraído para ese salto, y la sincronización ya está
-  hecha: la misma carpeta de iCloud le sirve a un iPhone sin tocar nada
+- **La [app de iOS](#la-app-de-ios) en un iPhone de verdad**, con su
+  sincronización. Arranca y funciona en el simulador; lo que falta es la cuenta
+  de desarrollador de pago: sin ella no hay firma para el dispositivo ni
+  entitlement de iCloud
+- Widget — es WidgetKit, o sea un `.appex` embebido, proyecto de Xcode y la misma
+  cuenta
 
 ## Licencia
 
