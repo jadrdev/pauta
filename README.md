@@ -883,6 +883,25 @@ existe. Lo que ya pasó se apaga, y no admite deslizar: no es tuyo, se lee y
 punto. El permiso se pide desde la propia lista de Hoy, con la misma invitación
 que el Mac, y solo mientras no se haya contestado.
 
+### Los ajustes del teléfono
+
+En `Más ▸ Ajustes`, y son **tres de los cinco del Mac**: el repaso del día, el
+margen del aviso y cuánto aplaza. Los otros dos no existen en un teléfono
+—arrancar al iniciar sesión y la cuenta atrás de la barra de menús— y el atajo
+global tampoco. Se guardan en el aparato y no viajan: la hora a la que te
+levantas mirando el móvil no tiene por qué ser la del Mac.
+
+Y llevan dos cosas que en el Mac viven en otro sitio, porque en un teléfono no
+hay menú de la app donde ponerlas y son justo lo que se viene a buscar aquí:
+
+- **Los permisos** —avisos y calendario—, que en el Mac están en la ayuda. Sin
+  preguntar se piden desde ahí; denegados, se enlaza a los ajustes del sistema,
+  que es el único sitio donde esa decisión se cambia.
+- **El «Acerca de»**: versión, enlaces, autoría, y **dónde están los datos**. Con
+  la parte incómoda dicha: en este teléfono, y todavía sin sincronizar con el
+  Mac. Es la pregunta que se hace cualquiera que tenga las dos apps, y callarla
+  haría parecer que está roto lo que solo está pendiente.
+
 Lo que sí hace ya: las cinco listas con sus cuentas, apuntar, completar, borrar
 deslizando, una ficha por tarea para cambiarle el día, y **los avisos** — el
 repaso del día se programó solo en el simulador y pidió permiso, que es la señal
@@ -1279,6 +1298,7 @@ Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
   Duracion.swift          cuánto dura cada cosa y cuánto suma el día
   Ajustes.swift           las preferencias, en UserDefaults
   Paleta.swift            los colores en crudo, que usan las dos interfaces
+  Enlaces.swift           las direcciones, que son las mismas en las dos apps
   Atajo.swift             una combinación de teclas y si sirve como atajo
   Repaso.swift            el repaso de la mañana
 Sources/Pauta/            la app de macOS
@@ -1300,6 +1320,7 @@ Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
   FilaView.swift          la fila y sus marcas
   Captura.swift           el botón flotante y el campo de apuntar
   EventoRow.swift         un evento del calendario en la lista
+  AjustesView.swift       ajustes, permisos y acerca de
   MasView.swift           listas de fondo, proyectos, áreas y etiquetas
   DetalleView.swift       la ficha de una tarea
 Tests/PautaCoreTests/     tests del núcleo (swift test)

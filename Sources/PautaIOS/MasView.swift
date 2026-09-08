@@ -50,6 +50,15 @@ struct MasView: View {
                         }
                     }
                 }
+                // Al final, siempre: los ajustes son lo que menos se abre, y
+                // ponerlos entre las listas los cruza con lo que sí se usa.
+                Section {
+                    NavigationLink {
+                        AjustesView()
+                    } label: {
+                        Label("Ajustes", systemImage: "gearshape")
+                    }
+                }
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)

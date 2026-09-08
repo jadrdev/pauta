@@ -2,15 +2,6 @@ import SwiftUI
 import AppKit
 import PautaCore
 
-/// Enlaces de la app. En un solo sitio para que no se dupliquen a medias.
-enum Enlaces {
-    static let repositorio = URL(string: "https://github.com/jadrdev/pauta")!
-    static let autor = URL(string: "https://github.com/jadrdev")!
-    static let guia = URL(string: "https://github.com/jadrdev/pauta#readme")!
-    static let novedades = URL(string: "https://github.com/jadrdev/pauta/releases")!
-    static let problemas = URL(string: "https://github.com/jadrdev/pauta/issues")!
-}
-
 /// Lo que la app sabe de sí misma, leído del bundle.
 ///
 /// Del `Info.plist` y no de constantes en el código: la versión la pone el
