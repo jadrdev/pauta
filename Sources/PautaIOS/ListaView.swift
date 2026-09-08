@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import PautaCore
 
 /// Una lista de tareas.
@@ -25,7 +26,15 @@ struct ListaView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottomTrailing) {
-                contenido
+                VStack(spacing: 0) {
+                    // Fuera de la lista y no dentro: con cero tareas y cero
+                    // eventos se dibuja el estado vacío, y ahí dentro la
+                    // invitación no llegaba a existir. En un teléfono recién
+                    // instalado —que es justo cuando hace falta— era
+                    // inalcanzable.
+                    avisoDelCalendario
+                    contenido
+                }
                 if !apuntando { BotonDeApuntar { apuntando = true } }
             }
             .background(Papel.bg)
@@ -63,7 +72,6 @@ struct ListaView: View {
                     .listRowBackground(Papel.bg)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 6, trailing: 16))
-                invitacionAlCalendario
                 // Hoy es el día entero, no solo la lista de tareas: lo que hay
                 // que hacer y lo que ya está comprometido, en el orden en que va
                 // a ocurrir. La mezcla la hace el núcleo, igual que en el Mac.
@@ -121,34 +129,58 @@ struct ListaView: View {
         return "\(e) · \(tareas)"
     }
 
-    /// La invitación a enseñar el calendario, solo mientras no se haya
-    /// preguntado. Si se dijo que no, esa decisión se cambia en los ajustes del
-    /// sistema y no volviendo a preguntar aquí.
-    @ViewBuilder private var invitacionAlCalendario: some View {
-        if case .today = perspectiva, eventos.isEmpty,
-           Agenda.authorization == .notDetermined {
-            Button {
-                Task {
-                    await agenda.requestAccess()
-                    await agenda.load(force: true)
+    /// Lo que hay que decir sobre el calendario, según lo que haya contestado
+    /// el sistema.
+    ///
+    /// Tres estados y no dos. El tercero es el que se escapa: iOS ofrece
+    /// **«Solo añadir»** junto a «Acceso completo», y con esa respuesta la app
+    /// no puede **leer** ni un evento. Sin decirlo, Hoy se queda vacío y parece
+    /// que la función está rota cuando lo que hay es un permiso a medias.
+    @ViewBuilder private var avisoDelCalendario: some View {
+        if case .today = perspectiva {
+            switch Agenda.authorization {
+            case .notDetermined:
+                franja("calendar.badge.plus", "MOSTRAR LOS EVENTOS DEL CALENDARIO",
+                       Papel.accentInk, Papel.accent.opacity(0.12)) {
+                    Task {
+                        await agenda.requestAccess()
+                        await agenda.load(force: true)
+                    }
                 }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "calendar.badge.plus").font(.system(size: 13))
-                    Text("MOSTRAR LOS EVENTOS DEL CALENDARIO").rubrica(Papel.accentInk)
-                    Spacer(minLength: 0)
+            case .fullAccess:
+                EmptyView()
+            default:
+                // Denegado, restringido o «solo añadir»: la decisión ya está
+                // tomada y solo se cambia en los ajustes del sistema, porque el
+                // diálogo no vuelve a salir.
+                franja("calendar.badge.exclamationmark",
+                       "PAUTA NO PUEDE LEER TU CALENDARIO",
+                       Papel.warning, Papel.warning.opacity(0.12)) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
                 }
-                .foregroundStyle(Papel.accentInk)
-                .padding(.vertical, 11)
-                .padding(.horizontal, 12)
-                .background(Papel.accent.opacity(0.12),
-                            in: RoundedRectangle(cornerRadius: 9))
             }
-            .buttonStyle(.plain)
-            .listRowBackground(Papel.bg)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 10, trailing: 16))
         }
+    }
+
+    private func franja(_ icono: String, _ texto: String, _ tinta: Color,
+                        _ fondo: Color, _ accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            HStack(spacing: 8) {
+                Image(systemName: icono).font(.system(size: 13))
+                Text(texto).rubrica(tinta)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold))
+            }
+            .foregroundStyle(tinta)
+            .padding(.vertical, 11)
+            .padding(.horizontal, 12)
+            .background(fondo, in: RoundedRectangle(cornerRadius: 9))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
     }
 }
 
