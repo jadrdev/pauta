@@ -21,31 +21,46 @@ command -v xcodegen >/dev/null || {
 
 # El primer iPhone físico y conectado. El UDID no se escribe a mano: cambia de
 # teléfono y de cable, y un UDID pegado en un guion caduca sin avisar.
-UDID=$(xcrun devicectl list devices --json-output /dev/stdout --quiet 2>/dev/null \
+INFO=$(xcrun devicectl list devices --json-output /dev/stdout --quiet 2>/dev/null \
     | /usr/bin/python3 -c '
 import json, sys
-# «physical» descarta los simuladores, que también son iPhone para devicectl y
-# aparecen conectados: sin ese filtro se instala en el simulador y el error que
-# sale habla de rutas que no existen.
-#
-# Y **no** se mira `tunnelState`: ese es el túnel de depuración, que se duerme
-# solo y solo se levanta cuando algo le habla al teléfono. Filtrando por él, un
-# iPhone enchufado y emparejado se declaraba ausente. Lo que decide es que esté
-# emparejado; por cable primero, que es el que está delante.
-def sirve(x):
-    h = x.get("hardwareProperties", {})
-    c = x.get("connectionProperties", {})
-    return (h.get("deviceType") == "iPhone" and h.get("reality") == "physical"
-            and c.get("pairingState") == "paired"
-            and c.get("transportType") == "wired")
 
-for x in json.load(sys.stdin)["result"]["devices"]:
-    if sirve(x):
-        print(x["hardwareProperties"]["udid"])
-        break
+# Qué cuenta como «ese iPhone está delante». Ha costado dos intentos:
+#
+#   · `physical` descarta los simuladores, que también son iPhone para
+#     devicectl y aparecen conectados. Sin esto se instala en el simulador y el
+#     error habla de rutas que no existen.
+#   · `tunnelState` **no** vale por sí solo: es el túnel de depuración, se
+#     duerme y solo despierta cuando algo le habla. Por cable suele estar
+#     dormido, y un teléfono enchufado se declaraba ausente.
+#   · `transportType == wired` tampoco: por Wi-Fi el mismo teléfono aparece
+#     como `localNetwork`, y volvía a declararse ausente con la app en la mano.
+#
+# Lo que decide es que esté **emparejado** y alcanzable de alguna forma. El
+# cable primero, que es más rápido y no depende de la red.
+def puntos(x):
+    c = x.get("connectionProperties", {})
+    return (2 if c.get("transportType") == "wired" else
+            1 if c.get("tunnelState") == "connected" else 0)
+
+candidatos = [x for x in json.load(sys.stdin)["result"]["devices"]
+              if x.get("hardwareProperties", {}).get("deviceType") == "iPhone"
+              and x.get("hardwareProperties", {}).get("reality") == "physical"
+              and x.get("connectionProperties", {}).get("pairingState") == "paired"
+              and puntos(x) > 0]
+if candidatos:
+    mejor = max(candidatos, key=puntos)
+    print(mejor["hardwareProperties"]["udid"],
+          mejor.get("deviceProperties", {}).get("name", "iPhone"),
+          mejor.get("connectionProperties", {}).get("transportType", "?"))
 ')
-[[ -n "$UDID" ]] || { echo "no veo ningún iPhone conectado" >&2; exit 1; }
-echo "▸ iPhone $UDID"
+UDID=${INFO%% *}
+[[ -n "$UDID" ]] || {
+    echo "no veo ningún iPhone emparejado y alcanzable" >&2
+    echo "  (enchúfalo, o compruébalo con: xcrun devicectl list devices)" >&2
+    exit 1
+}
+echo "▸ ${INFO#* }  ·  $UDID"
 
 xcodegen generate --quiet
 xcodebuild -project Pauta.xcodeproj -scheme Pauta -destination "id=$UDID" \
