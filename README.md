@@ -552,6 +552,49 @@ atribuye la petición al proceso responsable, que es la consola.
 Escribir tareas de Pauta como recordatorios, en cambio, no está previsto: duplica
 y obliga a resolver conflictos en los dos lados.
 
+## Vaciar la bandeja
+
+La bandeja existe para poder **apuntar sin decidir**. El precio es decidir
+después, y ese después no llega: se abre una lista de sesenta cosas, hay que
+elegir por dónde empezar —que es otra decisión, la más cara—, se cierra la lista
+y no se vuelve. Así es como una bandeja se convierte en el sitio donde las cosas
+van a morir.
+
+`VACIAR`, en la cabecera de la bandeja, lo da la vuelta: **una tarea delante,
+cinco decisiones, la siguiente.**
+
+```
+VACIAR LA BANDEJA                    1 DE 12   Cerrar
+
+Comprar entradas del concierto
+
+  ☀  Hoy                                    H
+  🌅 Mañana                                  M
+  📅 Próxima semana                          S
+  📦 Algún día                               A
+  📁 A un proyecto                           ▾
+  →  Saltar        ↩       🗑 Eliminar      ⌫
+```
+
+No se puede reordenar ni priorizar, y es a propósito: esto no sirve para
+organizar la bandeja, sirve para dejarla vacía. Todas las decisiones la sacan de
+ahí —una que la dejara donde estaba no sería una decisión—.
+
+**Saltar** existe porque hay cosas que de verdad no se pueden decidir ahora, y
+forzar una decisión es como se acaba con una lista llena de fechas falsas. Al
+final se dice cuántas quedaron: «Bandeja casi vacía · dejaste 3 para luego».
+
+En el Mac **va con el teclado**, que es lo que un Mac puede hacer y un teléfono
+no: la inicial de cada decisión, `⌫` para eliminar y `↩` para saltar. Veinte
+tareas en veinte pulsaciones, sin soltar la mano. Los atajos se enseñan en el
+propio botón, porque uno que hay que aprenderse en otro sitio no se usa. La fila
+del proyecto no anuncia tecla: un menú no se abre con una pulsación suelta, y un
+atajo que se promete y no funciona es peor que no tenerlo.
+
+La cola **se congela al abrir**. Despachar una tarea la saca de la bandeja, así
+que una lista viva se reordenaría bajo la mano y perdería la cuenta de cuántas
+quedan; y así puede entrar algo nuevo por Siri sin empujar nada.
+
 ## Fechas límite
 
 Una cosa es **cuándo pienso ponerme** (la fecha de planificación) y otra **cuándo
@@ -1054,6 +1097,7 @@ Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
   Paleta.swift            los colores en crudo, que usan las dos interfaces
   Enlaces.swift           las direcciones, que son las mismas en las dos apps
   PuestaAPunto.swift      qué permisos se ofrecen al usuario nuevo
+  Despacho.swift          las decisiones del vaciado de la bandeja
   Atajo.swift             una combinación de teclas y si sirve como atajo
   Repaso.swift            el repaso de la mañana
 Sources/Pauta/            la app de macOS
@@ -1068,6 +1112,7 @@ Sources/Pauta/            la app de macOS
   Views/Ayuda.swift       atajos y estado de los permisos
   Views/AjustesView.swift ajustes y arranque al iniciar sesión
   Views/PuestaAPuntoView.swift la tarjeta de bienvenida
+  Views/VaciarBandejaView.swift el vaciado, con teclado
   Views/GrabadorDeAtajo.swift  grabar una combinación y nombrar las teclas
 Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
   Tema.swift              la paleta compartida, resuelta con UIKit

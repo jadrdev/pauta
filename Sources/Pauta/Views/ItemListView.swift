@@ -9,6 +9,7 @@ struct ItemListView: View {
     @State private var draftTitle = ""
     @State private var pegado: String?
     @State private var isEndDropTarget = false
+    @State private var vaciando = false
     @FocusState private var draftFocused: Bool
 
     private var items: [Item] { store.items(for: nav.perspective) }
@@ -67,6 +68,7 @@ struct ItemListView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(Paper.bg)
+        .sheet(isPresented: $vaciando) { VaciarBandejaView() }
         .onTapGesture {
             nav.selectedItemID = nil
             commitDraft()
@@ -92,6 +94,16 @@ struct ItemListView: View {
                     .foregroundStyle(Paper.ink)
             }
             Spacer(minLength: 0)
+            // Solo en la bandeja y solo si hay algo: es la única lista que se
+            // supone que se vacía.
+            if case .inbox = nav.perspective, !items.isEmpty {
+                Button { vaciando = true } label: {
+                    Text("VACIAR").rubricStyle(Paper.accentInk)
+                }
+                .buttonStyle(.plain)
+                .help("Decidir una por una qué hacer con lo que hay en la bandeja")
+                .padding(.trailing, 12)
+            }
             if !items.isEmpty || !eventosDeHoy.isEmpty {
                 Text(countLabel)
                     .rubricStyle()

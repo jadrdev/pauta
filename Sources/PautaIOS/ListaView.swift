@@ -14,6 +14,7 @@ struct ListaView: View {
     @Environment(Agenda.self) private var agenda
     @State private var abierta: Item?
     @State private var apuntando = false
+    @State private var vaciando = false
 
     private var items: [Item] { store.items(for: perspectiva) }
 
@@ -40,6 +41,17 @@ struct ListaView: View {
             .background(Papel.bg)
             .navigationTitle(store.title(for: perspectiva))
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                // Solo en la bandeja y solo si hay algo: es la única lista que
+                // se supone que se vacía.
+                if case .inbox = perspectiva, !items.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { vaciando = true } label: {
+                            Label("Vaciar", systemImage: "tray.and.arrow.down")
+                        }
+                    }
+                }
+            }
             // Como franja del área segura y no como superposición: una
             // superposición se queda **debajo** de la barra de pestañas, y el
             // teclado la tapa. Así el sistema la coloca sobre el teclado él.
@@ -54,6 +66,7 @@ struct ListaView: View {
             .toolbar(apuntando ? .hidden : .visible, for: .tabBar)
         }
         .sheet(item: $abierta) { DetalleView(item: $0) }
+        .sheet(isPresented: $vaciando) { VaciarBandejaView() }
         .task {
             if case .today = perspectiva { await agenda.load() }
         }

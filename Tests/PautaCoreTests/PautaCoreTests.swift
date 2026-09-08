@@ -2554,3 +2554,88 @@ struct PuestaAPuntoTests {
         }
     }
 }
+
+/// El vaciado de la bandeja: una tarea delante, una decisión, la siguiente.
+@MainActor
+struct DespachoTests {
+    private func conUna() -> (Store, Item) {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "llamar al banco", in: .inbox)
+        #expect(s.items(for: .inbox).count == 1)
+        return (s, a)
+    }
+    private func recargar(_ s: Store, _ id: UUID) -> Item? { s.items.first { $0.id == id } }
+
+    /// Todas las decisiones sacan la tarea de la bandeja. Una que la dejara
+    /// donde estaba no sería una decisión.
+    @Test func everyDecisionEmptiesItFromTheInbox() {
+        for decision in Despacho.sueltas {
+            let (s, a) = conUna()
+            s.despachar(a, decision)
+            #expect(s.items(for: .inbox).isEmpty, "\(decision) dejó la tarea en la bandeja")
+        }
+    }
+
+    @Test func todayAndTomorrowSetTheDay() {
+        let cal = Calendar.current
+        let (s, a) = conUna()
+        s.despachar(a, .hoy)
+        #expect(recargar(s, a.id)?.day == cal.startOfDay(for: .now))
+
+        let (s2, b) = conUna()
+        s2.despachar(b, .manana)
+        #expect(recargar(s2, b.id)?.day
+                == cal.startOfDay(for: cal.date(byAdding: .day, value: 1, to: .now)!))
+
+        let (s3, c) = conUna()
+        s3.despachar(c, .proximaSemana)
+        #expect(recargar(s3, c.id)?.day
+                == cal.startOfDay(for: cal.date(byAdding: .day, value: 7, to: .now)!))
+    }
+
+    @Test func somedayParksItWithoutADate() {
+        let (s, a) = conUna()
+        s.despachar(a, .algunDia)
+        let puesta = recargar(s, a.id)
+        #expect(puesta?.isSomeday == true)
+        #expect(puesta?.when == nil)
+        #expect(s.items(for: .someday).count == 1)
+    }
+
+    /// Eliminar la saca de la memoria y deja la lápida **en disco**: la tarea
+    /// desaparece de las listas, y el archivo marcado se queda para que un
+    /// dispositivo que no vio el borrado no la resucite al sincronizar. Con un
+    /// almacén en memoria no hay disco, así que aquí se comprueba lo primero.
+    @Test func deletingTakesItOutOfEveryList() {
+        let (s, a) = conUna()
+        s.despachar(a, .eliminar)
+        #expect(recargar(s, a.id) == nil)
+        #expect(s.items(for: .inbox).isEmpty)
+    }
+
+    @Test func aProjectTakesItToo() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        let a = s.addItem(title: "pedir cajas", in: .inbox)
+        s.despachar(a, .proyecto(p.id))
+        #expect(recargar(s, a.id)?.projectID == p.id)
+        #expect(s.items(for: .inbox).isEmpty)
+        #expect(s.items(for: .project(p.id)).count == 1)
+    }
+
+    /// Solo eliminar es de las que no se vuelve, y la interfaz tiene que poder
+    /// distinguirla sin repetir la lista aquí.
+    @Test func onlyDeletingIsDestructive() {
+        #expect(Despacho.eliminar.esDestructiva)
+        for d in Despacho.sueltas where d != .eliminar {
+            #expect(d.esDestructiva == false)
+        }
+    }
+
+    @Test func everyDecisionSaysItsNameAndIcon() {
+        for d in Despacho.sueltas + [.proyecto(UUID())] {
+            #expect(!d.titulo.isEmpty)
+            #expect(!d.icono.isEmpty)
+        }
+    }
+}
