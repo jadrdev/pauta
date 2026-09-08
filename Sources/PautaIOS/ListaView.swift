@@ -61,7 +61,29 @@ struct ListaView: View {
 
     @ViewBuilder private var contenido: some View {
         if items.isEmpty && eventos.isEmpty {
-            VacioView(perspectiva: perspectiva)
+            // Centrado a mano y no con la altura infinita del vacío: `VacioView`
+            // pedía todo el espacio y empujaba la tarjeta fuera de la pantalla
+            // —se dibujaba, pero no se veía—.
+            VStack(spacing: 26) {
+                Spacer(minLength: 20)
+                VacioView(perspectiva: perspectiva)
+                // La bienvenida solo en Hoy: es la pestaña que se abre al
+                // arrancar, y ofrecer permisos desde una etiqueta sería
+                // pedirlos donde no se acaba de ver para qué sirven.
+                if case .today = perspectiva {
+                    PuestaAPuntoView { permiso in
+                        Task {
+                            switch permiso {
+                            case .avisos: await Avisos.reschedule(store.items)
+                            case .calendario: await agenda.load(force: true)
+                            case .recordatorios:
+                                await RemindersInbox().importar(en: store)
+                            }
+                        }
+                    }
+                }
+                Spacer(minLength: 90)
+            }
         } else {
             List {
                 // La cuenta va aquí y no en la barra: en la barra, un texto
@@ -139,6 +161,11 @@ struct ListaView: View {
     @ViewBuilder private var avisoDelCalendario: some View {
         if case .today = perspectiva {
             switch Agenda.authorization {
+            case .notDetermined where items.isEmpty && eventos.isEmpty:
+                // Con la lista vacía manda la tarjeta de bienvenida, que ya
+                // ofrece el calendario con su motivo: dos sitios pidiendo lo
+                // mismo a la vez se leen como un error.
+                EmptyView()
             case .notDetermined:
                 franja("calendar.badge.plus", "MOSTRAR LOS EVENTOS DEL CALENDARIO",
                        Papel.accentInk, Papel.accent.opacity(0.12)) {
@@ -198,7 +225,7 @@ struct VacioView: View {
                 .foregroundStyle(Papel.inkFaint)
                 .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 40)
     }
 

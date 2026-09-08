@@ -722,6 +722,40 @@ pantalla— y no cosas que deban viajar con las tareas. En [maqueta](docs/compil
 son de mentira y en su propio dominio: mirar el diseño no debe cambiarte los
 ajustes de verdad.
 
+## La bienvenida
+
+En un teléfono o un Mac recién instalados, debajo del vacío de `Hoy` aparece una
+tarjeta con **los permisos que aún no se han contestado**, cada uno con su motivo
+en una línea y su botón:
+
+```
+PARA QUE SIRVA DE ALGO
+🔔 Avisos          Sin ellos, una hora es solo una etiqueta.        [Activar]
+📅 Calendario      Para que Hoy sea el día entero y no solo tus     [Activar]
+                   tareas.
+✓  Recordatorios   Lo que le dictas a Siri entra en la bandeja.     [Activar]
+```
+
+**No hay asistente de páginas**, y no por pereza: pedir tres permisos antes de
+que se haya visto una sola tarea es pedirlos antes de que exista el motivo, y
+aquí un «no» es **para siempre** porque ni macOS ni iOS vuelven a preguntar. La
+tarjeta va donde ya hay hueco, se puede ignorar, y la app es usable desde el
+primer segundo — que es la promesa de no tener cuentas ni configuración.
+
+El motivo de cada permiso dice **qué se pierde sin él**, no qué se concede.
+«Pauta quiere acceder a tu calendario» no es una razón, es un trámite.
+
+Solo lista lo que está **sin contestar**. Un permiso denegado no vuelve aquí a
+insistir: eso ya lo dicen la franja de su sitio y la pantalla de permisos. Una
+tarjeta que no se va nunca deja de ser una bienvenida y pasa a ser una regañina.
+Cuando los tres están decididos, desaparece.
+
+Y nada pide permiso por su cuenta al arrancar. Eso hubo que arreglarlo dos veces:
+la importación de Recordatorios lo pedía al abrir la app, y **registrarse a los
+cambios de un `EKEventStore` también lo pide** —conectar con el demonio de
+Recordatorios dispara el diálogo—, así que el vigilante no se monta hasta que hay
+permiso. Sin eso, la tarjeta llegaba tarde a su propia fiesta.
+
 ## Acerca de y ayuda
 
 Dos fichas de lectura, del tamaño de su contenido y sin poder estirarse: una
@@ -1019,6 +1053,7 @@ Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
   Ajustes.swift           las preferencias, en UserDefaults
   Paleta.swift            los colores en crudo, que usan las dos interfaces
   Enlaces.swift           las direcciones, que son las mismas en las dos apps
+  PuestaAPunto.swift      qué permisos se ofrecen al usuario nuevo
   Atajo.swift             una combinación de teclas y si sirve como atajo
   Repaso.swift            el repaso de la mañana
 Sources/Pauta/            la app de macOS
@@ -1032,6 +1067,7 @@ Sources/Pauta/            la app de macOS
   Views/AcercaDe.swift    el panel «Acerca de» y los enlaces
   Views/Ayuda.swift       atajos y estado de los permisos
   Views/AjustesView.swift ajustes y arranque al iniciar sesión
+  Views/PuestaAPuntoView.swift la tarjeta de bienvenida
   Views/GrabadorDeAtajo.swift  grabar una combinación y nombrar las teclas
 Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
   Tema.swift              la paleta compartida, resuelta con UIKit
@@ -1041,6 +1077,7 @@ Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
   Captura.swift           el botón flotante y el campo de apuntar
   EventoRow.swift         un evento del calendario en la lista
   AjustesView.swift       ajustes, permisos y acerca de
+  PuestaAPuntoView.swift  la tarjeta de bienvenida
   MasView.swift           listas de fondo, proyectos, áreas y etiquetas
   DetalleView.swift       la ficha de una tarea
 Tests/PautaCoreTests/     tests del núcleo (swift test)

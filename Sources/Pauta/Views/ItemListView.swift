@@ -184,6 +184,23 @@ struct ItemListView: View {
                     .font(.system(size: 12.5))
                     .foregroundStyle(Paper.inkFaint)
             }
+            // La bienvenida solo en Hoy: es la lista que se abre al arrancar, y
+            // ofrecer los permisos desde una etiqueta o un proyecto sería
+            // pedirlos donde no se acaba de ver para qué sirven.
+            if case .today = nav.perspective {
+                PuestaAPuntoView { permiso in
+                    Task {
+                        switch permiso {
+                        case .avisos: await Avisos.reschedule(store.items)
+                        case .calendario: await agenda.load(force: true)
+                        case .recordatorios:
+                            await importFromReminders(RemindersInbox(), into: store,
+                                                      nav: nav)
+                        }
+                    }
+                }
+                .padding(.top, 18)
+            }
         }
     }
 
@@ -229,8 +246,11 @@ struct ItemListView: View {
     /// Si se dijo que no, no se vuelve a preguntar desde aquí: hay un comando en
     /// el menú para cuando se cambie de idea.
     @ViewBuilder private var invitacionAlCalendario: some View {
+        // Con la lista vacía manda la tarjeta de bienvenida, que ya ofrece el
+        // calendario con su motivo: dos sitios pidiendo lo mismo a la vez se
+        // leen como un error.
         if case .today = nav.perspective, agenda.eventos.isEmpty,
-           Agenda.authorization == .notDetermined {
+           !items.isEmpty, Agenda.authorization == .notDetermined {
             Button {
                 Task {
                     await agenda.requestAccess()

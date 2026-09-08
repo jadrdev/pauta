@@ -98,14 +98,6 @@ struct RaizView: View {
     /// pantalla debajo del dedo es peor que no avisar; la cuenta de la bandeja
     /// ya lo dice.
     private func importar() async {
-        do {
-            guard try await recordatorios.requestAccess() else { return }
-            let capturado = try await recordatorios.drain()
-            guard !capturado.isEmpty else { return }
-            store.addCaptured(capturado)
-        } catch {
-            // La captura remota es un extra: si falla, la app sigue siendo
-            // usable.
-        }
+        await recordatorios.importar(en: store)
     }
 }

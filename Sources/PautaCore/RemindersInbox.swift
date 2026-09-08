@@ -40,6 +40,33 @@ public final class RemindersInbox {
         if let valor = testigo.valor { NotificationCenter.default.removeObserver(valor) }
     }
 
+    /// Trae lo pendiente de la lista a la bandeja. Devuelve cuántas entraron.
+    ///
+    /// **No pide permiso salvo que se le diga.** Pedirlo por su cuenta hacía que
+    /// la app sacara el diálogo de Recordatorios sola al arrancar, antes de que
+    /// se hubiera visto una sola tarea —y un «no» ahí es para siempre—. Quien
+    /// pide es la tarjeta de bienvenida o el usuario con ⌘⇧R: alguien que sabe
+    /// qué está pidiendo y por qué.
+    ///
+    /// Silencioso si falla: la captura remota es un extra, y si se cae la app
+    /// sigue siendo usable.
+    @discardableResult
+    public func importar(en store: Store, pidiendoPermiso: Bool = false) async -> Int {
+        do {
+            if pidiendoPermiso {
+                guard try await requestAccess() else { return 0 }
+            } else {
+                guard RemindersInbox.authorization == .fullAccess else { return 0 }
+            }
+            let capturado = try await drain()
+            guard !capturado.isEmpty else { return 0 }
+            return store.addCaptured(capturado)
+        } catch {
+            log.notice("no se pudo importar de Recordatorios: \(error.localizedDescription)")
+            return 0
+        }
+    }
+
     /// Avisa cuando algo cambia en Recordatorios.
     ///
     /// Sin esto la captura remota solo funcionaba **al arrancar la app**: dictabas
@@ -52,6 +79,14 @@ public final class RemindersInbox {
     /// quién tocó qué.
     public func observar(cambios: @escaping () -> Void) {
         guard testigo.valor == nil else { return }
+        // Sin permiso no se vigila, y no por ahorrar: **registrarse a los
+        // cambios de un `EKEventStore` obliga a EventKit a conectarse con el
+        // demonio de Recordatorios, y eso dispara el diálogo de permisos**. Sin
+        // esta guarda, la app lo pedía sola al arrancar —antes de que se hubiera
+        // visto una sola tarea— justo lo que la tarjeta de bienvenida existe
+        // para evitar. Y no se pierde nada: sin permiso no hay lista que
+        // vigilar.
+        guard RemindersInbox.authorization == .fullAccess else { return }
         testigo.valor = NotificationCenter.default.addObserver(
             forName: .EKEventStoreChanged, object: ek, queue: .main
         ) { _ in cambios() }

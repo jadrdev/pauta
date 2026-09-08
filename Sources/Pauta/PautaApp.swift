@@ -441,7 +441,10 @@ struct PautaApp: App {
             // ayuda, junto a los otros dos, y en Hoy sigue la invitación.
             CommandGroup(after: .newItem) {
                 Button("Importar de Recordatorios") {
-                    Task { await importFromReminders(recordatorios, into: store, nav: nav) }
+                    Task {
+                        await importFromReminders(recordatorios, into: store, nav: nav,
+                                                  pidiendoPermiso: true)
+                    }
                 }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
             }
@@ -543,15 +546,8 @@ func mostrar(_ id: UUID, in store: Store, nav: Navigation) {
 
 @MainActor
 func importFromReminders(_ inbox: RemindersInbox, into store: Store,
-                         nav: Navigation) async {
-    do {
-        guard try await inbox.requestAccess() else { return }
-        let captured = try await inbox.drain()
-        guard !captured.isEmpty else { return }
-        let added = store.addCaptured(captured)
-        // Llevar a la bandeja solo si algo entró y no estabas en otra lista.
-        if added > 0, case .today = nav.perspective { nav.go(to: .inbox) }
-    } catch {
-        // La captura remota es un extra: si falla, la app sigue siendo usable.
-    }
+                         nav: Navigation, pidiendoPermiso: Bool = false) async {
+    let entraron = await inbox.importar(en: store, pidiendoPermiso: pidiendoPermiso)
+    // Llevar a la bandeja solo si algo entró y no estabas en otra lista.
+    if entraron > 0, case .today = nav.perspective { nav.go(to: .inbox) }
 }

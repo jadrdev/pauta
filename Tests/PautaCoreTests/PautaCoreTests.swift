@@ -2507,3 +2507,50 @@ struct AtajoTests {
         d.removePersistentDomain(forName: nombre)
     }
 }
+
+/// La bienvenida: qué permisos se ofrecen y cuáles no.
+struct PuestaAPuntoTests {
+    @Test func onlyTheOnesNotAnsweredYet() {
+        let estados: [Permiso: EstadoDePermiso] = [
+            .avisos: .sinPreguntar,
+            .calendario: .concedido,
+            .recordatorios: .denegado,
+        ]
+        #expect(PuestaAPunto.pendientes(estados) == [.avisos])
+    }
+
+    /// Todo contestado, tarjeta fuera. Una bienvenida que no se va deja de ser
+    /// bienvenida y pasa a ser una regañina.
+    @Test func nothingPendingMeansNoCard() {
+        let estados: [Permiso: EstadoDePermiso] = [
+            .avisos: .denegado,
+            .calendario: .concedido,
+            .recordatorios: .concedido,
+        ]
+        #expect(PuestaAPunto.pendientes(estados).isEmpty)
+    }
+
+    /// En el mismo orden en que se declaran, no en el del diccionario: la
+    /// tarjeta no puede reordenarse sola entre arranques.
+    @Test func theOrderIsStable() {
+        let todos = Permiso.allCases.reduce(into: [Permiso: EstadoDePermiso]()) {
+            $0[$1] = .sinPreguntar
+        }
+        #expect(PuestaAPunto.pendientes(todos) == [.avisos, .calendario, .recordatorios])
+    }
+
+    /// Un permiso sin estado conocido no se ofrece: es lo que pasa si algún día
+    /// se añade uno y se olvida de consultarlo, y ofrecer un botón que no sabe
+    /// qué pedir sería peor que no ofrecerlo.
+    @Test func anUnknownStateIsNotOffered() {
+        #expect(PuestaAPunto.pendientes([:]).isEmpty)
+    }
+
+    @Test func everyPermissionSaysWhatIsLostWithoutIt() {
+        for permiso in Permiso.allCases {
+            #expect(!permiso.titulo.isEmpty)
+            #expect(permiso.motivo.count > 20)
+            #expect(!permiso.icono.isEmpty)
+        }
+    }
+}
