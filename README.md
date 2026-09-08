@@ -776,6 +776,7 @@ una interfaz atrás sin que nadie se enterase.
 ```bash
 ./tools/ios.sh              # compila e instala en el simulador
 ./tools/ios.sh "iPhone Air" # en otro modelo
+./tools/iphone.sh           # en un iPhone conectado por cable
 ```
 
 Sin proyecto de Xcode, igual que el Mac: se compila con `swiftc` y el `.app` se
@@ -796,9 +797,39 @@ porque un objetivo que importa UIKit rompería `swift build` en el Mac.
   en iOS, así que se compila fuera. En su lugar recarga al volver del fondo. El
   equivalente para una carpeta sincronizada sería `NSMetadataQuery`, y hace falta
   el día que haya iCloud.
-- **Instalarse en un iPhone de verdad.** El simulador no pide firma; un teléfono,
-  sí. Con una cuenta gratuita Xcode firma para siete días; sin límite, con la de
-  pago. Ese día toca crear un `.xcodeproj`, que es donde se configura la firma.
+### En un iPhone de verdad
+
+```bash
+./tools/iphone.sh
+```
+
+Compila, firma, instala y abre. Hacen falta tres cosas que el simulador no pide:
+
+1. **El modo de desarrollador** activado en el teléfono —Ajustes ▸ Privacidad y
+   seguridad ▸ Modo de desarrollador—, que lo enciende su dueño y reinicia el
+   aparato.
+2. **Una cuenta registrada en Xcode.** El perfil de aprovisionamiento lo crea
+   Xcode contra ella; el guion pasa `-allowProvisioningUpdates` para que lo haga
+   sin abrir la interfaz.
+3. **Un `.xcodeproj`**, porque `xcodebuild` es quien sabe firmar. Se declara en
+   [`project.yml`](project.yml) y lo genera XcodeGen (`brew install xcodegen`):
+   un pbxproj son miles de líneas generadas que se llenan de conflictos y que
+   nadie lee, así que no se guarda en el repositorio — veinte líneas de YAML sí.
+
+Con un equipo **gratuito el perfil dura siete días**: al octavo la app deja de
+abrirse y hay que volver a ejecutar el guion. Sin límite, con la cuenta de pago.
+
+El UDID no está escrito en el guion: lo busca. Un identificador pegado a mano
+caduca en cuanto cambias de teléfono o de cable, y lo hace en silencio. El filtro
+exige además que el dispositivo sea `physical`, porque para `devicectl` los
+simuladores también son iPhone y aparecen conectados — sin eso, instala en el
+simulador y el error habla de rutas que no existen.
+
+En el proyecto el núcleo va como **objetivo propio** y no como dependencia del
+paquete: dependiendo del paquete, Xcode intenta compilar todos sus objetivos
+para iOS —incluido el ejecutable de macOS con su AppKit, su Carbon y su
+ServiceManagement— y no hay forma de decirle que ese es solo del Mac. Son los
+mismos archivos; cambia quién los compila.
 
 Lo que sí hace ya: las cinco listas con sus cuentas, apuntar, completar, borrar
 deslizando, una ficha por tarea para cambiarle el día, y **los avisos** — el
@@ -1211,10 +1242,9 @@ Tests/PautaCoreTests/     tests del núcleo (swift test)
   donde encajarían sin inventar nada. Se dejó fuera para no cargar de golpe una
   ventana de semanas de calendario: primero conviene ver si en `Hoy` estorban o
   ayudan
-- **La [app de iOS](#la-app-de-ios) en un iPhone de verdad**, con su
-  sincronización. Arranca y funciona en el simulador; lo que falta es la cuenta
-  de desarrollador de pago: sin ella no hay firma para el dispositivo ni
-  entitlement de iCloud
+- **La sincronización en el teléfono.** La app ya se instala y funciona en un
+  iPhone, pero guarda solo en su carpeta: entrar en iCloud exige el contenedor de
+  ubicuidad, con entitlements y cuenta de pago
 - Widget — es WidgetKit, o sea un `.appex` embebido, proyecto de Xcode y la misma
   cuenta
 

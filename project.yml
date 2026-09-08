@@ -1,0 +1,65 @@
+# Proyecto de Xcode para la app de iOS.
+#
+# Existe por una sola razón: **firmar contra un iPhone de verdad**. El simulador
+# no pide firma y se cubre con `tools/ios.sh`; un dispositivo exige un perfil de
+# aprovisionamiento, y quien los crea es Xcode contra tu cuenta.
+#
+# Se declara aquí y no se guarda el `.xcodeproj`: un pbxproj es un archivo
+# generado de miles de líneas que se llena de conflictos y que nadie lee. Esto
+# son veinte líneas que se entienden.
+name: Pauta
+options:
+  bundleIdPrefix: dev.jadrdev
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+targets:
+  # El núcleo como objetivo del propio proyecto y no como dependencia del
+  # paquete: dependiendo del paquete, Xcode intenta compilar **todos** sus
+  # objetivos para iOS —incluido el ejecutable de macOS con su AppKit, su Carbon
+  # y su ServiceManagement— y no hay forma de decirle que ese es solo del Mac.
+  # Son los mismos archivos; lo que cambia es quién los compila.
+  PautaCore:
+    type: library.static
+    platform: iOS
+    sources:
+      - Sources/PautaCore
+
+  Pauta:
+    type: application
+    platform: iOS
+    sources:
+      - Sources/PautaIOS
+    dependencies:
+      - target: PautaCore
+    info:
+      path: build/ios/Generated-Info.plist
+      properties:
+        CFBundleName: Pauta
+        CFBundleDisplayName: Pauta
+        # Sin esto el plist generado se queda en «1.0» y la app miente sobre
+        # qué versión es.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: es
+        CFBundleLocalizations: [es]
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        # Equipo personal y gratuito: el perfil dura siete días y la app es
+        # tuya. El de la empresa está en la cuenta, y meter una app personal ahí
+        # es una decisión que no toca tomar a un guion.
+        DEVELOPMENT_TEAM: 26W4G92PSS
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        # Solo iPhone: la interfaz está pensada para una mano y un pulgar. En
+        # un iPad cabría la del Mac, y esa es otra interfaz, no esta estirada.
+        TARGETED_DEVICE_FAMILY: "1"
