@@ -825,6 +825,7 @@ porque un objetivo que importa UIKit rompería `swift build` en el Mac.
   en iOS, así que se compila fuera. En su lugar recarga al volver del fondo. El
   equivalente para una carpeta sincronizada sería `NSMetadataQuery`, y hace falta
   el día que haya iCloud.
+
 ### En un iPhone de verdad
 
 ```bash
@@ -872,6 +873,15 @@ sistema deriva los tamaños, y mantener quince a mano era garantizar que alguna 
 quedara con el arte viejo. En la ruta del simulador, que no pasa por Xcode, lo
 compila `actool` y las claves del plist las escribe la propia herramienta — en
 iOS el icono no es un PNG suelto en el paquete.
+
+**Los eventos del calendario también salen en Hoy**, igual que en el Mac y con la
+misma mezcla —`Agenda.filas`, en el núcleo—: todo el día arriba, luego lo que
+tiene hora, sea evento o tarea, y al final lo que no la tiene. La fila de un
+evento lleva **barra de color en vez de casilla**: un evento no se completa,
+ocurre, y darle algo redondo que parezca pulsable sería prometer un gesto que no
+existe. Lo que ya pasó se apaga, y no admite deslizar: no es tuyo, se lee y
+punto. El permiso se pide desde la propia lista de Hoy, con la misma invitación
+que el Mac, y solo mientras no se haya contestado.
 
 Lo que sí hace ya: las cinco listas con sus cuentas, apuntar, completar, borrar
 deslizando, una ficha por tarea para cambiarle el día, y **los avisos** — el
@@ -1289,6 +1299,7 @@ Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
   ListaView.swift         una lista, con su título y su vacío
   FilaView.swift          la fila y sus marcas
   Captura.swift           el botón flotante y el campo de apuntar
+  EventoRow.swift         un evento del calendario en la lista
   MasView.swift           listas de fondo, proyectos, áreas y etiquetas
   DetalleView.swift       la ficha de una tarea
 Tests/PautaCoreTests/     tests del núcleo (swift test)

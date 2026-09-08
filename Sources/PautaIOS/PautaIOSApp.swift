@@ -11,6 +11,7 @@ import PautaCore
 @MainActor
 struct PautaIOSApp: App {
     @State private var store = Store()
+    @State private var agenda = Agenda()
 
     init() {
         // Antes de la interfaz: un aviso pulsado con la app cerrada se entrega
@@ -22,6 +23,7 @@ struct PautaIOSApp: App {
         WindowGroup {
             RaizView()
                 .environment(store)
+                .environment(agenda)
                 .tint(Papel.accentInk)
         }
     }
@@ -39,6 +41,7 @@ struct PautaIOSApp: App {
 /// «Más», porque una barra de siete iconos no se lee: se adivina.
 struct RaizView: View {
     @Environment(Store.self) private var store
+    @Environment(Agenda.self) private var agenda
     @Environment(\.scenePhase) private var fase
 
     var body: some View {
@@ -57,7 +60,13 @@ struct RaizView: View {
         .onChange(of: fase) { _, nueva in
             guard nueva == .active else { return }
             store.reload()
-            Task { await Avisos.reschedule(store.items) }
+            // Los eventos se releen a la fuerza: pudo aceptarse una invitación
+            // o moverse una reunión mientras la app dormía, y el día que se
+            // enseña ya no sería el de verdad.
+            Task {
+                await Avisos.reschedule(store.items)
+                await agenda.load(force: true)
+            }
         }
         .task(id: store.items) {
             // Un segundo de espera, como en el Mac: escribir un título cambia

@@ -55,6 +55,11 @@ cat > "$APP/Info.plist" <<PLIST
     <key>CFBundleLocalizations</key>     <array><string>es</string></array>
     <!-- Obligatoria desde iOS 14; vacía hereda el fondo del sistema. -->
     <key>UILaunchScreen</key>            <dict/>
+    <!-- Sin estas cadenas, pedir acceso al calendario aborta el proceso. -->
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.</string>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>

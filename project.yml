@@ -46,6 +46,11 @@ targets:
         CFBundleDevelopmentRegion: es
         CFBundleLocalizations: [es]
         UILaunchScreen: {}
+        # Sin estas cadenas, pedir acceso al calendario aborta el proceso.
+        NSCalendarsFullAccessUsageDescription: >-
+          Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.
+        NSCalendarsUsageDescription: >-
+          Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
