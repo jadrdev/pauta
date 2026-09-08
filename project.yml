@@ -31,6 +31,7 @@ targets:
     platform: iOS
     sources:
       - Sources/PautaIOS
+      - Resources/ios/Assets.xcassets
     dependencies:
       - target: PautaCore
     info:
@@ -59,6 +60,7 @@ targets:
         # es una decisión que no toca tomar a un guion.
         DEVELOPMENT_TEAM: 26W4G92PSS
         CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: "5.0"
         # Solo iPhone: la interfaz está pensada para una mano y un pulgar. En
         # un iPad cabría la del Mac, y esa es otra interfaz, no esta estirada.

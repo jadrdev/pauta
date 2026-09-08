@@ -36,6 +36,26 @@ def compose(size, ground, art_name, frac=0.60):
     img.alpha_composite(r, (lo + (span - r.size[0]) // 2, lo + (span - r.size[1]) // 2))
     return img
 
+def lamina_ios(size, ground, art_name, frac=0.52):
+    """Lámina de iOS: **a sangre**, sin margen ni esquinas redondeadas.
+
+    La máscara la pone el sistema, y la del Mac encima se vería como un icono
+    metido en un marco con un borde muerto alrededor. El monograma va algo más
+    pequeño en proporción que en el Mac porque el redondeo de iOS come esquina:
+    lo que en una lámina plana parece holgado, ahí queda pegado al filo.
+    """
+    if size < 1024:
+        return lamina_ios(1024, ground, art_name, frac).resize((size, size), Image.LANCZOS)
+    img = Image.new("RGBA", (size, size), ground)
+    art = Image.open(RES / art_name).convert("RGBA")
+    k = min((size * frac) / art.size[0], (size * frac) / art.size[1])
+    r = art.resize((int(art.size[0] * k), int(art.size[1] * k)), Image.LANCZOS)
+    img.alpha_composite(r, ((size - r.size[0]) // 2, (size - r.size[1]) // 2))
+    # Sin alfa: iOS no admite transparencia en el icono, y donde la hay sale
+    # negro sin avisar.
+    return img.convert("RGB")
+
+
 def icon_mono(size=1024):  return compose(size, BRAND_BLACK, "monogram.png")
 def icon_claro(size=1024): return compose(size, BRAND_LIGHT, "monogram-ink.png")
 
@@ -52,7 +72,29 @@ def build(name, maker):
     maker(1024).save(RES / f"{name}-preview.png")
     print(f"✓ {out.relative_to(ROOT)}")
 
+def build_ios():
+    """El catálogo de recursos del icono de iOS.
+
+    Una sola imagen de 1024 y no las quince de antaño: desde Xcode 14 el sistema
+    deriva los tamaños él, y mantener quince a mano era garantizar que alguna se
+    quedara con el arte viejo.
+    """
+    catalogo = RES / "ios" / "Assets.xcassets" / "AppIcon.appiconset"
+    catalogo.mkdir(parents=True, exist_ok=True)
+    lamina_ios(1024, BRAND_BLACK, "monogram.png").save(catalogo / "icon-1024.png")
+    (catalogo / "Contents.json").write_text(
+        '{\n  "images" : [\n    {\n      "filename" : "icon-1024.png",\n'
+        '      "idiom" : "universal",\n      "platform" : "ios",\n'
+        '      "size" : "1024x1024"\n    }\n  ],\n'
+        '  "info" : { "author" : "pauta", "version" : 1 }\n}\n')
+    (RES / "ios" / "Assets.xcassets" / "Contents.json").write_text(
+        '{\n  "info" : { "author" : "pauta", "version" : 1 }\n}\n')
+    lamina_ios(512, BRAND_BLACK, "monogram.png").save(RES / "icon-ios-preview.png")
+    print(f"✓ {catalogo.relative_to(ROOT)}")
+
+
 if __name__ == "__main__":
     which = sys.argv[1] if len(sys.argv) > 1 else "ambas"
     if which in ("mono", "ambas"):  build("icon-mono", icon_mono)
     if which in ("claro", "ambas"): build("icon-claro", icon_claro)
+    if which in ("ios", "ambas"):   build_ios()

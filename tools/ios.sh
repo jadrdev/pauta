@@ -65,6 +65,16 @@ cat > "$APP/Info.plist" <<PLIST
 </plist>
 PLIST
 
+# El icono, compilado con actool: en iOS el icono no es un PNG dentro del
+# paquete sino un catálogo compilado más unas claves en el plist, y las claves
+# las escribe la propia herramienta.
+echo "▸ Icono…"
+xcrun actool Resources/ios/Assets.xcassets \
+    --compile "$APP" --platform iphonesimulator --minimum-deployment-target 17.0 \
+    --app-icon AppIcon --output-partial-info-plist "$OUT/icono.plist" \
+    --output-format human-readable-text > /dev/null
+/usr/libexec/PlistBuddy -c "Merge $OUT/icono.plist" "$APP/Info.plist" > /dev/null
+
 echo "▸ Simulador «$DESTINO»…"
 UDID=$(xcrun simctl list devices available -j \
     | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for v in d.values() for x in v if x["name"]==sys.argv[1]))' "$DESTINO")

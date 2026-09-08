@@ -831,6 +831,20 @@ para iOS —incluido el ejecutable de macOS con su AppKit, su Carbon y su
 ServiceManagement— y no hay forma de decirle que ese es solo del Mac. Son los
 mismos archivos; cambia quién los compila.
 
+El icono es el mismo monograma del Mac con otra lámina: **a sangre, sin margen ni
+esquinas redondeadas**. La máscara la pone iOS, y la lámina del Mac encima se
+vería como un icono metido en un marco con un borde muerto alrededor. El
+monograma va algo más pequeño en proporción, porque el redondeo de iOS come
+esquina y lo que en una lámina plana parece holgado ahí queda pegado al filo. Se
+genera con `python3 tools/make-icon.py ios`, del mismo arte y en el mismo sitio
+que los del Mac, para que no puedan divergir.
+
+Va como catálogo de recursos con **una sola imagen de 1024**: desde Xcode 14 el
+sistema deriva los tamaños, y mantener quince a mano era garantizar que alguna se
+quedara con el arte viejo. En la ruta del simulador, que no pasa por Xcode, lo
+compila `actool` y las claves del plist las escribe la propia herramienta — en
+iOS el icono no es un PNG suelto en el paquete.
+
 Lo que sí hace ya: las cinco listas con sus cuentas, apuntar, completar, borrar
 deslizando, una ficha por tarea para cambiarle el día, y **los avisos** — el
 repaso del día se programó solo en el simulador y pidió permiso, que es la señal
@@ -1165,14 +1179,25 @@ AA (≥ 4.5) sobre los cuatro fondos. Si cambias un fondo, recalcúlalos.
 |---|---|
 | `icon-mono` | Monograma blanco sobre el negro de marca. **La que está puesta** |
 | `icon-claro` | Monograma oscuro sobre fondo claro |
+| `ios` | La lámina del teléfono: a sangre, sin margen ni esquinas |
 
 ```bash
-python3 tools/make-icon.py ambas
+python3 tools/make-icon.py ambas   # los dos .icns del Mac y el catálogo de iOS
 ICON=icon-claro ./build.sh
 ```
 
 Al ser un monograma y no un wordmark, el mismo arte funciona de 16 a 1024 px sin
 necesitar versiones distintas por tamaño.
+
+Las dos láminas del Mac llevan **squircle con margen transparente**, que es la
+forma del icono en macOS y la dibuja la app. La de iOS es lo contrario: el color
+llega al borde y la máscara la pone el sistema. Poner la del Mac en el teléfono
+se vería como un icono dentro de un marco, con un borde muerto alrededor.
+
+Y va en un catálogo de recursos con **una sola imagen de 1024**, no en quince
+tamaños: desde Xcode 14 el sistema los deriva, y mantener quince a mano era
+garantizar que alguna se quedara con el arte viejo. En la ruta del simulador, que
+no pasa por Xcode, lo compila `actool`.
 
 ### Limitación conocida del arte actual
 
