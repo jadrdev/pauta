@@ -111,11 +111,16 @@ Compila, firma, instala y abre. Hacen falta tres cosas que el simulador no pide:
 Con un equipo **gratuito el perfil dura siete días**: al octavo la app deja de
 abrirse y hay que volver a ejecutar el guion. Sin límite, con la cuenta de pago.
 
-El UDID no está escrito en el guion: lo busca. Un identificador pegado a mano
+El UDID no está escrito en el guion: lo busca por cable y emparejado. Un identificador pegado a mano
 caduca en cuanto cambias de teléfono o de cable, y lo hace en silencio. El filtro
 exige además que el dispositivo sea `physical`, porque para `devicectl` los
 simuladores también son iPhone y aparecen conectados — sin eso, instala en el
 simulador y el error habla de rutas que no existen.
+
+Lo que **no** se mira es `tunnelState`: ese es el túnel de depuración, se duerme
+solo y solo se levanta cuando algo le habla al teléfono. Filtrando por él, un
+iPhone enchufado y emparejado se declaraba ausente y el guion decía «no veo
+ningún iPhone conectado» con el cable puesto.
 
 En el proyecto el núcleo va como **objetivo propio** y no como dependencia del
 paquete: dependiendo del paquete, Xcode intenta compilar todos sus objetivos

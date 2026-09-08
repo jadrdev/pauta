@@ -24,15 +24,25 @@ command -v xcodegen >/dev/null || {
 UDID=$(xcrun devicectl list devices --json-output /dev/stdout --quiet 2>/dev/null \
     | /usr/bin/python3 -c '
 import json, sys
-for x in json.load(sys.stdin)["result"]["devices"]:
+# «physical» descarta los simuladores, que también son iPhone para devicectl y
+# aparecen conectados: sin ese filtro se instala en el simulador y el error que
+# sale habla de rutas que no existen.
+#
+# Y **no** se mira `tunnelState`: ese es el túnel de depuración, que se duerme
+# solo y solo se levanta cuando algo le habla al teléfono. Filtrando por él, un
+# iPhone enchufado y emparejado se declaraba ausente. Lo que decide es que esté
+# emparejado; por cable primero, que es el que está delante.
+def sirve(x):
     h = x.get("hardwareProperties", {})
     c = x.get("connectionProperties", {})
-    # «physical» descarta los simuladores, que también son iPhone para devicectl
-    # y aparecen conectados: sin este filtro se instala en el simulador y el
-    # error que sale habla de rutas que no existen.
-    if (h.get("deviceType") == "iPhone" and h.get("reality") == "physical"
-            and c.get("tunnelState") == "connected"):
-        print(h["udid"]); break
+    return (h.get("deviceType") == "iPhone" and h.get("reality") == "physical"
+            and c.get("pairingState") == "paired"
+            and c.get("transportType") == "wired")
+
+for x in json.load(sys.stdin)["result"]["devices"]:
+    if sirve(x):
+        print(x["hardwareProperties"]["udid"])
+        break
 ')
 [[ -n "$UDID" ]] || { echo "no veo ningún iPhone conectado" >&2; exit 1; }
 echo "▸ iPhone $UDID"
