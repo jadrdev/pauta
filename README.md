@@ -761,11 +761,39 @@ PautaIOS       ~400 líneas   la interfaz del teléfono
 
 Ninguna vista compartida es una decisión, no una pereza. Un teléfono no se maneja
 como un Mac: no cabe la barra lateral, no hay clic derecho y la mano tapa media
-pantalla. Así que las listas son las mismas —las de verdad, calculadas por el
-mismo código— y la forma de andar por ellas es distinta: **fichas que se
-deslizan** en vez de barra lateral, y el campo de alta **fijo abajo**, donde
-llega el pulgar, porque apuntar es lo que más se hace y esconderlo tras un «+»
-añade un gesto a lo único que no puede costar nada.
+pantalla. Las listas son las mismas —las de verdad, calculadas por el mismo
+código—; la forma de andar por ellas, no.
+
+**Pestañas abajo** —Hoy, Próximamente, Bandeja y Más— y no una tira de fichas
+arriba. Abajo llega el pulgar, es un toque para cambiar, y es lo que iOS entiende
+por cambiar de sección: una fila de fichas arriba es un patrón de web y en un
+teléfono se lee como un navegador. Cuatro y no siete, porque una barra de siete
+iconos no se lee, se adivina: las tres de diario tienen sitio fijo y el resto
+—listas de fondo, proyectos, áreas, etiquetas— vive en «Más», donde sí se entra
+y se vuelve.
+
+**Título grande** por pantalla, con la cuenta en versalitas debajo, como en el
+Mac. Sin título, la lista activa se distinguía por un fondo verde pálido y sabías
+dónde estabas por deducción.
+
+**Apuntar va en un botón flotante**, no en una franja fija. El campo se usa a
+ráfagas y una franja permanente cobra sitio a la lista todo el rato; el botón lo
+encuentra el pulgar sin mirar y no tapa nada mientras no se usa. Al pulsarlo
+aparece el campo sobre el teclado —como franja del área segura, que si fuera una
+superposición se quedaría debajo de la barra de pestañas— y las pestañas se
+esconden: con el teclado abierto no se cambia de sección. **No se cierra al
+guardar**: cuenta lo apuntado —«3 apuntadas · sigue escribiendo»— porque vaciar
+la cabeza de tres cosas seguidas es cuando de verdad hace falta.
+
+**La fila recupera la densidad del Mac**, en dos alturas: a la derecha lo del
+reloj —hora con su campana si hay margen, luna del aplazamiento, retraso, fecha
+límite, duración— y debajo del título el contexto —proyecto, etiquetas, pasos—.
+Todo en una línea sería una fila que no se puede leer de reojo. La duración va
+**sin icono**: «45 min» se entiende solo, y a tamaño de teléfono el cronómetro no
+se distinguía del reloj del retraso, que es lo único que debe leerse como un
+reloj.
+
+Deslizar una fila da eliminar a la izquierda y programar para hoy a la derecha.
 
 Lo que sí se comparte del diseño son los colores, y por eso salieron del tema de
 macOS a [`Paleta`](Sources/PautaCore/Paleta.swift) en el núcleo: números en
@@ -1257,7 +1285,12 @@ Sources/Pauta/            la app de macOS
   Views/GrabadorDeAtajo.swift  grabar una combinación y nombrar las teclas
 Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
   Tema.swift              la paleta compartida, resuelta con UIKit
-  PautaIOSApp.swift       listas, alta, ficha de tarea
+  PautaIOSApp.swift       punto de entrada y las cuatro pestañas
+  ListaView.swift         una lista, con su título y su vacío
+  FilaView.swift          la fila y sus marcas
+  Captura.swift           el botón flotante y el campo de apuntar
+  MasView.swift           listas de fondo, proyectos, áreas y etiquetas
+  DetalleView.swift       la ficha de una tarea
 Tests/PautaCoreTests/     tests del núcleo (swift test)
 ```
 
