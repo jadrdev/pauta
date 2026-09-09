@@ -34,6 +34,8 @@ targets:
       - Resources/ios/Assets.xcassets
     dependencies:
       - target: PautaCore
+      - target: PautaWidget
+      - sdk: WidgetKit.framework
     info:
       path: build/ios/Generated-Info.plist
       properties:
@@ -55,6 +57,10 @@ targets:
           Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.
         NSCalendarsUsageDescription: >-
           Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.
+        CFBundleURLTypes:
+          - CFBundleURLName: dev.jadrdev.pauta
+            CFBundleTypeRole: Editor
+            CFBundleURLSchemes: [pauta]
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
@@ -62,15 +68,49 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta
+        CODE_SIGN_ENTITLEMENTS: Resources/ios/Pauta.entitlements
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
-        # Equipo personal y gratuito: el perfil dura siete días y la app es
-        # tuya. El de la empresa está en la cuenta, y meter una app personal ahí
-        # es una decisión que no toca tomar a un guion.
+        # Equipo personal, con membresía de pago: el perfil que emite Apple
+        # dura un año y admite grupos de aplicaciones —lo que necesita el
+        # widget para ver los datos de la app—. El de la empresa está en la
+        # cuenta, y meter una app personal ahí es una decisión que no toca
+        # tomar a un guion.
         DEVELOPMENT_TEAM: 26W4G92PSS
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: "5.0"
         # Solo iPhone: la interfaz está pensada para una mano y un pulgar. En
         # un iPad cabría la del Mac, y esa es otra interfaz, no esta estirada.
+        TARGETED_DEVICE_FAMILY: "1"
+
+  PautaWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Sources/PautaWidget
+      # La paleta y las versalitas del teléfono, compartidas y no copiadas: un
+      # widget que no se parece a su app parece de otra app.
+      - path: Sources/PautaIOS/Tema.swift
+    dependencies:
+      - target: PautaCore
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    info:
+      path: build/ios/Widget-Info.plist
+      properties:
+        CFBundleDisplayName: Pauta
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta.widget
+        CODE_SIGN_ENTITLEMENTS: Resources/ios/PautaWidget.entitlements
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        DEVELOPMENT_TEAM: 26W4G92PSS
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"

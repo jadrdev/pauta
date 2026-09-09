@@ -9,6 +9,10 @@ import PautaCore
 /// vistas distintas sería mantener la misma pantalla varias veces.
 struct ListaView: View {
     let perspectiva: Perspective
+    /// Cuando sube, se abre la barra de apuntar. Viene del widget, que no puede
+    /// llamar a esta vista: solo pedirle al sistema que abra la app con una
+    /// dirección.
+    var pidenApuntar: Int = 0
 
     @Environment(Store.self) private var store
     @Environment(Agenda.self) private var agenda
@@ -66,6 +70,7 @@ struct ListaView: View {
             .toolbar(apuntando ? .hidden : .visible, for: .tabBar)
         }
         .sheet(item: $abierta) { DetalleView(item: $0) }
+        .onChange(of: pidenApuntar) { _, _ in apuntando = true }
         .sheet(isPresented: $vaciando) { VaciarBandejaView() }
         .task {
             if case .today = perspectiva { await agenda.load() }

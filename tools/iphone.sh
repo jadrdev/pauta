@@ -6,9 +6,11 @@
 # el modo de desarrollador activado en el propio teléfono
 # (Ajustes ▸ Privacidad y seguridad ▸ Modo de desarrollador).
 #
-# El perfil lo crea Xcode contra la cuenta que tengas registrada. Con un equipo
-# **gratuito** dura siete días: pasados, la app deja de abrirse y hay que volver
-# a ejecutar esto. Sin límite, con la cuenta de pago.
+# El perfil lo crea Xcode contra la cuenta que tengas registrada, y cuánto dura
+# depende de ella: con un equipo gratuito, siete días; con membresía de pago, un
+# año. No se afirma aquí cuál es tu caso —se lee del perfil que quedó dentro del
+# paquete y se dice al final—, que un comentario con una fecha inventada es
+# exactamente cómo se acaba creyendo que la app caduca el martes.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -72,6 +74,13 @@ xcrun devicectl device process launch --device "$UDID" dev.jadrdev.pauta >/dev/n
     && echo "· abierta en el teléfono" \
     || echo "· instalada; ábrela tú (el teléfono estaba bloqueado)"
 
-echo
-echo "⚠︎ Con equipo gratuito el perfil caduca en 7 días: al octavo, vuelve a"
-echo "  ejecutar esto o la app dejará de abrirse."
+# Cuándo deja de abrirse, según el perfil que se acaba de embeber y no según lo
+# que creamos recordar de la cuenta.
+PERFIL=$(mktemp)
+if security cms -D -i "$APP/embedded.mobileprovision" > "$PERFIL" 2>/dev/null; then
+    CADUCA=$(/usr/libexec/PlistBuddy -c 'Print :ExpirationDate' "$PERFIL" 2>/dev/null || true)
+    echo
+    echo "· el perfil de este build caduca el ${CADUCA:-?}"
+    echo "  pasada esa fecha la app deja de abrirse: vuelve a ejecutar esto"
+fi
+rm -f "$PERFIL"

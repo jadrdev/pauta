@@ -2639,3 +2639,179 @@ struct DespachoTests {
         }
     }
 }
+
+/// El vistazo: lo que cabe en un widget. Un widget no se abre, se mira de
+/// reojo, así que lo que enseña se decide aquí y se comprueba con fechas fijas
+/// —no con las de hoy—, que es lo que un widget no puede hacer.
+struct VistazoTests {
+    private var cal: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }
+    private func fecha(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0) -> Date {
+        cal.date(from: DateComponents(year: y, month: m, day: d, hour: h))!
+    }
+    private func tarea(_ t: String, dia: Date? = nil, hora: Int? = nil,
+                       limite: Date? = nil, proyecto: UUID? = nil) -> Item {
+        var i = Item(title: t)
+        i.when = dia
+        i.timeOfDay = hora
+        i.deadline = limite
+        i.projectID = proyecto
+        return i
+    }
+    private var hoy: Date { fecha(2026, 9, 9, 10) }
+
+    @Test func itCountsWhatIsForTodayAndWhatDragsFromBefore() {
+        let items = [tarea("a", dia: fecha(2026, 9, 7)),
+                     tarea("b", dia: fecha(2026, 9, 8)),
+                     tarea("c", dia: fecha(2026, 9, 9)),
+                     tarea("d", dia: fecha(2026, 9, 10)),
+                     tarea("e")]
+        let v = Vistazo.de(items, limite: 5, now: hoy, calendar: cal)
+        #expect(v.hoy == 3)
+        #expect(v.atrasadas == 2)
+        #expect(v.vacio == false)
+    }
+
+    /// El mismo orden que la lista de Hoy en la app: primero lo que tiene hora,
+    /// por hora, y detrás lo que no la tiene. Un widget que ordenara distinto
+    /// enseñaría otra cosa que la app y no se podría creer.
+    @Test func itKeepsTheOrderOfTheAppsList() {
+        let items = [tarea("sin hora", dia: hoy),
+                     tarea("tarde", dia: hoy, hora: 18 * 60),
+                     tarea("temprano", dia: hoy, hora: 9 * 60)]
+        let v = Vistazo.de(items, limite: 5, now: hoy, calendar: cal)
+        #expect(v.filas.map(\.titulo) == ["temprano", "tarde", "sin hora"])
+        #expect(v.filas.first?.minuto == 9 * 60)
+    }
+
+    @Test func itTrimsToTheLimitAndSaysHowManyAreLeft() {
+        let items = (1...7).map { tarea("t\($0)", dia: hoy, hora: $0 * 60) }
+        let v = Vistazo.de(items, limite: 3, now: hoy, calendar: cal)
+        #expect(v.filas.count == 3)
+        #expect(v.restantes == 4)
+        #expect(v.hoy == 7)
+
+        let corto = Vistazo.de(Array(items.prefix(2)), limite: 3, now: hoy, calendar: cal)
+        #expect(corto.restantes == 0)
+    }
+
+    /// Lo hecho, lo aparcado y lo borrado no salen. El borrado importa más de
+    /// lo que parece: la lápida se queda en la carpeta treinta días, y el
+    /// widget lee la carpeta.
+    @Test func doneParkedAndBuriedDoNotShowUp() {
+        var hecha = tarea("hecha", dia: hoy); hecha.isCompleted = true
+        var aparcada = tarea("aparcada", dia: hoy); aparcada.isSomeday = true
+        var borrada = tarea("borrada", dia: hoy); borrada.deletedAt = fecha(2026, 9, 8)
+        let v = Vistazo.de([hecha, aparcada, borrada], limite: 5, now: hoy, calendar: cal)
+        #expect(v.vacio)
+        #expect(v.filas.isEmpty)
+    }
+
+    /// Una fecha límite que vence la arrastra a Hoy aunque no estuviera
+    /// planificada, igual que en la app.
+    @Test func aDueDeadlineDragsItIn() {
+        let v = Vistazo.de([tarea("factura", limite: fecha(2026, 9, 9))],
+                           limite: 5, now: hoy, calendar: cal)
+        #expect(v.hoy == 1)
+        #expect(v.filas.first?.titulo == "factura")
+    }
+
+    @Test func eachRowNamesItsProject() {
+        let p = Project(name: "Mudanza")
+        let v = Vistazo.de([tarea("pedir cajas", dia: hoy, proyecto: p.id),
+                            tarea("suelta", dia: hoy)],
+                           proyectos: [p], limite: 5, now: hoy, calendar: cal)
+        #expect(v.filas.first(where: { $0.titulo == "pedir cajas" })?.proyecto == "Mudanza")
+        #expect(v.filas.first(where: { $0.titulo == "suelta" })?.proyecto == nil)
+    }
+
+    /// La bandeja también: es la cuenta que dice que hay cosas sin decidir, y
+    /// en un widget cabe en una línea.
+    @Test func itCountsTheInbox() {
+        let items = [tarea("sin decidir"), tarea("otra"), tarea("de hoy", dia: hoy)]
+        let v = Vistazo.de(items, limite: 5, now: hoy, calendar: cal)
+        #expect(v.bandeja == 2)
+    }
+
+    @Test func theHeadlineSaysItInWords() {
+        let tres = Vistazo.de([tarea("a", dia: fecha(2026, 9, 8)),
+                               tarea("b", dia: fecha(2026, 9, 8)),
+                               tarea("c", dia: hoy)],
+                              limite: 5, now: hoy, calendar: cal)
+        #expect(tres.titular == "3 para hoy")
+        #expect(tres.apunte == "2 atrasadas")
+
+        let una = Vistazo.de([tarea("a", dia: fecha(2026, 9, 8))],
+                             limite: 5, now: hoy, calendar: cal)
+        #expect(una.titular == "1 para hoy")
+        #expect(una.apunte == "1 atrasada")
+
+        let vacio = Vistazo.de([], limite: 5, now: hoy, calendar: cal)
+        #expect(vacio.titular == "Nada para hoy")
+        #expect(vacio.apunte == nil)
+    }
+
+    /// Y lo que de verdad hace el widget: leer la carpeta que escribió la app.
+    /// Es el único sitio donde se comprueba que lo que escribe el almacén lo
+    /// entiende quien lo lee desde fuera, que es otro proceso y otra caja.
+    @MainActor
+    @Test func itReadsTheFolderTheAppWrote() throws {
+        let carpeta = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-vistazo-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: carpeta) }
+
+        let store = Store(root: carpeta)
+        let p = store.addProject(name: "Casa")
+        let a = store.addItem(title: "regar las plantas", in: .today)
+        store.update({ var c = a; c.projectID = p.id; return c }())
+        store.addItem(title: "sin decidir", in: .inbox)
+
+        let v = Vistazo.leer(en: carpeta, limite: 5)
+        #expect(v.hoy == 1)
+        #expect(v.bandeja == 1)
+        #expect(v.filas.first?.titulo == "regar las plantas")
+        #expect(v.filas.first?.proyecto == "Casa")
+    }
+
+    /// Una carpeta que no existe no es un error: es un teléfono donde la app
+    /// todavía no se ha abierto. El widget tiene que dibujar algo.
+    @Test func anEmptyFolderIsNotAnError() {
+        let v = Vistazo.leer(en: URL(fileURLWithPath: "/no/existe/pauta"), limite: 5)
+        #expect(v.vacio)
+        #expect(v.titular == "Nada para hoy")
+    }
+}
+
+/// Los enlaces internos: lo que el widget pide y la app abre. Se prueban por
+/// las dos puntas —se construye y se vuelve a leer— porque quien escribe la
+/// dirección y quien la interpreta son dos procesos distintos, y una errata en
+/// uno de los dos es un toque que no hace nada.
+struct DestinoTests {
+    @Test func everyDestinationSurvivesTheRoundTrip() {
+        let todos: [Enlaces.Destino] = [.hoy, .bandeja, .apuntar, .tarea(UUID())]
+        for destino in todos {
+            #expect(Enlaces.destino(Enlaces.url(destino)) == destino,
+                    "\(destino) no sobrevivió al viaje")
+        }
+    }
+
+    @Test func theUrlsAreTheOnesTheWidgetWrites() {
+        #expect(Enlaces.url(.hoy).absoluteString == "pauta://hoy")
+        #expect(Enlaces.url(.bandeja).absoluteString == "pauta://bandeja")
+        #expect(Enlaces.url(.apuntar).absoluteString == "pauta://apuntar")
+        let id = UUID()
+        #expect(Enlaces.url(.tarea(id)).absoluteString == "pauta://tarea/\(id.uuidString)")
+    }
+
+    /// Lo que no se reconoce no se inventa: abrir la app en otra pantalla
+    /// porque llegó una dirección rara es peor que no abrir nada.
+    @Test func anythingElseIsNotADestination() {
+        for texto in ["pauta://loquesea", "https://jadrdev.dev", "pauta://tarea/no-es-un-uuid",
+                      "pauta://tarea"] {
+            #expect(Enlaces.destino(URL(string: texto)!) == nil, "\(texto)")
+        }
+    }
+}

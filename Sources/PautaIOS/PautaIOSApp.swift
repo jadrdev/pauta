@@ -1,4 +1,5 @@
 import SwiftUI
+import WidgetKit
 import PautaCore
 
 /// Pauta en el teléfono.
@@ -49,16 +50,55 @@ struct RaizView: View {
     @Environment(Agenda.self) private var agenda
     @Environment(\.scenePhase) private var fase
 
+    /// La pestaña que se ve. Deja de ser cosa del sistema porque ahora se puede
+    /// llegar de fuera: un toque en el widget tiene que abrir **su** lista, no
+    /// la última que quedara abierta.
+    @State private var pestana = Pestana.hoy
+    /// La tarea que pidió el widget, si pidió una.
+    @State private var delEnlace: Item?
+    /// Un pulso, no un interruptor: cada vez que suba, la lista abre la barra
+    /// de apuntar. Con un booleano habría que acordarse de bajarlo, y dos
+    /// toques seguidos en el widget no harían nada la segunda vez.
+    @State private var pulsoApuntar = 0
+
+    private enum Pestana: Hashable { case hoy, proximamente, bandeja, mas }
+
     var body: some View {
-        TabView {
-            ListaView(perspectiva: .today)
+        TabView(selection: $pestana) {
+            ListaView(perspectiva: .today, pidenApuntar: pulsoApuntar)
                 .tabItem { Label("Hoy", systemImage: "sun.max") }
+                .tag(Pestana.hoy)
             ListaView(perspectiva: .upcoming)
                 .tabItem { Label("Próximamente", systemImage: "calendar") }
+                .tag(Pestana.proximamente)
             ListaView(perspectiva: .inbox)
                 .tabItem { Label("Bandeja", systemImage: "tray") }
+                .tag(Pestana.bandeja)
             MasView()
                 .tabItem { Label("Más", systemImage: "ellipsis") }
+                .tag(Pestana.mas)
+        }
+        // La tarea del enlace se abre **aquí arriba** y no dentro de la lista:
+        // así da igual en qué pestaña estuvieras y no hay que llevar el enlace
+        // a mano hasta el fondo de la vista que la enseña.
+        .sheet(item: $delEnlace) { DetalleView(item: $0) }
+        .onOpenURL { url in
+            switch Enlaces.destino(url) {
+            case .hoy:
+                pestana = .hoy
+            case .bandeja:
+                pestana = .bandeja
+            case .apuntar:
+                pestana = .hoy
+                pulsoApuntar += 1
+            case .tarea(let id):
+                // Si ya no existe —se completó desde el Mac, se borró— se
+                // aterriza en Hoy sin más: es donde estaba.
+                pestana = .hoy
+                delEnlace = store.items.first { $0.id == id && $0.deletedAt == nil }
+            case .none:
+                break
+            }
         }
         // Al volver del fondo: el día pudo cambiar mientras la app dormía, y lo
         // que era «de hoy» pasó a ser atrasado.
@@ -82,6 +122,10 @@ struct RaizView: View {
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
             await Avisos.reschedule(store.items)
+            // Y el widget, que si no se enteraría cuando el sistema quisiera:
+            // completar algo y verlo seguir ahí media hora es lo que hace que
+            // un widget deje de creerse.
+            WidgetCenter.shared.reloadAllTimelines()
         }
         .task {
             await importar()

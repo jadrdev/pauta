@@ -854,9 +854,15 @@ vista**. Las listas son las mismas —calculadas por el mismo código—; la for
 andar por ellas, no: pestañas abajo, título grande y un botón flotante para
 apuntar.
 
-**[El capítulo del teléfono →](docs/ios.md)** — la estructura, cómo se compila
-para el simulador y para un iPhone de verdad, sus ajustes y lo que todavía no
-puede hacer.
+Y trae **un widget**, que es la única parte de la app que se ve sin abrirla:
+«3 para hoy», las atrasadas aparte y en rojo, las primeras tareas con su hora y
+lo que queda en la bandeja. Con el día vacío se convierte en un botón de apuntar,
+porque es lo único útil que se puede hacer desde ahí. Solo lee tus datos: desde
+el widget no se completa nada.
+
+**[El capítulo del teléfono →](docs/ios.md)** — la estructura, el widget, cómo se
+compila para el simulador y para un iPhone de verdad, sus ajustes y lo que
+todavía no puede hacer.
 
 ## Instalar
 
@@ -881,7 +887,7 @@ Y si prefieres compilarla: **[compilar, firmar y empaquetar →](docs/compilar.m
 
 ```bash
 ./run.sh      # compila y abre la app
-swift test    # los 194 tests del núcleo
+swift test    # los 219 tests del núcleo
 ```
 
 Eso es todo lo que hace falta para verla funcionando. La firma, el empaquetado
@@ -1086,7 +1092,7 @@ un comando: sustituye `Resources/monogram.png` y ejecuta `make-icon.py`.
 ## Estructura
 
 ```
-Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
+Sources/PautaCore/        librería sin UI: la comparten macOS, iOS y el widget
   Models.swift            Item, ChecklistStep, Project, Area, Perspective
   Store.swift             estado + persistencia + consultas
   Avisos.swift            avisos del sistema para las tareas con hora
@@ -1100,6 +1106,7 @@ Sources/PautaCore/        librería sin UI: la compartirán widget/iOS/sync
   Despacho.swift          las decisiones del vaciado de la bandeja
   Atajo.swift             una combinación de teclas y si sirve como atajo
   Repaso.swift            el repaso de la mañana
+  Vistazo.swift           lo que cabe en un widget, y de dónde se lee
 Sources/Pauta/            la app de macOS
   PautaApp.swift          punto de entrada, menús, atajos y barra de menús
   AltaRapida.swift        atajo global y panel para apuntar sin abrir la app
@@ -1125,6 +1132,9 @@ Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
   PuestaAPuntoView.swift  la tarjeta de bienvenida
   MasView.swift           listas de fondo, proyectos, áreas y etiquetas
   DetalleView.swift       la ficha de una tarea
+Sources/PautaWidget/      el widget de iOS: otro proceso, y solo lectura
+  PautaWidget.swift       el paquete de widgets y su línea de tiempo
+  HoyView.swift           lo que se dibuja, por tamaño
 Tests/PautaCoreTests/     tests del núcleo (swift test)
 docs/ios.md               el capítulo del teléfono
 docs/compilar.md          compilar, firmar, empaquetar y el modo maqueta
@@ -1138,10 +1148,17 @@ docs/tecnica.md           persistencia, orden, sincronización y decodificación
   ventana de semanas de calendario: primero conviene ver si en `Hoy` estorban o
   ayudan
 - **La sincronización en el teléfono.** La app ya se instala y funciona en un
-  iPhone, pero guarda solo en su carpeta: entrar en iCloud exige el contenedor de
-  ubicuidad, con entitlements y cuenta de pago
-- Widget — es WidgetKit, o sea un `.appex` embebido, proyecto de Xcode y la misma
-  cuenta
+  iPhone, pero guarda solo en su carpeta —ahora la del grupo que comparte con el
+  widget—: entrar en iCloud exige el contenedor de ubicuidad y sus entitlements.
+  Eso se daba por imposible por la cuenta, y no lo es: el grupo del widget
+  demostró que la cuenta admite capacidades así. Queda el trabajo, no el permiso
+- **Completar desde el widget.** Hoy solo lee, que es lo prudente mientras sus
+  datos vivan donde vivan; para tachar algo desde la pantalla de inicio haría
+  falta que la extensión escribiera en el almacén, y eso se piensa antes de
+  hacerlo
+- **Widget en el Mac**, que es donde están los datos de verdad. Allí la app no
+  está en sandbox y la extensión sí lo estaría, así que hay que rehacer el mismo
+  camino del grupo de aplicaciones que en el teléfono
 
 ## Licencia
 

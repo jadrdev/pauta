@@ -8,13 +8,31 @@ import Observation
 /// La fracción de segundo importa: sin ella, dos tareas creadas en el mismo
 /// segundo quedan con la misma fecha y su orden relativo se pierde al guardar,
 /// así que pegar varias líneas y reabrir la app las reordenaría.
-private enum ISODate {
+enum ISODate {
     nonisolated(unsafe) static let precise: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
     }()
     nonisolated(unsafe) static let secondsOnly = ISO8601DateFormatter()
+
+    /// Un decodificador nuevo, no uno compartido: `JSONDecoder` no es
+    /// `Sendable` y aquí lo usan el almacén —en el actor principal— y el
+    /// vistazo del widget, que lee desde donde le toque.
+    static func decodificador() -> JSONDecoder {
+        let d = JSONDecoder()
+        // Se acepta también el formato sin fracción, que es el que escribieron
+        // las versiones anteriores.
+        d.dateDecodingStrategy = .custom { decoder in
+            let text = try decoder.singleValueContainer().decode(String.self)
+            if let date = ISODate.precise.date(from: text) { return date }
+            if let date = ISODate.secondsOnly.date(from: text) { return date }
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: decoder.codingPath,
+                debugDescription: "fecha no reconocida: \(text)"))
+        }
+        return d
+    }
 }
 
 /// Cuánto se conservan las lápidas antes de borrar su archivo.
@@ -52,20 +70,7 @@ public final class Store {
         }
         return e
     }()
-    private let decoder: JSONDecoder = {
-        let d = JSONDecoder()
-        // Se acepta también el formato sin fracción, que es el que escribieron
-        // las versiones anteriores.
-        d.dateDecodingStrategy = .custom { decoder in
-            let text = try decoder.singleValueContainer().decode(String.self)
-            if let date = ISODate.precise.date(from: text) { return date }
-            if let date = ISODate.secondsOnly.date(from: text) { return date }
-            throw DecodingError.dataCorrupted(.init(
-                codingPath: decoder.codingPath,
-                debugDescription: "fecha no reconocida: \(text)"))
-        }
-        return d
-    }()
+    private let decoder = ISODate.decodificador()
 
     /// En modo memoria no se lee ni se escribe en disco: sirve para maquetar.
     private let inMemory: Bool
@@ -94,9 +99,11 @@ public final class Store {
     /// está en sandbox, así que puede escribir en ella directamente.
     /// En iOS es siempre `nil`: la app va en sandbox y no puede entrar en la
     /// carpeta de iCloud Drive por ruta. Ahí hace falta el contenedor de
-    /// ubicuidad, que exige entitlements y cuenta de desarrollador de pago. Sin
-    /// eso el teléfono guarda en su propia carpeta, que es local pero funciona.
-    public static var iCloudRoot: URL? {
+    /// ubicuidad, con sus entitlements; lo que falta para eso es el trabajo y no
+    /// el permiso —la cuenta admite capacidades así, como demostró el grupo de
+    /// aplicaciones del widget—. Hasta entonces el teléfono guarda en la carpeta
+    /// del grupo, que es local pero funciona.
+    public nonisolated static var iCloudRoot: URL? {
         #if os(macOS)
         let drive = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs",
@@ -108,16 +115,41 @@ public final class Store {
         #endif
     }
 
+    /// El grupo de aplicaciones: el identificador de la única carpeta que la app
+    /// y el widget ven los dos.
+    public nonisolated static let grupo = "group.dev.jadrdev.pauta"
+
+    /// Carpeta compartida con el widget, en el teléfono.
+    ///
+    /// Una extensión es otro proceso y otra caja: no comparte memoria con la
+    /// app y **no puede leer su carpeta**. Lo único que ven las dos es el
+    /// contenedor del grupo, así que en iOS los datos viven ahí y no en la
+    /// carpeta privada de la app. El almacén adopta al arrancar lo que hubiera
+    /// en la de antes, así que el cambio de sitio no pierde nada.
+    ///
+    /// En macOS es siempre `nil`: allí la app no está en sandbox y sus datos
+    /// están en iCloud Drive, que es donde tienen que seguir.
+    public nonisolated static var grupoRoot: URL? {
+        #if os(iOS)
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: grupo)?
+            .appendingPathComponent("Pauta", isDirectory: true)
+        #else
+        nil
+        #endif
+    }
+
     /// Carpeta local, que es también el respaldo si iCloud no está disponible.
-    public static var localRoot: URL {
+    public nonisolated static var localRoot: URL {
         FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Pauta", isDirectory: true)
     }
 
-    /// iCloud si está, y si no la local. Nunca falla: sin iCloud la app sigue
-    /// funcionando exactamente como antes.
-    public static var defaultRoot: URL { iCloudRoot ?? localRoot }
+    /// iCloud si está; en el teléfono, la carpeta del grupo; y si no, la local.
+    /// Nunca falla: sin iCloud y sin grupo la app sigue funcionando
+    /// exactamente como antes.
+    public nonisolated static var defaultRoot: URL { iCloudRoot ?? grupoRoot ?? localRoot }
 
     /// Copia los datos de una carpeta a otra si el destino aún no tiene ninguno.
     /// El origen se deja intacto: sirve de respaldo del paso anterior.
