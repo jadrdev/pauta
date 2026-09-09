@@ -883,9 +883,10 @@ Se abre, se arrastra Pauta a `Aplicaciones` y ya está.
 
 La primera vez macOS **no la va a dejar abrirse**, y conviene saber por qué en
 vez de pelearse con el mensaje: Gatekeeper solo confía en lo que se descarga si
-está firmado con un certificado *Developer ID* y notarizado por Apple, y las dos
-cosas exigen la cuenta de desarrollador de pago. Sin ellas dice que la app «está
-dañada», que no es verdad y no explica nada. Se le quita la cuarentena a mano:
+está firmado con un certificado *Developer ID* y notarizado por Apple, y el disco
+va firmado con un certificado de desarrollo. Sin esas dos cosas dice que la app
+«está dañada», que no es verdad y no explica nada. Se le quita la cuarentena a
+mano:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Pauta.app
@@ -893,6 +894,9 @@ xattr -dr com.apple.quarantine /Applications/Pauta.app
 
 No lo hagas con una app que no sepas de dónde viene. Aquí el código está entero
 a la vista y puedes compilarlo tú, que es la otra salida y la mejor.
+
+El certificado *Developer ID* y la notarización están **por hacerse, no por
+poderse**: la cuenta los permite. Es el paso que quitaría este párrafo entero.
 
 Y si prefieres compilarla: **[compilar, firmar y empaquetar →](docs/compilar.md)**.
 ## Compilar y ejecutar

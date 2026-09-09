@@ -26,9 +26,8 @@ hdiutil create -volname "Pauta $VERSION" -srcfolder "$STAGE" \
     -ov -format UDZO -quiet "$DMG"
 rm -rf "$STAGE"
 
-# La advertencia importa más que el paquete. Con un certificado de desarrollo
-# —el único que da una cuenta gratuita— el disco se abre aquí y en ningún otro
-# Mac: Gatekeeper exige «Developer ID Application» **y** notarización para lo que
+# La advertencia importa más que el paquete. Firmado solo con un certificado de
+# desarrollo, el disco se abre aquí y en ningún otro Mac: Gatekeeper exige «Developer ID Application» **y** notarización para lo que
 # se descarga de internet, y sin las dos cosas el sistema dice que la app está
 # dañada, que es un mensaje que asusta y no explica nada.
 if codesign -dv --verbose=2 build/Pauta.app 2>&1 | grep -q "Authority=Developer ID Application"; then
@@ -40,8 +39,8 @@ else
     echo "  Sirve para probar y para pasársela a alguien de confianza, pero en"
     echo "  otro Mac Gatekeeper la bloqueará hasta que se le quite la cuarentena:"
     echo "      xattr -dr com.apple.quarantine /Applications/Pauta.app"
-    echo "  Para repartirla sin esa nota hace falta la cuenta de desarrollador"
-    echo "  de pago, un certificado Developer ID y notarizarla."
+    echo "  Para repartirla sin esa nota hace falta un certificado Developer ID"
+    echo "  y notarizar el disco. La cuenta lo permite: está por hacerse."
 fi
 
 echo
