@@ -1,4 +1,5 @@
 import SwiftUI
+import WidgetKit
 import EventKit
 import AppKit
 import Observation
@@ -231,6 +232,37 @@ struct Entry {
             print("para borrarla: rm '\(archivo.path)'")
             return
         }
+        // Qué le ha dejado escrito la app al widget.
+        //
+        // Existe porque **desde fuera no se puede mirar**: la carpeta de un
+        // grupo de aplicaciones está protegida por el sistema y un terminal no
+        // entra ahí. La app sí, porque el grupo es suyo. Sin esto, la única
+        // forma de saber si el widget tiene algo que enseñar es mirar el widget.
+        if CommandLine.arguments.contains("--vistazo") {
+            print("grupo: \(Store.grupo)")
+            guard let archivo = Vistazo.archivoCompartido else {
+                print("sin acceso al grupo: el binario no lleva el entitlement")
+                print("  (pasa al ejecutar el binario suelto sin firmar; con Pauta.app no)")
+                return
+            }
+            print("archivo: \(archivo.path)")
+            guard let vistazo = Vistazo.instantanea(en: archivo) else {
+                print("todavía no hay instantánea: abre la app una vez")
+                return
+            }
+            let deHoy = Calendar.current.isDateInToday(vistazo.dia)
+            print("día: \(vistazo.dia.formatted(.dateTime.year().month().day()))"
+                  + (deHoy ? "  (es de hoy)" : "  ⚠︎ NO es de hoy: el widget dirá que no sabe"))
+            print("titular: \(vistazo.titular)" + (vistazo.apunte.map { "  ·  \($0)" } ?? ""))
+            print("bandeja: \(vistazo.bandeja)   sobran: \(vistazo.restantes)")
+            for fila in vistazo.filas {
+                let hora = fila.hora.map { "  \($0)" } ?? ""
+                let tarde = fila.atrasada ? "  (atrasada \(fila.diasTarde) d)" : ""
+                print("  · \(fila.titulo)\(hora)\(tarde)"
+                      + (fila.proyecto.map { "  [\($0)]" } ?? ""))
+            }
+            return
+        }
         if CommandLine.arguments.contains("--dump") {
             let store = Launch.demo ? Store.demo() : Store()
             if Launch.demo {
@@ -280,8 +312,27 @@ struct PautaApp: App {
     /// tiene que sobrevivir para poder vigilar los cambios.
     @State private var recordatorios = RemindersInbox()
     @State private var ajustes = Ajustes.shared
+    /// De qué día es la última instantánea que se le dejó al widget. Sirve para
+    /// republicarla cuando cambia el día sin que cambie ninguna tarea: a las
+    /// doce, lo de hoy pasa a ser de ayer y el widget dejaría de creerse lo que
+    /// tiene escrito.
+    @State private var vistazoDelDia: Date?
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
+
+    /// Deja escrito para el widget lo que hay que enseñar.
+    ///
+    /// El widget del Mac **no puede leer tus datos**: va en sandbox y están en
+    /// iCloud Drive. Así que se le publica una instantánea en la carpeta del
+    /// grupo. Se publica de sobra —nueve filas— porque no se sabe de qué tamaño
+    /// es el widget que la leerá, y cada tamaño recorta.
+    private func publicarVistazo() {
+        let vistazo = Vistazo.de(store.items, proyectos: store.projects,
+                                 limite: Vistazo.limitePublicado)
+        Vistazo.publicar(vistazo)
+        vistazoDelDia = vistazo.dia
+        WidgetCenter.shared.reloadAllTimelines()
+    }
 
     var body: some Scene {
         // `Window` y no `WindowGroup`: esta app es de una sola ventana, y con
@@ -391,6 +442,35 @@ struct PautaApp: App {
                     try? await Task.sleep(for: .seconds(1))
                     guard !Task.isCancelled else { return }
                     await Avisos.reschedule(store.items)
+                    publicarVistazo()
+                }
+                // El día cambia solo, sin que se toque ninguna tarea. El reloj
+                // de la barra late cada medio minuto, así que aquí no hace falta
+                // otro temporizador: basta comparar de qué día es lo publicado.
+                .onChange(of: reloj.ahora) { _, _ in
+                    guard !Launch.demo else { return }
+                    guard vistazoDelDia != Calendar.current.startOfDay(for: .now) else { return }
+                    publicarVistazo()
+                }
+                .onOpenURL { url in
+                    switch Enlaces.destino(url) {
+                    // Una tarea concreta cae en Hoy y no en su ficha: en el Mac
+                    // la ficha se despliega dentro de la fila, y llevar el foco
+                    // hasta ahí desde fuera es más máquina que provecho. Hoy es
+                    // donde está.
+                    case .hoy, .tarea:
+                        nav.perspective = .today
+                        openWindow(id: "main")
+                    case .bandeja:
+                        nav.perspective = .inbox
+                        openWindow(id: "main")
+                    // Apuntar abre el panel del atajo, que es exactamente para
+                    // esto y no necesita la ventana.
+                    case .apuntar:
+                        AltaRapida.shared.alternar()
+                    case .none:
+                        break
+                    }
                 }
         }
         .windowStyle(.hiddenTitleBar)

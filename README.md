@@ -720,9 +720,8 @@ segundo y no un minuto.
 
 El monograma junto al reloj abre un panel con las tareas de Hoy: completarlas
 con su casilla, añadir una nueva (que cae en Hoy) y reabrir la ventana
-principal, todo sin cambiar de app. Cubre casi todo lo que daría un widget sin
-necesitar extensión ni firma — WidgetKit exige un `.appex` embebido que no encaja
-con el empaquetado actual por SwiftPM y firma ad-hoc.
+principal, todo sin cambiar de app. Y a diferencia del [widget](#el-widget), aquí
+sí se puede **tocar**: el panel es la app, no una copia de lectura.
 
 ### La cuenta atrás
 
@@ -738,6 +737,53 @@ leer, y entonces tampoco dice nada cuando falta un cuarto de hora, que es el
 Cuenta **solo tareas**. Los eventos del calendario ya los avisa el sistema, y
 contarlos aquí también sería avisar dos veces de lo mismo. Y cuenta la hora de la
 tarea, no la del aviso: el margen adelanta la campana, no el momento.
+
+## El widget
+
+En el centro de notificaciones y en el escritorio, en tres tamaños. Enseña lo
+mismo que el del teléfono: **«3 para hoy»**, las atrasadas aparte y en rojo, las
+primeras tareas con su hora y lo que queda sin decidir en la bandeja. Lo que no
+cabe lo dice —«+3 más»—, y con el día vacío se convierte en un botón de apuntar.
+Un clic abre la app donde toca: Hoy, la bandeja, o el panel del atajo.
+
+**Solo lee.** El círculo de cada fila no es una casilla: desde el widget no se
+completa nada. Uno que pareciera pulsable sin serlo sería peor que no ponerlo, y
+para tachar cosas está el [panel de la barra de menús](#barra-de-menús), que sí
+es la app.
+
+### Por qué el Mac necesita una instantánea y el teléfono no
+
+Un widget es **otro proceso y otra caja**. En el teléfono eso se resuelve
+moviendo los datos a la carpeta de un grupo de aplicaciones, que la app y la
+extensión ven las dos. Aquí no se puede: tus datos están en **iCloud Drive**, y
+una extensión de widget en macOS va en sandbox —no se carga de otra manera—, así
+que por ruta no entra. Y entrar por la puerta buena exigiría el contenedor de
+ubicuidad, que es justo el atajo del que vive esta app: para ella iCloud Drive es
+una carpeta normal.
+
+Así que la app le deja escrito lo que hay que enseñar: un `vistazo.json` en la
+carpeta del grupo, con los números, las nueve primeras tareas y **el día del que
+habla**. Se publica cuando cambian las tareas y al cruzar la medianoche —el reloj
+de la barra ya late cada medio minuto, así que no hace falta otro temporizador—.
+
+El día que lleva dentro es lo que salva al widget de mentir: si la app está
+cerrada, lo escrito envejece, y entonces el widget dice **«Abre Pauta para ver el
+día»** en vez de enseñar la lista de ayer como si fuera la de hoy.
+
+Para ver qué tiene escrito, sin adivinar:
+
+```bash
+./build/Pauta.app/Contents/MacOS/Pauta --vistazo
+# grupo: 26W4G92PSS.dev.jadrdev.pauta
+# día: 9 sept 2026  (es de hoy)
+# titular: 2 para hoy  ·  1 atrasada
+#   · Revisión diaria  20:00
+#   · Video  (atrasada 1 d)  [Aguere Games]
+```
+
+Existe porque **desde fuera no se puede mirar**: la carpeta de un grupo está
+protegida por el sistema y un terminal no entra ahí. La app sí, porque el grupo
+es suyo.
 
 ## Ajustes
 
@@ -903,7 +949,7 @@ Y si prefieres compilarla: **[compilar, firmar y empaquetar →](docs/compilar.m
 
 ```bash
 ./run.sh      # compila y abre la app
-swift test    # los 227 tests del núcleo
+swift test    # los 234 tests del núcleo
 ```
 
 Eso es todo lo que hace falta para verla funcionando. La firma, el empaquetado
@@ -1123,6 +1169,7 @@ Sources/PautaCore/        librería sin UI: la comparten macOS, iOS y el widget
   Atajo.swift             una combinación de teclas y si sirve como atajo
   Repaso.swift            el repaso de la mañana
   Vistazo.swift           lo que cabe en un widget, y de dónde se lee
+                          —el almacén en iOS, una instantánea en el Mac—
 Sources/Pauta/            la app de macOS
   PautaApp.swift          punto de entrada, menús, atajos y barra de menús
   AltaRapida.swift        atajo global y panel para apuntar sin abrir la app
@@ -1151,6 +1198,9 @@ Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
 Sources/PautaWidget/      el widget de iOS: otro proceso, y solo lectura
   PautaWidget.swift       el paquete de widgets y su línea de tiempo
   HoyView.swift           lo que se dibuja, por tamaño
+Sources/PautaWidgetMac/   el widget del Mac: lee la instantánea, no los datos
+  PautaWidgetMac.swift    el paquete, la línea de tiempo y el día que descarta
+  HoyViewMac.swift        lo que se dibuja, por tamaño
 Tests/PautaCoreTests/     tests del núcleo (swift test)
 docs/ios.md               el capítulo del teléfono
 docs/compilar.md          compilar, firmar, empaquetar y el modo maqueta
@@ -1172,9 +1222,9 @@ docs/tecnica.md           persistencia, orden, sincronización y decodificación
   datos vivan donde vivan; para tachar algo desde la pantalla de inicio haría
   falta que la extensión escribiera en el almacén, y eso se piensa antes de
   hacerlo
-- **Widget en el Mac**, que es donde están los datos de verdad. Allí la app no
-  está en sandbox y la extensión sí lo estaría, así que hay que rehacer el mismo
-  camino del grupo de aplicaciones que en el teléfono
+- **Notarizar el disco**, que es lo que quitaría el paso de la cuarentena al
+  instalar. Hace falta un certificado *Developer ID* y pasar el `.dmg` por
+  notarización: está por hacerse, no por poderse
 
 ## Licencia
 

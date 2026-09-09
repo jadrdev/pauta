@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- El grupo, y **nada de sandbox**: la app del Mac lee tus datos en iCloud
+         Drive por ruta, que es lo que le permite no pedir entitlements de
+         ubicuidad. Meterla en sandbox le quitaría el acceso a su propia
+         carpeta. -->
+    <key>com.apple.security.application-groups</key>
+    <array><string>26W4G92PSS.dev.jadrdev.pauta</string></array>
+</dict>
+</plist>

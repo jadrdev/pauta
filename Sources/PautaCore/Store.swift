@@ -16,6 +16,18 @@ enum ISODate {
     }()
     nonisolated(unsafe) static let secondsOnly = ISO8601DateFormatter()
 
+    /// Un codificador con las fechas en ISO, como todo lo que escribe la app.
+    /// Legible al abrir el archivo, y lo que el decodificador de abajo espera.
+    static func codificador() -> JSONEncoder {
+        let e = JSONEncoder()
+        e.outputFormatting = [.prettyPrinted, .sortedKeys]
+        e.dateEncodingStrategy = .custom { date, encoder in
+            var c = encoder.singleValueContainer()
+            try c.encode(ISODate.precise.string(from: date))
+        }
+        return e
+    }
+
     /// Un decodificador nuevo, no uno compartido: `JSONDecoder` no es
     /// `Sendable` y aquí lo usan el almacén —en el actor principal— y el
     /// vistazo del widget, que lee desde donde le toque.
@@ -61,15 +73,7 @@ public final class Store {
     private let itemsDir: URL
     private let projectsDir: URL
     private let areasDir: URL
-    private let encoder: JSONEncoder = {
-        let e = JSONEncoder()
-        e.outputFormatting = [.prettyPrinted, .sortedKeys]
-        e.dateEncodingStrategy = .custom { date, encoder in
-            var c = encoder.singleValueContainer()
-            try c.encode(ISODate.precise.string(from: date))
-        }
-        return e
-    }()
+    private let encoder = ISODate.codificador()
     private let decoder = ISODate.decodificador()
 
     /// En modo memoria no se lee ni se escribe en disco: sirve para maquetar.
@@ -117,7 +121,17 @@ public final class Store {
 
     /// El grupo de aplicaciones: el identificador de la única carpeta que la app
     /// y el widget ven los dos.
-    public nonisolated static let grupo = "group.dev.jadrdev.pauta"
+    ///
+    /// Distinto en cada plataforma, y no por gusto: en macOS un grupo tiene que
+    /// llevar **el identificador del equipo delante** para una app que no viene
+    /// de la App Store. En iOS no, y el prefijo `group.` es la convención.
+    public nonisolated static let grupo = {
+        #if os(macOS)
+        "26W4G92PSS.dev.jadrdev.pauta"
+        #else
+        "group.dev.jadrdev.pauta"
+        #endif
+    }()
 
     /// Carpeta compartida con el widget, en el teléfono.
     ///

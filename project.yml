@@ -1,8 +1,11 @@
-# Proyecto de Xcode para la app de iOS.
+# Proyecto de Xcode para las dos apps.
 #
-# Existe por una sola razón: **firmar contra un iPhone de verdad**. El simulador
-# no pide firma y se cubre con `tools/ios.sh`; un dispositivo exige un perfil de
-# aprovisionamiento, y quien los crea es Xcode contra tu cuenta.
+# Empezó por una sola razón —**firmar contra un iPhone de verdad**— y ahora
+# compila también el Mac, por otra: los **widgets**. Una extensión no es un
+# binario más dentro del paquete, es otro paquete con su identificador, sus
+# permisos y su punto de extensión, embebido en `PlugIns/` y firmado aparte; y
+# un grupo de aplicaciones necesita que la firma vaya autorizada por un perfil.
+# Las dos cosas las hace Xcode y no las hace `swift build`.
 #
 # Se declara aquí y no se guarda el `.xcodeproj`: un pbxproj es un archivo
 # generado de miles de líneas que se llena de conflictos y que nadie lee. Esto
@@ -12,6 +15,7 @@ options:
   bundleIdPrefix: dev.jadrdev
   deploymentTarget:
     iOS: "17.0"
+    macOS: "14.0"
   createIntermediateGroups: true
 
 targets:
@@ -114,3 +118,123 @@ targets:
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
+
+  # ── El Mac ────────────────────────────────────────────────────────────────
+  #
+  # Mismos archivos que compila `swift build`, otro que los compila. El núcleo
+  # va de nuevo como objetivo propio y por lo mismo que en iOS: el paquete trae
+  # el ejecutable del Mac y el proyecto no sabría cuál es de quién.
+
+  PautaCoreMac:
+    type: library.static
+    platform: macOS
+    sources:
+      - Sources/PautaCore
+    settings:
+      base:
+        # El objetivo se llama distinto para no chocar con el de iOS, pero el
+        # **módulo** tiene que llamarse igual: `import PautaCore` es el mismo en
+        # las cuatro fuentes que lo usan.
+        PRODUCT_NAME: PautaCore
+        PRODUCT_MODULE_NAME: PautaCore
+
+  PautaMac:
+    type: application
+    platform: macOS
+    productName: Pauta
+    sources:
+      - Sources/Pauta
+      - path: Resources/icon-mono.icns
+        buildPhase: resources
+      - path: Resources/icon-claro.icns
+        buildPhase: resources
+      - path: Resources/monogram.png
+        buildPhase: resources
+      - path: Resources/monogram-ink.png
+        buildPhase: resources
+      # El idioma no es decoración: AppKit localiza sus propios menús según los
+      # idiomas que declara el bundle, y sin ninguno los deja en inglés dentro
+      # de una app escrita entera en español.
+      - path: Resources/es.lproj
+        buildPhase: resources
+    dependencies:
+      - target: PautaCoreMac
+      - target: PautaWidgetMac
+      - sdk: WidgetKit.framework
+    info:
+      path: build/mac/Generated-Info.plist
+      properties:
+        CFBundleName: Pauta
+        CFBundleDisplayName: Pauta
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleIconFile: $(ICONO)
+        CFBundleDevelopmentRegion: es
+        CFBundleLocalizations: [es]
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSPrincipalClass: NSApplication
+        NSHighResolutionCapable: true
+        # El esquema propio: es lo que hace que un clic en el widget abra la app
+        # donde toca y no en la última pantalla que quedara.
+        CFBundleURLTypes:
+          - CFBundleURLName: dev.jadrdev.pauta
+            CFBundleTypeRole: Editor
+            CFBundleURLSchemes: [pauta]
+        NSHumanReadableCopyright: © 2026 Joshua A. Díaz Robayna · Todos los derechos reservados
+        # Sin estas cadenas, pedir acceso aborta el proceso.
+        NSRemindersFullAccessUsageDescription: >-
+          Pauta lee su propia lista de Recordatorios para traer a la bandeja lo que apuntes desde el iPhone o con Siri.
+        NSRemindersUsageDescription: >-
+          Pauta lee su propia lista de Recordatorios para traer a la bandeja lo que apuntes desde el iPhone o con Siri.
+        NSCalendarsFullAccessUsageDescription: >-
+          Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.
+        NSCalendarsUsageDescription: >-
+          Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta
+        PRODUCT_NAME: Pauta
+        # Variante de icono: icon-mono (fondo oscuro) o icon-claro.
+        ICONO: icon-mono
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_ENTITLEMENTS: Resources/mac/Pauta.entitlements
+        # Tu equipo y no el de la empresa. `build.sh` firmaba con «la primera
+        # identidad Apple Development del llavero», que resultó ser la del
+        # trabajo; en macOS el grupo lleva el equipo delante, así que la
+        # elección deja de ser invisible.
+        DEVELOPMENT_TEAM: 26W4G92PSS
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        # Sin sandbox: la app lee tus datos en iCloud Drive por ruta.
+        ENABLE_APP_SANDBOX: NO
+
+  PautaWidgetMac:
+    type: app-extension
+    platform: macOS
+    sources:
+      - Sources/PautaWidgetMac
+      # El tema del Mac, compartido y no copiado.
+      - path: Sources/Pauta/Views/Theme.swift
+    dependencies:
+      - target: PautaCoreMac
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    info:
+      path: build/mac/Widget-Info.plist
+      properties:
+        CFBundleDisplayName: Pauta
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta.widget
+        PRODUCT_NAME: PautaWidget
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_ENTITLEMENTS: Resources/mac/PautaWidget.entitlements
+        DEVELOPMENT_TEAM: 26W4G92PSS
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"

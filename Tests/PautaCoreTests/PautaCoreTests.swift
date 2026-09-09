@@ -2918,3 +2918,131 @@ struct CualquierMomentoTests {
         #expect(s.items(for: .today).isEmpty)
     }
 }
+
+/// La instantánea del widget del Mac.
+///
+/// En el teléfono el widget lee el almacén de verdad, porque los datos viven en
+/// la carpeta del grupo. En el Mac no puede: los datos están en iCloud Drive y
+/// una extensión de widget va en sandbox, que no entra ahí por ruta. Así que la
+/// app le deja escrito lo que hay que enseñar, y esto es ese archivo.
+struct InstantaneaTests {
+    private var cal: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }
+    private func fecha(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0) -> Date {
+        cal.date(from: DateComponents(year: y, month: m, day: d, hour: h))!
+    }
+    private func tarea(_ t: String, dia: Date?, hora: Int? = nil) -> Item {
+        var i = Item(title: t)
+        i.when = dia
+        i.timeOfDay = hora
+        return i
+    }
+    private func archivoTemporal() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-instantanea-\(UUID().uuidString).json")
+    }
+
+    @Test func itSurvivesTheRoundTrip() {
+        let hoy = fecha(2026, 9, 9, 10)
+        let v = Vistazo.de([tarea("regar", dia: fecha(2026, 9, 8)),
+                            tarea("pastilla", dia: hoy, hora: 9 * 60),
+                            tarea("sin decidir", dia: nil)],
+                           limite: 4, now: hoy, calendar: cal)
+        let archivo = archivoTemporal()
+        defer { try? FileManager.default.removeItem(at: archivo) }
+
+        Vistazo.publicar(v, en: archivo)
+        #expect(Vistazo.instantanea(en: archivo) == v)
+    }
+
+    /// Y sabe **qué día** describe. Es lo que salva al widget de mentir: si la
+    /// app lleva un día cerrada, la instantánea habla de ayer, y enseñar la
+    /// lista de ayer como si fuera la de hoy es peor que no enseñar nada.
+    @Test func itKnowsWhichDayItDescribes() {
+        let hoy = fecha(2026, 9, 9, 17)
+        let v = Vistazo.de([], limite: 4, now: hoy, calendar: cal)
+        #expect(v.dia == cal.startOfDay(for: hoy))
+
+        let archivo = archivoTemporal()
+        defer { try? FileManager.default.removeItem(at: archivo) }
+        Vistazo.publicar(v, en: archivo)
+        #expect(Vistazo.instantanea(en: archivo)?.dia == cal.startOfDay(for: hoy))
+    }
+
+    /// Sin archivo no hay error: es un Mac donde la app todavía no se ha
+    /// abierto nunca.
+    @Test func aMissingFileIsNothing() {
+        #expect(Vistazo.instantanea(en: archivoTemporal()) == nil)
+    }
+
+    /// Y un archivo a medio escribir tampoco revienta el widget.
+    @Test func aBrokenFileIsNothingEither() {
+        let archivo = archivoTemporal()
+        defer { try? FileManager.default.removeItem(at: archivo) }
+        try? Data("{ no soy json".utf8).write(to: archivo)
+        #expect(Vistazo.instantanea(en: archivo) == nil)
+    }
+
+    /// Se escribe entero o no se escribe: el widget puede estar leyendo justo
+    /// cuando la app guarda, y un archivo a medias es una lista a medias.
+    @Test func itIsWrittenWholeOrNotAtAll() throws {
+        let archivo = archivoTemporal()
+        defer { try? FileManager.default.removeItem(at: archivo) }
+        let hoy = fecha(2026, 9, 9)
+        Vistazo.publicar(Vistazo.de([tarea("a", dia: hoy)], limite: 4, now: hoy, calendar: cal),
+                         en: archivo)
+        Vistazo.publicar(Vistazo.de([tarea("b", dia: hoy), tarea("c", dia: hoy)],
+                                    limite: 4, now: hoy, calendar: cal),
+                         en: archivo)
+        let leido = try #require(Vistazo.instantanea(en: archivo))
+        #expect(leido.hoy == 2)
+        #expect(leido.filas.count == 2)
+    }
+}
+
+/// Recortar un vistazo ya hecho.
+///
+/// La app del Mac escribe **un** archivo y no sabe de qué tamaño es el widget
+/// que lo va a leer, así que publica de sobra y quien dibuja recorta. Lo que no
+/// puede pasar es que al recortar se pierda la cuenta de lo que sobra.
+struct RecorteTests {
+    private var cal: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }
+
+    private func vistazo(_ cuantas: Int, limite: Int) -> Vistazo {
+        let hoy = cal.date(from: DateComponents(year: 2026, month: 9, day: 9, hour: 10))!
+        let items = (1...cuantas).map { n -> Item in
+            var i = Item(title: "t\(n)")
+            i.when = hoy
+            i.timeOfDay = n * 10
+            return i
+        }
+        return Vistazo.de(items, limite: limite, now: hoy, calendar: cal)
+    }
+
+    @Test func itTrimsAndKeepsTheCountOfWhatIsLeft() {
+        let publicado = vistazo(12, limite: 9)
+        #expect(publicado.filas.count == 9)
+        #expect(publicado.restantes == 3)
+
+        let corto = publicado.recortado(a: 4)
+        #expect(corto.filas.count == 4)
+        // Doce del día menos cuatro enseñadas: ocho, y no las tres de antes.
+        #expect(corto.restantes == 8)
+        #expect(corto.hoy == 12)
+        #expect(corto.dia == publicado.dia)
+    }
+
+    @Test func trimmingToMoreThanThereIsChangesNothing() {
+        let publicado = vistazo(3, limite: 9)
+        #expect(publicado.recortado(a: 9) == publicado)
+        #expect(publicado.recortado(a: 3) == publicado)
+        #expect(publicado.recortado(a: 3).restantes == 0)
+    }
+}

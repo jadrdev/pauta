@@ -12,11 +12,11 @@ import Foundation
 /// la misma carpeta por su cuenta. Todo lo que decide qué se ve está aquí, en
 /// funciones puras con la fecha por parámetro, que es lo único que se puede
 /// probar de un widget: en su sitio no hay pantalla que mirar.
-public struct Vistazo: Equatable, Sendable {
+public struct Vistazo: Codable, Equatable, Sendable {
     /// Una tarea, ya resuelta para dibujarla: sin identificadores que haya que
     /// ir a buscar a otra parte, porque en la extensión no hay a quién
     /// preguntar.
-    public struct Fila: Identifiable, Equatable, Sendable {
+    public struct Fila: Identifiable, Codable, Equatable, Sendable {
         public let id: UUID
         public let titulo: String
         /// La hora del día en minutos, si la tiene.
@@ -48,6 +48,13 @@ public struct Vistazo: Equatable, Sendable {
         }
     }
 
+    /// El día del que habla.
+    ///
+    /// Va dentro porque el vistazo del Mac se guarda en un archivo y se lee más
+    /// tarde: si la app lleva un día cerrada, lo que hay escrito habla de ayer.
+    /// Con el día dentro, quien lo lea puede darse cuenta; sin él, enseñaría la
+    /// lista de ayer como si fuera la de hoy.
+    public let dia: Date
     /// Cuántas hay para hoy, contando las que vienen arrastradas.
     public let hoy: Int
     /// De esas, cuántas se planificaron para un día que ya pasó.
@@ -101,6 +108,7 @@ public struct Vistazo: Equatable, Sendable {
         }
 
         return Vistazo(
+            dia: inicio,
             hoy: delDia.count,
             atrasadas: delDia.filter { tarde($0) > 0 }.count,
             bandeja: vivas.filter { $0.projectID == nil && $0.when == nil }.count,
@@ -152,5 +160,74 @@ public struct Vistazo: Equatable, Sendable {
 
         return de(todo("items", Item.self), proyectos: todo("projects", Project.self),
                   limite: limite, now: now, calendar: calendar)
+    }
+
+    /// Cuántas filas publica la app del Mac en su instantánea.
+    ///
+    /// De sobra a propósito: se escribe un solo archivo y quien lo lee no se
+    /// conoce todavía —un widget pequeño enseña tres, uno grande nueve—, así
+    /// que se publica para el más grande y cada tamaño recorta.
+    public static let limitePublicado = 9
+
+    /// El mismo vistazo, recortado a lo que cabe.
+    ///
+    /// Recalcula lo que sobra: recortar a cuatro un vistazo de doce tareas deja
+    /// ocho fuera, no las tres que sobraban al publicarlo. Un widget que dijera
+    /// «+3 más» enseñando cuatro de doce estaría mintiendo dos veces.
+    public func recortado(a limite: Int) -> Vistazo {
+        guard filas.count > limite else { return self }
+        return Vistazo(dia: dia, hoy: hoy, atrasadas: atrasadas, bandeja: bandeja,
+                       filas: Array(filas.prefix(limite)),
+                       restantes: max(0, hoy - limite))
+    }
+
+    // MARK: - La instantánea del Mac
+
+    /// En el Mac el widget **no puede leer los datos**.
+    ///
+    /// En el teléfono sí: los datos viven en la carpeta del grupo, que la app y
+    /// la extensión ven las dos. En el Mac viven en iCloud Drive, y una
+    /// extensión de widget va en sandbox: por ruta no entra ahí, y para entrar
+    /// haría falta el contenedor de ubicuidad y no una carpeta normal, que es
+    /// justo el atajo del que vive la app del Mac.
+    ///
+    /// Así que la app le deja escrito lo que hay que enseñar. Es una copia, con
+    /// lo que eso trae: si la app está cerrada, la copia envejece. Por eso el
+    /// vistazo lleva su día dentro y el widget puede decir que no sabe, en vez
+    /// de enseñar lo de ayer.
+    public static func publicar(_ vistazo: Vistazo, en archivo: URL) {
+        guard let datos = try? ISODate.codificador().encode(vistazo) else { return }
+        try? FileManager.default.createDirectory(
+            at: archivo.deletingLastPathComponent(), withIntermediateDirectories: true)
+        // Atómico, como todo lo que escribe el almacén: el widget puede estar
+        // leyendo justo ahora, y medio archivo es media lista.
+        try? datos.write(to: archivo, options: .atomic)
+    }
+
+    /// Lee la instantánea. `nil` si no hay ninguna o si no se entiende: un Mac
+    /// donde la app no se ha abierto nunca no es un error, y un archivo a medio
+    /// escribir no debe tumbar el widget.
+    public static func instantanea(en archivo: URL) -> Vistazo? {
+        guard let datos = try? Data(contentsOf: archivo) else { return nil }
+        return try? ISODate.decodificador().decode(Vistazo.self, from: datos)
+    }
+
+    /// El archivo compartido, dentro del grupo de aplicaciones.
+    public nonisolated static var archivoCompartido: URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: Store.grupo)?
+            .appendingPathComponent("vistazo.json")
+    }
+
+    /// Lo mismo, en el sitio de verdad. Sin grupo no hace nada: es lo que pasa
+    /// en un binario sin firmar, y no es motivo para caerse.
+    public static func publicar(_ vistazo: Vistazo) {
+        guard let archivo = archivoCompartido else { return }
+        publicar(vistazo, en: archivo)
+    }
+
+    public static func instantanea() -> Vistazo? {
+        guard let archivo = archivoCompartido else { return nil }
+        return instantanea(en: archivo)
     }
 }

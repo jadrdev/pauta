@@ -201,6 +201,11 @@ desde un widget es apuntar lo próximo, así que ahí el widget entero se convie
 en eso: «Apuntar algo», y un toque abre la app con el campo listo y el teclado
 arriba.
 
+El Mac tiene el suyo desde después, y **no comparte con este ni el código de la
+vista ni la forma de leer los datos**: allí la extensión va en sandbox y los
+datos están en iCloud Drive, así que lee una instantánea que la app le deja
+escrita. Está contado en el [README](../README.md#el-widget).
+
 ### Por qué los datos se mudaron de carpeta
 
 Un widget es **otro proceso y otra caja**: no comparte memoria con la app, no

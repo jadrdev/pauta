@@ -10,7 +10,8 @@ está en el [README](../README.md); el teléfono, en [su capítulo](ios.md).
 ```
 
 Compila y abre la app. Solo `./build.sh` genera `build/Pauta.app` sin lanzarla —
-puedes arrastrarla a `/Applications` cuando te guste cómo va.
+puedes arrastrarla a `/Applications` cuando te guste cómo va. `ICONO=icon-claro
+./build.sh` usa la otra lámina de icono.
 
 ```bash
 swift test
@@ -18,11 +19,43 @@ swift test
 
 Los tests cubren `PautaCore`, que no depende de la interfaz.
 
+Hace falta **XcodeGen** (`brew install xcodegen`), y esto es nuevo: `build.sh`
+era `swift build` más un paquete montado a mano, y ahora pasa por el proyecto de
+Xcode. Lo obligó el **widget**, por dos razones que ninguna herramienta de
+paquetes cubre:
+
+- Una extensión no es un binario más dentro del paquete: es **otro paquete**
+  —con su identificador, sus permisos y su punto de extensión— embebido en
+  `Contents/PlugIns/` y firmado aparte.
+- Un **grupo de aplicaciones** necesita que la firma vaya autorizada, y quien
+  pide esa autorización a Apple es Xcode.
+
+El `.xcodeproj` no se guarda: se declara en [`project.yml`](../project.yml) —un
+pbxproj son miles de líneas generadas que se llenan de conflictos y que nadie
+lee—. Un solo proyecto para las dos plataformas, con el núcleo como objetivo
+propio en cada una: dependiendo del paquete, Xcode intentaría compilar todos sus
+objetivos para el destino equivocado.
+
 ## Firma
 
-`build.sh` firma con la primera identidad «Apple Development» del llavero que no
-esté revocada, o con la que fuerces en `SIGN_ID`. Si no encuentra ninguna, cae a
-firma ad-hoc y lo avisa.
+Firma Xcode, con **firma automática** y el equipo escrito en `project.yml`:
+`26W4G92PSS`, el personal.
+
+Antes lo hacía `build.sh` a mano, cogiendo «la primera identidad *Apple
+Development* del llavero que no estuviera revocada». Y esa resultó ser la del
+**trabajo** —`L6BPFFM8F3`, otra empresa—, sin que nadie lo hubiera decidido: la
+app personal llevaba meses firmada con el certificado de la empresa porque salía
+antes en la lista. Se descubrió al montar el widget, porque en macOS el grupo de
+aplicaciones lleva el identificador del equipo delante y la elección deja de ser
+invisible:
+
+```
+com.apple.security.application-groups = [ 26W4G92PSS.dev.jadrdev.pauta ]
+```
+
+El cambio de equipo se paga una vez: el requisito designado fija el certificado
+por su nombre, así que para el sistema la app pasó a ser otra y volvió a pedir
+los permisos —calendario, recordatorios, avisos y el arranque al iniciar sesión—.
 
 No es un detalle cosmético. Con firma ad-hoc el hash del binario cambia con cada
 cambio de código, y TCC —el sistema de permisos— identifica las apps por su
@@ -31,7 +64,7 @@ calendario, recordatorios o accesibilidad se pedirían otra vez en cada
 compilación, dejando entradas basura en Ajustes de Privacidad.
 
 Con una identidad de desarrollador el requisito designado pasa a basarse en el
-identificador y el certificado:
+identificador y el certificado, y **eso** es lo que sobrevive a recompilar:
 
 ```
 designated => identifier "dev.jadrdev.pauta" and anchor apple generic
@@ -74,6 +107,12 @@ en memoria, que no se escriben en disco, y permite forzar la apariencia.
 
 `--view 1…6` elige la lista de arranque, en el orden de la barra lateral.
 Combinado con `--dump` inspecciona la maqueta en vez de los datos reales.
+
+`--vistazo` dice qué le ha dejado escrito la app al widget: la carpeta del
+grupo, de qué día es la instantánea y qué filas lleva. Existe porque desde fuera
+no se puede mirar —la carpeta de un grupo está protegida por el sistema y un
+terminal no entra ahí—, y sin él la única forma de saber si el widget tiene algo
+que enseñar sería mirar el widget.
 
 `--alta-rapida` abre el panel del atajo al arrancar. Está para poder mirarlo y
 comprobar que el foco cae en el campo sin inyectar el atajo por debajo: un
