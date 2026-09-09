@@ -799,7 +799,7 @@ public final class Store {
             $0.when = date.map { Calendar.current.startOfDay(for: $0) }
             $0.isSomeday = false
             // Quitar el día se lleva la hora: una hora sin día no dice cuándo.
-            if date == nil { $0.timeOfDay = nil; $0.warnBefore = nil }
+            if date == nil { $0.sinHora() }
             // Cambiar el plan borra el aplazamiento: ese «ahora no» hablaba de
             // otro momento.
             $0.snoozedUntil = nil
@@ -971,6 +971,7 @@ public final class Store {
             // La bandeja es lo que no tiene nada decidido: ni fecha, ni proyecto.
             mutateItem(item.id) {
                 $0.when = nil
+                $0.sinHora()
                 $0.isSomeday = false
                 $0.projectID = nil
                 $0.isCompleted = false
@@ -999,6 +1000,7 @@ public final class Store {
             // Se puede hacer ya, pero sin día asignado. Conserva el proyecto.
             mutateItem(item.id) {
                 $0.when = nil
+                $0.sinHora()
                 $0.isSomeday = false
                 $0.isCompleted = false
                 $0.completedAt = nil
@@ -1007,6 +1009,7 @@ public final class Store {
             mutateItem(item.id) {
                 $0.isSomeday = true
                 $0.when = nil
+                $0.sinHora()
                 $0.isCompleted = false
                 $0.completedAt = nil
             }
@@ -1056,9 +1059,7 @@ public final class Store {
         mutateItem(item.id) {
             $0.isSomeday = true
             $0.when = nil
-            $0.timeOfDay = nil
-            $0.warnBefore = nil
-            $0.snoozedUntil = nil
+            $0.sinHora()
         }
     }
 

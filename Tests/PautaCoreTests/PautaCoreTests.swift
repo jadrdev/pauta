@@ -2815,3 +2815,106 @@ struct DestinoTests {
         }
     }
 }
+
+/// Qué entra en `Cualquier momento`.
+///
+/// La lista dice «lo que se puede hacer ya», y una tarea a las nueve no se
+/// puede hacer ya: se hace a las nueve. Con una diaria a una hora, la vieja
+/// regla la colaba ahí todos los días.
+@MainActor
+struct CualquierMomentoTests {
+    private func recargar(_ s: Store, _ id: UUID) -> Item? { s.items.first { $0.id == id } }
+
+    @Test func anHourTakesItOutOfAnytime() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .today)
+        s.setTime(a, to: 9 * 60)
+        #expect(s.items(for: .today).map(\.title) == ["pastilla"])
+        #expect(s.items(for: .anytime).isEmpty)
+    }
+
+    /// Sin hora sigue en las dos: eso no cambia. Es una tarea que de verdad se
+    /// puede hacer en cualquier momento de hoy.
+    @Test func withoutAnHourItIsInBothLists() {
+        let s = Store(inMemory: true)
+        s.addItem(title: "comprar pan", in: .today)
+        #expect(s.items(for: .today).map(\.title) == ["comprar pan"])
+        #expect(s.items(for: .anytime).map(\.title) == ["comprar pan"])
+    }
+
+    /// Y lo que da sentido a la lista sigue intacto: la tarea de proyecto sin
+    /// fecha, que es «lo quiero hacer, falta cuándo».
+    @Test func aProjectTaskWithoutADateIsStillAnytime() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        s.addItem(title: "pedir cajas", in: .project(p.id))
+        #expect(s.items(for: .anytime).map(\.title) == ["pedir cajas"])
+    }
+
+    /// Quitar la hora la devuelve.
+    @Test func removingTheHourBringsItBack() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .today)
+        s.setTime(a, to: 9 * 60)
+        #expect(s.items(for: .anytime).isEmpty)
+        s.setTime(recargar(s, a.id)!, to: nil)
+        #expect(s.items(for: .anytime).map(\.title) == ["pastilla"])
+    }
+
+    /// Lo que **no** puede pasar es que una tarea se quede sin ninguna lista.
+    /// Una hora sin día no llega por la interfaz —quitar el día se lleva la
+    /// hora—, pero un archivo escrito a mano sí puede traerla, y una tarea
+    /// invisible es peor que una mal colocada.
+    @Test func anHourWithoutADayDoesNotHideIt() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        var suelta = Item(title: "rara")
+        suelta.projectID = p.id
+        suelta.timeOfDay = 9 * 60
+        #expect(suelta.when == nil)
+        #expect(suelta.isAnytime)
+    }
+
+    /// Y mover una tarea con hora a `Cualquier momento` **le quita la hora**.
+    ///
+    /// La regla ya existía en dos sitios —quitar el día se lleva la hora, tanto
+    /// al dejarla sin fecha como al aparcarla— y faltaba en el arrastre. Con la
+    /// hora puesta y sin día, la tarea no aparecía en la lista donde acababas de
+    /// soltarla, y se quedaba con una hora que no dice cuándo.
+    @Test func movingItToAnytimeTakesTheHourAway() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        let a = s.addItem(title: "pedir cajas", in: .project(p.id))
+        s.setTime(a, to: 9 * 60)
+        s.move(recargar(s, a.id)!, to: .anytime)
+        let puesta = recargar(s, a.id)
+        #expect(puesta?.timeOfDay == nil)
+        #expect(puesta?.warnBefore == nil)
+        #expect(s.items(for: .anytime).map(\.title) == ["pedir cajas"])
+    }
+
+    @Test func andSoDoesMovingItToTheInboxOrToSomeday() {
+        for destino in [Perspective.inbox, .someday] {
+            let s = Store(inMemory: true)
+            let a = s.addItem(title: "pastilla", in: .today)
+            s.setTime(a, to: 9 * 60)
+            s.move(recargar(s, a.id)!, to: destino)
+            #expect(recargar(s, a.id)?.timeOfDay == nil, "\(destino) dejó la hora puesta")
+        }
+    }
+
+    /// El caso que lo destapó: una diaria a una hora. Hoy sale en Hoy y en
+    /// ningún otro sitio; al completarla, la sucesora solo en Próximamente.
+    @Test func aDailyOneWithAnHourNeverLandsInAnytime() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "pastilla", in: .today)
+        s.setTime(a, to: 9 * 60)
+        s.setRecurrence(recargar(s, a.id)!, to: .diaria)
+        #expect(s.items(for: .anytime).isEmpty)
+
+        s.toggleComplete(recargar(s, a.id)!)
+        #expect(s.items(for: .upcoming).map(\.title) == ["pastilla"])
+        #expect(s.items(for: .anytime).isEmpty)
+        #expect(s.items(for: .today).isEmpty)
+    }
+}

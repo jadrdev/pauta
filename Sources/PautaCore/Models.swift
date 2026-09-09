@@ -216,6 +216,19 @@ public struct Item: Identifiable, Codable, Hashable {
         return max(0, Calendar.current.dateComponents([.day], from: day, to: hoy).day ?? 0)
     }
 
+    /// Quita la hora y lo que cuelga de ella.
+    ///
+    /// En un método y no repetido en cada sitio: se hace al dejar una tarea sin
+    /// fecha, al aparcarla y al arrastrarla a la bandeja o a `Cualquier
+    /// momento`, y hasta ahora cada uno se acordaba por su cuenta —o no—. Una
+    /// hora sin día no dice cuándo, y un margen sin hora no cuenta desde
+    /// ninguna parte.
+    public mutating func sinHora() {
+        timeOfDay = nil
+        warnBefore = nil
+        snoozedUntil = nil
+    }
+
     /// El momento exacto, cuando tiene día y hora.
     public var scheduledAt: Date? {
         guard let day, let timeOfDay else { return nil }
@@ -365,8 +378,21 @@ public struct Item: Identifiable, Codable, Hashable {
 
     /// Se puede hacer ya: ni aparcada ni planificada para el futuro. La bandeja
     /// queda fuera a propósito: lo que hay allí todavía está sin decidir.
+    ///
+    /// Y **lo que tiene hora tampoco entra**. La lista dice «cualquier
+    /// momento», y una tarea de las nueve tiene el suyo: se hace a las nueve,
+    /// no cuando puedas. Antes entraba todo lo de Hoy, con hora o sin ella, y
+    /// con una repetitiva diaria a una hora fija eso llenaba la lista todos los
+    /// días de cosas que no se pueden elegir hacer «ahora».
+    ///
+    /// Se mira el momento completo —día **y** hora— y no solo la hora: una hora
+    /// sin día no dice cuándo, y por la interfaz no se puede llegar a ese estado
+    /// —quitar el día se lleva la hora—, pero un archivo traído de otro sitio
+    /// sí. Descontarla por la hora dejaría esa tarea sin ninguna lista, y una
+    /// tarea invisible es peor que una mal colocada.
     public var isAnytime: Bool {
         guard !isCompleted, !isSomeday, !isUpcoming else { return false }
+        guard scheduledAt == nil else { return false }
         return projectID != nil || when != nil
     }
 }

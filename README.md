@@ -37,9 +37,9 @@ pones fecha —y aparece en Hoy o en Próximamente—, la aparcas en Algún día
 metes en un proyecto.
 
 Las listas de la barra lateral no son carpetas: son **consultas** sobre ese
-estado. Una tarea con fecha de hoy que pertenece a un proyecto sale a la vez en
-Hoy, en Cualquier momento y en su proyecto, sin duplicarse. Cambiar su fecha la
-mueve de lista sola.
+estado. Una tarea con fecha de hoy y sin hora que pertenece a un proyecto sale a
+la vez en Hoy, en Cualquier momento y en su proyecto, sin duplicarse. Cambiar su
+fecha la mueve de lista sola.
 
 ## Las listas
 
@@ -48,14 +48,26 @@ mueve de lista sola.
 | Bandeja | Sin fecha, sin proyecto y sin aparcar: lo que aún no has decidido |
 | Hoy | Planificadas para hoy o antes, más lo que tenga la **fecha límite encima**. Una tarea vencida sigue apareciendo aquí |
 | Próximamente | Planificadas para más adelante, **agrupadas por día** |
-| Cualquier momento | Lo que se puede hacer ya: Hoy más las tareas de proyecto sin fecha. La bandeja queda fuera: lo que hay allí aún está sin decidir |
+| Cualquier momento | Lo que se puede hacer **cuando puedas**: lo de Hoy que no tiene hora, más las tareas de proyecto sin fecha. La bandeja queda fuera —lo que hay allí aún está sin decidir— y lo que tiene hora también: a las nueve no es cualquier momento |
 | Algún día | Aparcadas a propósito, sin fecha |
 | Completadas | Lo hecho, lo más reciente primero |
 
 Los **proyectos** aparecen debajo, cada uno con su cuenta de tareas abiertas.
 
 Una tarea de proyecto sin fecha sale en `Cualquier momento` a propósito: meterla
-en un proyecto ya es decidir que se va a hacer, solo falta cuándo. Fuera de su
+en un proyecto ya es decidir que se va a hacer, solo falta cuándo.
+
+Y **lo que tiene hora no sale ahí**, aunque sea de hoy. La lista existe para
+elegir qué hacer ahora, y una tarea de las nueve no se elige: se hace a las
+nueve. Antes entraba todo lo de Hoy, con hora o sin ella, y una repetitiva
+diaria a hora fija —la pastilla, el riego— reaparecía cada día en la única lista
+que debería estar libre de horarios. Sigue saliendo en `Hoy`, que es donde la
+columna del reloj significa algo.
+
+Por lo mismo, **quitarle el día a una tarea le quita la hora**: una hora sin día
+no dice cuándo. Ya pasaba al dejarla sin fecha y al aparcarla, y ahora también
+al arrastrarla a la bandeja o a `Cualquier momento` — antes se quedaba con una
+hora huérfana y desaparecía de la lista donde acababas de soltarla. Fuera de su
 propio proyecto, cada tarea lleva el nombre del proyecto —con su emoji— en una
 pastilla a la derecha, que es lo que permite distinguir dos tareas que se llamen
 igual.
@@ -887,7 +899,7 @@ Y si prefieres compilarla: **[compilar, firmar y empaquetar →](docs/compilar.m
 
 ```bash
 ./run.sh      # compila y abre la app
-swift test    # los 219 tests del núcleo
+swift test    # los 227 tests del núcleo
 ```
 
 Eso es todo lo que hace falta para verla funcionando. La firma, el empaquetado
