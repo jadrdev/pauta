@@ -271,6 +271,28 @@ La ficha de la tarea se abre desde la raíz de las pestañas y no desde dentro d
 la lista: así da igual en qué pestaña estuvieras, y si esa tarea ya no existe
 —se completó en el Mac, se borró— se aterriza en Hoy sin más.
 
+### La ficha de una tarea
+
+Título, notas, cuándo, la hora y **si se repite**. Sin fecha límite y sin
+etiquetas: eso se configura una vez sentado, y ofrecerlo todo en una hoja de
+teléfono la convierte en un formulario que nadie rellena.
+
+La repetición estaba fuera por esa misma regla, y era **la excepción**: «esto es
+todos los días» no se decide sentado delante del Mac, se decide en el momento en
+que te das cuenta —tomando la pastilla, regando, estirando— y ese momento pasa
+con el teléfono en la mano. Y cabe en una fila, que es lo que la separa de un
+formulario. El motor ya estaba entero en el núcleo desde el Mac: al completar
+una repetitiva nace la siguiente, heredando hora, margen, etiquetas y pasos, y
+poniéndose al día si venía atrasada.
+
+Lo que no sube es **hasta cuándo**. «Cada día hasta el 15 de octubre» sí es una
+decisión de sentarse. Si el Mac le puso un fin, el teléfono lo dice —callarlo
+haría parecer eterna una serie que caduca— pero no lo cambia.
+
+En la lista, una repetitiva lleva **solo la flecha** de repetición, como en el
+Mac: poner «Cada día» al lado del título gasta media fila en algo que ya se sabe
+en cuanto se reconoce el icono.
+
 ## Los ajustes del teléfono
 
 En `Más ▸ Ajustes`, y son **tres de los cinco del Mac**: el repaso del día, el
@@ -291,7 +313,8 @@ hay menú de la app donde ponerlas y son justo lo que se viene a buscar aquí:
   haría parecer que está roto lo que solo está pendiente.
 
 Lo que sí hace ya: las cinco listas con sus cuentas, apuntar, completar, borrar
-deslizando, una ficha por tarea para cambiarle el día, y **los avisos** — el
+deslizando, una ficha por tarea para cambiarle el día o **hacerla repetitiva**,
+y **los avisos** — el
 repaso del día se programó solo en el simulador y pidió permiso, que es la señal
 de que el núcleo entero está vivo ahí.
 

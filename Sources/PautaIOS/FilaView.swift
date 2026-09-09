@@ -115,8 +115,15 @@ struct FilaView: View {
     /// Proyecto, etiquetas y pasos. Solo si hay algo que decir.
     @ViewBuilder private var contexto: some View {
         let proyecto = item.projectID.flatMap(store.project)
-        if proyecto != nil || !item.tags.isEmpty || !item.checklist.isEmpty {
+        if proyecto != nil || !item.tags.isEmpty || !item.checklist.isEmpty
+            || item.recurrence != nil {
             HStack(spacing: 8) {
+                // Solo el icono, como en el Mac: poner «Cada día» al lado del
+                // título gasta la mitad de la fila en algo que ya se sabe en
+                // cuanto se reconoce la flecha.
+                if item.recurrence != nil {
+                    Image(systemName: "repeat").font(.system(size: 10, weight: .semibold))
+                }
                 if let proyecto {
                     HStack(spacing: 4) {
                         if !proyecto.icon.isEmpty {
