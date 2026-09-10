@@ -103,10 +103,14 @@ public final class Store {
     /// está en sandbox, así que puede escribir en ella directamente.
     /// En iOS es siempre `nil`: la app va en sandbox y no puede entrar en la
     /// carpeta de iCloud Drive por ruta. Ahí hace falta el contenedor de
-    /// ubicuidad, con sus entitlements; lo que falta para eso es el trabajo y no
-    /// el permiso —la cuenta admite capacidades así, como demostró el grupo de
-    /// aplicaciones del widget—. Hasta entonces el teléfono guarda en la carpeta
-    /// del grupo, que es local pero funciona.
+    /// ubicuidad, y eso **lo cierra la cuenta**, no el trabajo: probado el 10 de
+    /// septiembre de 2026, Apple se niega a emitir el perfil —«Personal
+    /// development teams do not support the iCloud capability»—. Que el grupo de
+    /// aplicaciones del widget sí funcionara no significaba que iCloud también:
+    /// se dedujo y era falso.
+    ///
+    /// Así que el teléfono guarda en la carpeta del grupo, que es local pero
+    /// funciona, y el puente entre los dos aparatos sigue siendo Recordatorios.
     public nonisolated static var iCloudRoot: URL? {
         #if os(macOS)
         let drive = FileManager.default.homeDirectoryForCurrentUser

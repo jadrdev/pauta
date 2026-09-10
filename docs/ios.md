@@ -90,13 +90,28 @@ que hay entre el teléfono y el Mac**, y funciona sin pagar nada.
 
 - **Sincronizar.** En iOS la app va en sandbox y no puede entrar en la carpeta de
   iCloud Drive por ruta, que es como lo hace el Mac. Ahí hace falta el contenedor
-  de ubicuidad, con sus entitlements. Eso se daba por imposible por la cuenta, y
-  **no lo es**: la cuenta admite capacidades de este tipo —lo demostró el grupo
-  de aplicaciones del widget—. Lo que queda es el trabajo, no el permiso.
-  `Store.iCloudRoot` sigue siendo `nil` en iOS por construcción y el teléfono
-  guarda en la carpeta del grupo: funciona, pero solo. Mientras tanto el puente
-  real entre los dos es
-  [Recordatorios](../README.md#captura-desde-recordatorios), que sí sincroniza gratis.
+  de ubicuidad, y **eso lo cierra la cuenta**. No es una suposición: se le pidió
+  el perfil a Apple y contestó que no.
+
+  ```
+  Cannot create a Mac App Development provisioning profile for "dev.jadrdev.pauta".
+  Personal development teams … do not support the iCloud capability.
+  ```
+
+  Que el **grupo de aplicaciones** del widget sí funcionara —y que el perfil dure
+  un año— hizo pensar que la cuenta era de pago y que iCloud también entraría.
+  Era una deducción, y era falsa: los grupos sí, iCloud no.
+
+  Así que `Store.iCloudRoot` sigue siendo `nil` en iOS y el teléfono guarda en la
+  carpeta del grupo: funciona, pero solo. El puente real entre los dos sigue
+  siendo [Recordatorios](../README.md#captura-desde-recordatorios), que sincroniza
+  gratis.
+
+  El otro camino, sin pagar nada, sería que el teléfono **adoptara la carpeta del
+  Mac**: elegirla una vez en el selector de archivos del sistema y guardar el
+  marcador de permiso. No mueve nada y no necesita entitlements; el precio es que
+  cada lectura pasa por un permiso con ámbito y que el día que la carpeta cambie
+  de sitio el teléfono deja de sincronizar **en silencio**.
 - **Enterarse de cambios de fuera.** `FolderWatcher` usa FSEvents, que no existe
   en iOS, así que se compila fuera. En su lugar recarga al volver del fondo. El
   equivalente para una carpeta sincronizada sería `NSMetadataQuery`, y hace falta
@@ -127,10 +142,11 @@ membresía de pago, un año. El guion no lo afirma: lee la fecha del perfil que
 acaba de quedar dentro del paquete y la dice al terminar. Un aviso con una fecha
 supuesta es exactamente cómo se acaba creyendo que la app caduca el martes.
 
-Esta cuenta es de pago, y se comprobó midiéndolo en vez de recordándolo: el
-perfil que Apple emitió para este `.app` **caduca en un año** y admite grupos de
-aplicaciones, que es lo que necesita el widget y lo que un equipo gratuito no
-da.
+De esta cuenta se sabe, medido: el perfil que Apple emite **dura un año** y
+admite **grupos de aplicaciones**, que es lo que necesita el widget. Y se sabe
+también lo que no: es un **equipo personal**, y con esos Apple no emite perfiles
+con iCloud. Las dos cosas a la vez, por raro que suene — de ahí que deducir «si
+admite grupos, es de pago» saliera mal.
 
 El UDID no está escrito en el guion: lo busca por cable y emparejado. Un identificador pegado a mano
 caduca en cuanto cambias de teléfono o de cable, y lo hace en silencio. El filtro

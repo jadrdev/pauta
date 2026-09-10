@@ -40,7 +40,7 @@ else
     echo "  otro Mac Gatekeeper la bloqueará hasta que se le quite la cuarentena:"
     echo "      xattr -dr com.apple.quarantine /Applications/Pauta.app"
     echo "  Para repartirla sin esa nota hace falta un certificado Developer ID"
-    echo "  y notarizar el disco. La cuenta lo permite: está por hacerse."
+    echo "  y notarizar el disco, y ese certificado lo da el programa de pago."
 fi
 
 echo

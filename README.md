@@ -941,8 +941,10 @@ xattr -dr com.apple.quarantine /Applications/Pauta.app
 No lo hagas con una app que no sepas de dónde viene. Aquí el código está entero
 a la vista y puedes compilarlo tú, que es la otra salida y la mejor.
 
-El certificado *Developer ID* y la notarización están **por hacerse, no por
-poderse**: la cuenta los permite. Es el paso que quitaría este párrafo entero.
+Este párrafo no se quita con trabajo: el certificado *Developer ID* que hace
+falta para notarizar lo da el **programa de pago** de Apple, y esta cuenta es un
+equipo personal. Mientras siga así, la cuarentena se quita a mano o se compila
+el código.
 
 Y si prefieres compilarla: **[compilar, firmar y empaquetar →](docs/compilar.md)**.
 ## Compilar y ejecutar
@@ -1219,17 +1221,21 @@ docs/tecnica.md           persistencia, orden, sincronización y decodificación
   ventana de semanas de calendario: primero conviene ver si en `Hoy` estorban o
   ayudan
 - **La sincronización en el teléfono.** La app ya se instala y funciona en un
-  iPhone, pero guarda solo en su carpeta —ahora la del grupo que comparte con el
-  widget—: entrar en iCloud exige el contenedor de ubicuidad y sus entitlements.
-  Eso se daba por imposible por la cuenta, y no lo es: el grupo del widget
-  demostró que la cuenta admite capacidades así. Queda el trabajo, no el permiso
+  iPhone, pero guarda solo en su carpeta —la del grupo que comparte con el
+  widget—: entrar en iCloud exige el contenedor de ubicuidad, y eso **lo cierra
+  la cuenta**. Comprobado pidiéndoselo a Apple: «*Personal development teams do
+  not support the iCloud capability*». Con el programa de pago se abre; sin él,
+  el único camino es que el teléfono adopte la carpeta del Mac por el selector
+  de archivos del sistema, con su marcador de permiso — que funciona gratis y
+  se rompe en silencio el día que la carpeta se mueva
 - **Completar desde el widget.** Hoy solo lee, que es lo prudente mientras sus
   datos vivan donde vivan; para tachar algo desde la pantalla de inicio haría
   falta que la extensión escribiera en el almacén, y eso se piensa antes de
   hacerlo
 - **Notarizar el disco**, que es lo que quitaría el paso de la cuarentena al
-  instalar. Hace falta un certificado *Developer ID* y pasar el `.dmg` por
-  notarización: está por hacerse, no por poderse
+  instalar. Hace falta un certificado *Developer ID*, y ese lo da el **programa
+  de pago** de Apple: con esta cuenta personal no hay ninguno en el llavero ni
+  forma de crearlo
 
 ## Licencia
 
