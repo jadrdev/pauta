@@ -124,7 +124,11 @@ struct ListaView: View {
                                                       bottom: 9, trailing: 16))
                             .listRowSeparatorTint(Papel.hairline)
                             .swipeActions(edge: .trailing) {
+                                // En verde —el tinte de la app se come el
+                                // papel destructivo— era idéntico al de
+                                // programar del otro lado.
                                 Button("Eliminar", role: .destructive) { store.delete(item) }
+                                    .tint(Papel.warning)
                             }
                             .swipeActions(edge: .leading) {
                                 // Aplazar a mano es lo que evita que una tarea

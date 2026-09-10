@@ -73,6 +73,7 @@ struct MasView: View {
                             // los suelta, y pasan a la lista de arriba.
                             .swipeActions(edge: .trailing) {
                                 Button("Eliminar", role: .destructive) { store.delete(area) }
+                                    .tint(Papel.warning)
                                 Button("Renombrar") { pedirNombre(.renombrarArea(area)) }
                                     .tint(Papel.accentInk)
                             }
@@ -199,7 +200,11 @@ struct MasView: View {
             }
         }
         .swipeActions(edge: .trailing) {
+            // El papel destructivo no basta en un deslizamiento: el tinte de
+            // la app lo pinta de verde, igual que «Renombrar». El rojo se pone
+            // a mano, y es el de la paleta —el mismo del retraso—.
             Button("Eliminar", role: .destructive) { store.delete(proyecto) }
+                .tint(Papel.warning)
             Button("Renombrar") { pedirNombre(.renombrarProyecto(proyecto)) }
                 .tint(Papel.accentInk)
         }
