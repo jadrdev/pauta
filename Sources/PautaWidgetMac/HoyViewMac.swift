@@ -129,9 +129,9 @@ private struct FilaDelVistazoMac: View {
             // pulsable sin serlo sería peor que no ponerlo. Se queda porque es
             // lo que hace que una lista se lea como una lista de tareas.
             Circle()
-                .strokeBorder(fila.atrasada ? Paper.warning : Paper.inkFaint, lineWidth: 1.4)
-                .frame(width: pequeno ? 8 : 9, height: pequeno ? 8 : 9)
-                .offset(y: pequeno ? -1 : -0.5)
+                .strokeBorder(fila.atrasada ? Paper.warning : Paper.inkFaint, lineWidth: 1.5)
+                .frame(width: pequeno ? 12 : 13, height: pequeno ? 12 : 13)
+                .offset(y: pequeno ? 3 : 3.5)
             Text(fila.titulo.isEmpty ? "Sin título" : fila.titulo)
                 .font(.system(size: pequeno ? 12.5 : 13.5))
                 .foregroundStyle(Paper.ink)

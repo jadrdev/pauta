@@ -159,14 +159,17 @@ private struct FilaDelVistazo: View {
             Button(intent: CompletarTarea(fila.id)) {
                 Circle()
                     .strokeBorder(fila.atrasada ? Papel.warning : Papel.inkFaint,
-                                  lineWidth: 1.4)
-                    .frame(width: pequeno ? 9 : 10, height: pequeno ? 9 : 10)
-                    .frame(width: 24, height: 18, alignment: .leading)
+                                  lineWidth: 1.5)
+                    .frame(width: pequeno ? 12 : 13, height: pequeno ? 12 : 13)
+                    .frame(width: 26, height: 19, alignment: .leading)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .padding(.trailing, -13)
-            .offset(y: pequeno ? -0.5 : 0)
+            // Bajado a ojo y medido en la captura: con la línea alineada por la
+            // primera línea base, un círculo de doce puntos queda cuatro por
+            // encima del centro del texto.
+            .offset(y: pequeno ? 3.5 : 4)
             Text(fila.titulo.isEmpty ? "Sin título" : fila.titulo)
                 .font(.system(size: pequeno ? 12.5 : 13.5))
                 .foregroundStyle(Papel.ink)
