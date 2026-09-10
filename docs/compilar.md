@@ -78,6 +78,37 @@ desbloquea las integraciones con Calendario y Recordatorios.
 La letra pequeña: los certificados «Apple Development» caducan (el actual, en
 mayo de 2027). Cuando caduque habrá que renovarlo y volver a conceder permisos.
 
+### El widget del Mac y las dos casillas del sandbox
+
+Un widget de macOS en sandbox con un grupo de aplicaciones necesita **dos cosas
+que no están donde uno las busca**, y sin ellas no falla al compilar: falla al
+arrancar, en `libsecinit`, antes de dibujar un píxel. Desde fuera se ve como un
+widget en blanco o como un widget que no existe, y en la consola como
+`EXC_BREAKPOINT` en `_libsecinit_appsandbox`.
+
+```yaml
+ENABLE_APP_SANDBOX: YES            # el ajuste, no solo el entitlement
+PROVISIONING_PROFILE_REQUIRED: YES # o Xcode firma sin perfil embebido
+```
+
+La primera porque **Xcode no lee tu archivo de entitlements** para decidir esto:
+mira el ajuste. Con `ENABLE_APP_SANDBOX = NO` y un plist que dice
+`app-sandbox = true`, el binario se declara en sandbox y Xcode cree que no lo
+está.
+
+La segunda porque en macOS `PROVISIONING_PROFILE_REQUIRED` le sale NO, así que no
+embebe perfil — y sin perfil nada autoriza el grupo dentro del sandbox. Apple sí
+los emite para este equipo personal: `Mac Team Provisioning Profile:
+dev.jadrdev.pauta` y otro para el widget, con el grupo por comodín
+`26W4G92PSS.*` y un año de validez. Solo había que pedirlos.
+
+Para comprobar que el perfil está donde tiene que estar:
+
+```bash
+ls build/Pauta.app/Contents/embedded.provisionprofile
+ls build/Pauta.app/Contents/PlugIns/PautaWidget.appex/Contents/embedded.provisionprofile
+```
+
 ### Una sola copia
 
 Y algo que costó encontrar: **el permiso de avisos es de cada copia, no de la

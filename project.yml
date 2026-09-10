@@ -203,6 +203,15 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta
         PRODUCT_NAME: Pauta
+        # Que el perfil hace falta, dicho a Xcode.
+        #
+        # Con firma automática, Xcode decide si embebe perfil mirando este
+        # ajuste, y en macOS le sale NO. Sin perfil embebido, un widget en
+        # sandbox con un grupo de aplicaciones **muere al arrancar** en
+        # `libsecinit`, antes de dibujar nada: tres caídas y un widget en blanco.
+        # Apple sí emite estos perfiles para este equipo —traen el grupo con
+        # comodín `26W4G92PSS.*`—; lo que faltaba era pedirlos.
+        PROVISIONING_PROFILE_REQUIRED: YES
         # Variante de icono: icon-mono (fondo oscuro) o icon-claro.
         ICONO: icon-mono
         CODE_SIGN_ENTITLEMENTS: Resources/mac/Pauta.entitlements
@@ -239,7 +248,15 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta.widget
         PRODUCT_NAME: PautaWidget
+        PROVISIONING_PROFILE_REQUIRED: YES
         CODE_SIGN_ENTITLEMENTS: Resources/mac/PautaWidget.entitlements
+        # El sandbox, **como ajuste de compilación** y no solo dentro del
+        # archivo de entitlements. Parece redundante y no lo es: Xcode decide si
+        # hace falta perfil de aprovisionamiento mirando este ajuste, no el
+        # plist. Con esto en NO firmaba sin perfil, y al arrancar el widget se
+        # declaraba en sandbox con un grupo que nada autorizaba: `libsecinit` lo
+        # mataba antes de dibujar un píxel. Tres caídas y un widget en blanco.
+        ENABLE_APP_SANDBOX: YES
         DEVELOPMENT_TEAM: 26W4G92PSS
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: "5.0"
