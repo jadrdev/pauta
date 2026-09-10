@@ -444,6 +444,23 @@ extension Item {
     }
 }
 
+/// Una tarea capturada en una fuente externa.
+///
+/// Vive aquí y no junto a la captura de Recordatorios porque de ahí no es: es
+/// lo que el almacén sabe recibir, venga de donde venga. Y de paso, es lo que
+/// permite que el núcleo compile en un reloj, donde Recordatorios no existe.
+public struct Captured: Sendable {
+    public let sourceID: String
+    public let title: String
+    public let notes: String
+
+    public init(sourceID: String, title: String, notes: String) {
+        self.sourceID = sourceID
+        self.title = title
+        self.notes = notes
+    }
+}
+
 // MARK: - Proyecto
 
 public struct Project: Identifiable, Codable, Hashable {

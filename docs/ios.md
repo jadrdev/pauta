@@ -357,6 +357,60 @@ detiene en silencio es peor que no tenerla. Así que
 [`CarpetaElegida`](../Sources/PautaCore/CarpetaElegida.swift) guarda que caducó,
 y los ajustes lo dicen en rojo y piden elegirla otra vez.
 
+## El reloj
+
+De **solo lectura**, y a propósito. Las dos cosas que una muñeca hace mejor que
+un teléfono ya funcionaban sin app: los avisos que programa Pauta en el iPhone
+los reenvía el sistema al reloj —con su botón de completar y su aplazar—, y a
+Siri se le puede dictar una tarea desde ahí, que entra por
+[Recordatorios](../README.md#captura-desde-recordatorios). Lo que faltaba era el
+vistazo: levantar la muñeca y saber cuántas quedan.
+
+Así que el reloj **no tiene datos**. Recibe del teléfono el mismo
+[`Vistazo`](../Sources/PautaCore/Vistazo.swift) que dibuja el widget —lo que cabe
+en un golpe de vista, ya calculado y ordenado por el núcleo— y lo enseña. Sin
+almacén, sin cruces y sin nada que se pueda perder ahí.
+
+Viaja en el **contexto de aplicación** de WatchConnectivity y no en mensajes: el
+contexto es «lo último que se sabe», lo guarda el sistema y está ahí al levantar
+la muñeca aunque el teléfono esté en otra habitación. Un mensaje exige a los dos
+despiertos a la vez, que es justo lo que no pasa entonces.
+
+Y distingue **«no hay nada» de «no sé nada»**: con el vistazo recibido y vacío
+dice «Nada para hoy»; sin recibir nada dice «Abre Pauta en el iPhone». En un
+reloj esos dos mensajes son muy distintos y confundirlos sería mentir.
+
+### Del núcleo, lo que en un reloj puede existir
+
+`PautaCoreWatch` compila las mismas fuentes menos tres:
+[`RemindersInbox`](../Sources/PautaCore/RemindersInbox.swift),
+`PuestaAPunto` y `Agenda`. watchOS **prohíbe** escribir recordatorios —el
+compilador lo dice con `__WATCHOS_PROHIBITED`— y allí no hay pantalla de permisos
+ni eventos de calendario que enseñar. Se excluyen los archivos en vez de repartir
+`#if` por el núcleo: si algún día el reloj necesita una de esas piezas, el
+compilador dirá que no está, que es lo que se quiere — un error, no una
+divergencia silenciosa. `Captured` se mudó a `Models` justo por esto: es un
+modelo del almacén, no parte de Recordatorios.
+
+### Lo que costó, para que no se repita
+
+Cuatro intentos, y cada uno lo dijo el sistema en su registro:
+
+1. **«counterpart app not installed».** La app del reloj tiene que ir **dentro**
+   del paquete del teléfono, en `Watch/`. Instalada por su cuenta en el reloj, el
+   teléfono no la reconoce como su pareja y el vistazo no sale.
+2. **La sesión se activa antes de saber que el reloj tiene la app.** El registro
+   enseña `appInstalled: NO` al activarse y `YES` dos segundos después: el primer
+   vistazo salía en medio y moría con `WCErrorCodeWatchAppNotInstalled`. Se
+   guarda el último y se reintenta al activarse, al cambiar el estado del reloj y
+   al volver a estar cerca.
+3. **El bloque que publicaba no llegaba a ejecutarse.** Colgaba de un
+   `task(id: store.items)` con un segundo de espera, y al arrancar hay una ráfaga
+   de cambios —recargar, cruzar con el Mac, importar— que lo cancelaba una y otra
+   vez. Cero recargas del widget en un arranque entero, comprobado en el
+   registro. Ahora se avisa a fuera también al terminar el arranque.
+4. Y `simctl install` con **ruta relativa** dice que instala y no instala.
+
 ## Los ajustes del teléfono
 
 En `Más ▸ Ajustes`, y son **tres de los cinco del Mac**: el repaso del día, el

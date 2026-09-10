@@ -27,6 +27,7 @@ options:
   deploymentTarget:
     iOS: "17.0"
     macOS: "14.0"
+    watchOS: "10.0"
   createIntermediateGroups: true
 
 targets:
@@ -50,6 +51,15 @@ targets:
     dependencies:
       - target: PautaCore
       - target: PautaWidget
+      # Dentro del paquete del teléfono, en `Watch/`. No es decoración: el
+      # sistema empareja las dos apps por ahí, y con la del reloj instalada por
+      # su cuenta el teléfono contesta «counterpart app not installed» y el
+      # vistazo no sale. Probado, y el error lo dijo tal cual.
+      - target: PautaWatch
+        embed: true
+        copy:
+          destination: wrapper
+          subpath: Watch
       - sdk: WidgetKit.framework
     info:
       path: build/ios/Generated-Info.plist
@@ -260,3 +270,61 @@ targets:
         DEVELOPMENT_TEAM: 26W4G92PSS
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: "5.0"
+
+  # ── El reloj ──────────────────────────────────────────────────────────────
+  #
+  # De solo lectura: recibe del teléfono el mismo `Vistazo` que dibuja el widget
+  # y lo enseña. No tiene almacén, así que no hay nada que perder ni reconciliar
+  # aquí — y las dos cosas que una muñeca hace mejor que un teléfono, avisar y
+  # dictarle a Siri, ya funcionaban sin app.
+
+  PautaCoreWatch:
+    type: library.static
+    platform: watchOS
+    sources:
+      - path: Sources/PautaCore
+        # Lo que en un reloj no existe, fuera — y no con `#if` repartidos por el
+        # núcleo, que sería llenar de excepciones un código que hoy se lee
+        # seguido. watchOS **prohíbe** escribir recordatorios y no tiene la
+        # pantalla de permisos ni los eventos que enseña Hoy, y el reloj es de
+        # solo lectura: no toca ninguna de las tres cosas.
+        #
+        # El precio, dicho: si algún día algo del reloj necesitara una de estas,
+        # el compilador dirá que no está. Eso es lo que se quiere — un error, no
+        # una divergencia silenciosa.
+        excludes:
+          - RemindersInbox.swift
+          - PuestaAPunto.swift
+          - Agenda.swift
+    settings:
+      base:
+        PRODUCT_NAME: PautaCore
+        PRODUCT_MODULE_NAME: PautaCore
+
+  PautaWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - Sources/PautaWatch
+    dependencies:
+      - target: PautaCoreWatch
+      - sdk: WatchConnectivity.framework
+    info:
+      path: build/watch/Generated-Info.plist
+      properties:
+        CFBundleName: Pauta
+        CFBundleDisplayName: Pauta
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: es
+        CFBundleLocalizations: [es]
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: dev.jadrdev.pauta
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta.watchkitapp
+        PRODUCT_NAME: Pauta
+        DEVELOPMENT_TEAM: 26W4G92PSS
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "4"

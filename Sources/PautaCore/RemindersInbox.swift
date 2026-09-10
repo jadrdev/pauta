@@ -2,13 +2,6 @@ import Foundation
 import EventKit
 import os
 
-/// Una tarea capturada en una fuente externa.
-public struct Captured: Sendable {
-    public let sourceID: String
-    public let title: String
-    public let notes: String
-}
-
 /// Captura desde Recordatorios de Apple.
 ///
 /// Recordatorios sincroniza por iCloud y funciona con Siri, así que una lista

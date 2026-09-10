@@ -181,6 +181,27 @@ public struct Vistazo: Codable, Equatable, Sendable {
                        restantes: max(0, hoy - limite))
     }
 
+    // MARK: - Por el aire, al reloj
+
+    /// La llave con la que viaja al reloj dentro del contexto de aplicación.
+    ///
+    /// En el núcleo y no en cada punta: quien lo manda es la app del teléfono y
+    /// quien lo lee es la del reloj, y dos copias de una cadena son dos cadenas
+    /// que un día dejan de coincidir sin que nadie lo note.
+    public static let clave = "vistazo"
+
+    /// El vistazo empaquetado para mandarlo.
+    public func datos() -> Data? {
+        try? ISODate.codificador().encode(self)
+    }
+
+    /// Y desempaquetado al llegar. `nil` si viene de una versión que no se
+    /// entiende: un reloj con la app vieja debe decir que no sabe, no dibujar
+    /// medio vistazo.
+    public static func desde(_ datos: Data) -> Vistazo? {
+        try? ISODate.decodificador().decode(Vistazo.self, from: datos)
+    }
+
     // MARK: - La instantánea del Mac
 
     /// En el Mac el widget **no puede leer los datos**.

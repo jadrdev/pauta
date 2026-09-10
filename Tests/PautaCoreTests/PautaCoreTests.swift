@@ -3334,3 +3334,42 @@ struct CarpetaElegidaTests {
         #expect(d.data(forKey: "carpetaDelMac") == nil)
     }
 }
+
+/// El vistazo por el aire, camino del reloj.
+///
+/// Viaja empaquetado en el contexto de aplicación del reloj, así que tiene que
+/// sobrevivir al viaje entero — y lo que no se entienda tiene que decir que no
+/// se entiende, en vez de dibujar medio vistazo en una muñeca.
+struct VistazoPorElAireTests {
+    private var cal: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }
+
+    @Test func itSurvivesTheTrip() throws {
+        let hoy = cal.date(from: DateComponents(year: 2026, month: 9, day: 10, hour: 9))!
+        var pastilla = Item(title: "pastilla")
+        pastilla.when = hoy
+        pastilla.timeOfDay = 9 * 60
+        var arrastrada = Item(title: "llamar al taller")
+        arrastrada.when = cal.date(byAdding: .day, value: -2, to: hoy)
+
+        let ida = Vistazo.de([pastilla, arrastrada, Item(title: "sin decidir")],
+                             limite: 4, now: hoy, calendar: cal)
+        let datos = try #require(ida.datos())
+        #expect(Vistazo.desde(datos) == ida)
+    }
+
+    /// Basura no es un vistazo. Es lo que llegaría de una versión del teléfono
+    /// que ya no habla el mismo idioma.
+    @Test func rubbishIsNothing() {
+        #expect(Vistazo.desde(Data("no soy un vistazo".utf8)) == nil)
+        #expect(Vistazo.desde(Data()) == nil)
+    }
+
+    /// Y la llave es una sola, para las dos puntas.
+    @Test func thereIsOneKey() {
+        #expect(Vistazo.clave == "vistazo")
+    }
+}

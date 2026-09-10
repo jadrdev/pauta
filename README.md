@@ -961,7 +961,7 @@ Y si prefieres compilarla: **[compilar, firmar y empaquetar →](docs/compilar.m
 
 ```bash
 ./run.sh      # compila y abre la app
-swift test    # los 247 tests del núcleo
+swift test    # los 250 tests del núcleo
 ```
 
 Eso es todo lo que hace falta para verla funcionando. La firma, el empaquetado
@@ -1212,6 +1212,10 @@ Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
 Sources/PautaWidget/      el widget de iOS: otro proceso, y solo lectura
   PautaWidget.swift       el paquete de widgets y su línea de tiempo
   HoyView.swift           lo que se dibuja, por tamaño
+Sources/PautaWatch/       el reloj: recibe el vistazo del teléfono y lo enseña
+  PautaWatchApp.swift     punto de entrada
+  EnlaceConElTelefono.swift  lo que llega por WatchConnectivity
+  HoyWatchView.swift      el día, a la altura del brazo
 Sources/PautaWidgetMac/   el widget del Mac: lee la instantánea, no los datos
   PautaWidgetMac.swift    el paquete, la línea de tiempo y el día que descarta
   HoyViewMac.swift        lo que se dibuja, por tamaño
@@ -1239,10 +1243,11 @@ docs/tecnica.md           persistencia, orden, sincronización y decodificación
   [puente](docs/ios.md#el-puente-con-el-mac): eliges la carpeta del Mac una vez
   y el teléfono cruza con ella al volver a la app. Falta que sea automático de
   verdad, sin elegir nada y sin volver a la app
-- **Completar desde el widget.** Hoy solo lee, que es lo prudente mientras sus
-  datos vivan donde vivan; para tachar algo desde la pantalla de inicio haría
-  falta que la extensión escribiera en el almacén, y eso se piensa antes de
-  hacerlo
+- **La complicación del reloj.** La app del reloj ya enseña el día, pero en la
+  esfera todavía no hay nada: eso es otra extensión de widget, esta vez para
+  watchOS. Es el sitio donde el vistazo valdría más, porque no hay que abrir nada
+- **Tachar desde el reloj**, que exige mandar la orden de vuelta al teléfono y no
+  solo recibir
 - **Notarizar el disco**, que es lo que quitaría el paso de la cuarentena al
   instalar. Hace falta un certificado *Developer ID*, y ese lo da el **programa
   de pago** de Apple: con esta cuenta personal no hay ninguno en el llavero ni

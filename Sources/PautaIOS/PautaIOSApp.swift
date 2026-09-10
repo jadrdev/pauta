@@ -21,6 +21,9 @@ struct PautaIOSApp: App {
         // Antes de la interfaz: un aviso pulsado con la app cerrada se entrega
         // sin nadie que lo atienda si el delegado llega tarde.
         Avisos.hookUp()
+        // Y la sesión con el reloj, que tarda en activarse: pedirla al arrancar
+        // es lo que hace que el primer vistazo salga y no se quede esperando.
+        EnlaceConElReloj.shared.activar()
     }
 
     var body: some Scene {
@@ -128,10 +131,7 @@ struct RaizView: View {
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
             await Avisos.reschedule(store.items)
-            // Y el widget, que si no se enteraría cuando el sistema quisiera:
-            // completar algo y verlo seguir ahí media hora es lo que hace que
-            // un widget deje de creerse.
-            WidgetCenter.shared.reloadAllTimelines()
+            avisarAFuera()
         }
         .task {
             // También al arrancar en frío: apoyarse solo en el cambio de fase
@@ -140,10 +140,34 @@ struct RaizView: View {
             // que sobra pedirlo dos veces y falta no pedirlo ninguna.
             await Sincronizar.conElMac(store)
             await importar()
+            // Y se avisa a fuera **aquí también**, no solo en el bloque de
+            // arriba.
+            //
+            // Ese bloque espera un segundo y se reinicia con cada cambio del
+            // almacén; al arrancar hay una ráfaga —recargar, cruzar con el Mac,
+            // importar de Recordatorios— y entre cancelación y cancelación no
+            // llegaba a ejecutarse nunca. Comprobado en el registro del
+            // simulador: cero recargas del widget en un arranque entero, y el
+            // reloj esperando un vistazo que no salía.
+            avisarAFuera()
             // Y a partir de aquí, cada vez que cambie algo en Recordatorios:
             // con la app abierta, lo dictado aparece sin tocar nada.
             recordatorios.observar { Task { await importar() } }
         }
+    }
+
+    /// Lo que hay que contarle a lo que vive fuera de la app: el widget y el
+    /// reloj. Los dos enseñan el mismo vistazo y ninguno se entera por su
+    /// cuenta.
+    private func avisarAFuera() {
+        // El widget, que si no se enteraría cuando el sistema quisiera:
+        // completar algo y verlo seguir ahí media hora es lo que hace que un
+        // widget deje de creerse.
+        WidgetCenter.shared.reloadAllTimelines()
+        // Y el reloj. Sin reloj emparejado no hace nada.
+        EnlaceConElReloj.shared.publicar(
+            Vistazo.de(store.items, proyectos: store.projects,
+                       limite: Vistazo.limitePublicado))
     }
 
     /// Trae lo pendiente de la lista de Recordatorios a la bandeja.
