@@ -3127,3 +3127,210 @@ struct CompletarDesdeFueraTests {
         #expect(app.items(for: .today).map(\.title) == ["regar"])
     }
 }
+
+/// El puente entre dos carpetas de datos.
+///
+/// El teléfono no puede leer la carpeta del Mac por ruta, pero sí una que le
+/// des tú con el selector de archivos del sistema. Y entonces no conviene
+/// apuntar el almacén ahí: la carpeta puede no estar —el iPhone sin red, el
+/// permiso caducado— y la app tiene que seguir funcionando. Así que cada lado
+/// guarda lo suyo y esto los cruza.
+///
+/// La regla es la que ya usa la sincronización del Mac: **gana la versión
+/// modificada más recientemente**. Y se aplica archivo a archivo, que es lo que
+/// hace que dos aparatos tocando tareas distintas no se pisen nunca.
+struct PuenteTests {
+    private func carpeta() -> URL {
+        let u = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-puente-\(UUID().uuidString)", isDirectory: true)
+        for sub in ["items", "projects", "areas"] {
+            try? FileManager.default.createDirectory(
+                at: u.appendingPathComponent(sub), withIntermediateDirectories: true)
+        }
+        return u
+    }
+
+    /// Escribe una tarea a mano, con la fecha que haga falta para la prueba.
+    private func poner(_ carpeta: URL, id: UUID = UUID(), titulo: String,
+                       actualizada: String, borrada: String? = nil) {
+        var campos = """
+            {"id": "\(id.uuidString)", "title": "\(titulo)", "notes": "",
+             "isCompleted": false, "isSomeday": false, "position": 0,
+             "checklist": [], "tags": [],
+             "createdAt": "2026-09-01T10:00:00.000Z",
+             "updatedAt": "\(actualizada)"
+            """
+        if let borrada { campos += ", \"deletedAt\": \"\(borrada)\"" }
+        campos += "}"
+        try? Data(campos.utf8).write(
+            to: carpeta.appendingPathComponent("items/\(id.uuidString).json"))
+    }
+
+    private func titulos(_ carpeta: URL) -> [String] {
+        let dir = carpeta.appendingPathComponent("items")
+        let archivos = (try? FileManager.default.contentsOfDirectory(at: dir,
+                        includingPropertiesForKeys: nil)) ?? []
+        let d = ISODate.decodificador()
+        return archivos.filter { $0.pathExtension == "json" }
+            .compactMap { try? Data(contentsOf: $0) }
+            .compactMap { try? d.decode(Item.self, from: $0) }
+            .filter { $0.deletedAt == nil }
+            .map(\.title).sorted()
+    }
+
+    @Test func itBringsAndTakesWhatIsOnlyOnOneSide() {
+        let telefono = carpeta(), mac = carpeta()
+        defer { try? FileManager.default.removeItem(at: telefono)
+                try? FileManager.default.removeItem(at: mac) }
+        poner(telefono, titulo: "comprar pilas", actualizada: "2026-09-10T09:00:00.000Z")
+        poner(mac, titulo: "renovar el seguro", actualizada: "2026-09-10T09:00:00.000Z")
+
+        let balance = Puente.cruzar(telefono, mac)
+        #expect(titulos(telefono) == ["comprar pilas", "renovar el seguro"])
+        #expect(titulos(mac) == ["comprar pilas", "renovar el seguro"])
+        #expect(balance.traidas == 1)
+        #expect(balance.llevadas == 1)
+    }
+
+    /// Con el mismo archivo en los dos lados, gana el más reciente. Es la regla
+    /// del almacén, aplicada aquí para que no haya dos verdades.
+    @Test func theNewerVersionWins() {
+        let telefono = carpeta(), mac = carpeta()
+        defer { try? FileManager.default.removeItem(at: telefono)
+                try? FileManager.default.removeItem(at: mac) }
+        let id = UUID()
+        poner(telefono, id: id, titulo: "lo viejo", actualizada: "2026-09-10T09:00:00.000Z")
+        poner(mac, id: id, titulo: "lo nuevo", actualizada: "2026-09-10T11:00:00.000Z")
+
+        Puente.cruzar(telefono, mac)
+        #expect(titulos(telefono) == ["lo nuevo"])
+        #expect(titulos(mac) == ["lo nuevo"])
+    }
+
+    /// Y una lápida viaja como cualquier otra versión: borrar en el Mac tiene
+    /// que borrar en el teléfono, o la tarea resucitaría en el siguiente cruce.
+    @Test func aTombstoneTravels() {
+        let telefono = carpeta(), mac = carpeta()
+        defer { try? FileManager.default.removeItem(at: telefono)
+                try? FileManager.default.removeItem(at: mac) }
+        let id = UUID()
+        poner(telefono, id: id, titulo: "devolver el paquete",
+              actualizada: "2026-09-10T09:00:00.000Z")
+        poner(mac, id: id, titulo: "devolver el paquete",
+              actualizada: "2026-09-10T10:00:00.000Z", borrada: "2026-09-10T10:00:00.000Z")
+
+        Puente.cruzar(telefono, mac)
+        #expect(titulos(telefono).isEmpty)
+    }
+
+    /// Cruzar dos veces no hace nada la segunda: si no fuera así, cada cruce
+    /// tocaría archivos intactos y le daría trabajo a iCloud por nada.
+    @Test func crossingTwiceChangesNothing() {
+        let telefono = carpeta(), mac = carpeta()
+        defer { try? FileManager.default.removeItem(at: telefono)
+                try? FileManager.default.removeItem(at: mac) }
+        poner(telefono, titulo: "una", actualizada: "2026-09-10T09:00:00.000Z")
+        poner(mac, titulo: "otra", actualizada: "2026-09-10T09:00:00.000Z")
+
+        Puente.cruzar(telefono, mac)
+        let segundo = Puente.cruzar(telefono, mac)
+        #expect(segundo == Puente.Balance())
+    }
+
+    /// Lo que no es un JSON de datos se deja en paz: `.DS_Store`, y sobre todo
+    /// los marcadores `.icloud` de lo que iCloud tiene desalojado —copiar uno
+    /// sería copiar un archivo vacío encima de una tarea de verdad—.
+    @Test func itLeavesAloneWhatIsNotData() {
+        let telefono = carpeta(), mac = carpeta()
+        defer { try? FileManager.default.removeItem(at: telefono)
+                try? FileManager.default.removeItem(at: mac) }
+        try? Data("basura".utf8).write(to: mac.appendingPathComponent("items/.DS_Store"))
+        try? Data().write(to: mac.appendingPathComponent("items/.algo.json.icloud"))
+        poner(mac, titulo: "de verdad", actualizada: "2026-09-10T09:00:00.000Z")
+
+        let balance = Puente.cruzar(telefono, mac)
+        #expect(titulos(telefono) == ["de verdad"])
+        #expect(balance.traidas == 1)
+        #expect(balance.pendientesDeBajar == 1)
+    }
+
+    /// Una carpeta a medio hacer no es un error: es un Mac donde la app aún no
+    /// ha creado sus subcarpetas.
+    @Test func aHalfEmptyFolderIsNotAnError() {
+        let telefono = carpeta()
+        let vacia = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-vacia-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: telefono)
+                try? FileManager.default.removeItem(at: vacia) }
+        poner(telefono, titulo: "sola", actualizada: "2026-09-10T09:00:00.000Z")
+
+        let balance = Puente.cruzar(telefono, vacia)
+        #expect(balance.llevadas == 1)
+        #expect(titulos(vacia) == ["sola"])
+    }
+}
+
+/// La carpeta elegida a mano, y su marcador.
+///
+/// Lo que se guarda no es una ruta —una ruta no da permiso— sino un marcador que
+/// el sistema sabe volver a abrir. Aquí se prueba el ida y vuelta, y sobre todo
+/// que **decir que caducó** funcione: una sincronización que se detiene en
+/// silencio es peor que no tenerla.
+@MainActor
+struct CarpetaElegidaTests {
+    private func limpios(_ nombre: String) -> (CarpetaElegida, UserDefaults) {
+        let d = UserDefaults(suiteName: nombre)!
+        d.removePersistentDomain(forName: nombre)
+        return (CarpetaElegida(defaults: d), d)
+    }
+    private func carpetaTemporal() -> URL {
+        let u = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-elegida-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
+        return u
+    }
+
+    @Test func nothingIsChosenAtTheStart() {
+        let (c, _) = limpios("pauta.tests.carpeta.vacia")
+        #expect(c.elegida == false)
+        #expect(c.url == nil)
+        #expect(c.caducada == false)
+    }
+
+    @Test func whatIsChosenComesBack() throws {
+        let (c, _) = limpios("pauta.tests.carpeta.ida")
+        let carpeta = carpetaTemporal()
+        defer { try? FileManager.default.removeItem(at: carpeta) }
+
+        #expect(c.elegir(carpeta))
+        #expect(c.elegida)
+        let vuelta = try #require(c.abrir())
+        #expect(vuelta.standardizedFileURL.path == carpeta.standardizedFileURL.path)
+    }
+
+    /// Y si la carpeta ya no está, se dice. Es el fallo del que avisamos al
+    /// ofrecer esto, así que no puede pasar callando.
+    @Test func aFolderThatIsGoneSaysSo() {
+        let (c, _) = limpios("pauta.tests.carpeta.perdida")
+        let carpeta = carpetaTemporal()
+        #expect(c.elegir(carpeta))
+        try? FileManager.default.removeItem(at: carpeta)
+
+        #expect(c.abrir() == nil)
+        #expect(c.caducada)
+        // Sigue habiendo algo elegido: hay que poder decir «esa que elegiste ya
+        // no está» en vez de fingir que nunca elegiste nada.
+        #expect(c.elegida)
+    }
+
+    @Test func forgettingItLeavesNoTrace() {
+        let (c, d) = limpios("pauta.tests.carpeta.olvido")
+        let carpeta = carpetaTemporal()
+        defer { try? FileManager.default.removeItem(at: carpeta) }
+        #expect(c.elegir(carpeta))
+        c.olvidar()
+        #expect(c.elegida == false)
+        #expect(c.url == nil)
+        #expect(d.data(forKey: "carpetaDelMac") == nil)
+    }
+}

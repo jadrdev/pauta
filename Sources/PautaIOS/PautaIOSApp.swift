@@ -105,6 +105,10 @@ struct RaizView: View {
         .onChange(of: fase) { _, nueva in
             guard nueva == .active else { return }
             store.reload()
+            // Al volver del fondo es cuando hace falta cruzar con el Mac: entre
+            // dejar el teléfono y volver a cogerlo es cuando se ha estado
+            // delante del otro aparato. Sin carpeta elegida no hace nada.
+            Sincronizar.conElMac(store)
             // Los eventos se releen a la fuerza: pudo aceptarse una invitación
             // o moverse una reunión mientras la app dormía, y el día que se
             // enseña ya no sería el de verdad.
