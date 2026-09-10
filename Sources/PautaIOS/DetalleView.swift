@@ -46,6 +46,18 @@ struct DetalleView: View {
                     }
                     Button("Algún día") { guardar(); store.park(item); cerrar() }
                     Button("Sin fecha") { conFecha(nil) }
+                    // Y cualquier otro día. Sin esto, «para más adelante» eran
+                    // mañana y la semana que viene y nada más: para el viernes
+                    // había que abrir el Mac.
+                    //
+                    // El calendario se ata **al día de la tarea** en vez de a un
+                    // estado propio de la vista: así no hay que sembrarlo al
+                    // aparecer —lo que dispararía un cambio de fecha sin que
+                    // nadie lo pidiera— y siempre enseña lo que la tarea tiene.
+                    DatePicker("Otro día", selection: Binding(
+                        get: { actual?.when ?? Self.manana },
+                        set: { conFecha($0, cerrando: false) }
+                    ), displayedComponents: .date)
                 }
                 if let actual, actual.when != nil {
                     Section("HORA") {
@@ -58,6 +70,23 @@ struct DetalleView: View {
                             ForEach(Array(stride(from: 6 * 60, through: 22 * 60, by: 30)),
                                     id: \.self) { m in
                                 Text(Self.hora(m)).tag(m)
+                            }
+                        }
+                    }
+                }
+                // Solo si hay alguno: un selector con «Ninguno» y nada más
+                // sería una fila que no hace nada. Se crean en «Más».
+                if !store.projects.isEmpty {
+                    Section("PROYECTO") {
+                        Picker("En", selection: Binding(
+                            get: { actual?.projectID },
+                            set: { ponerProyecto($0) }
+                        )) {
+                            Text("Ninguno").tag(Optional<UUID>.none)
+                            ForEach(store.projects) { proyecto in
+                                Text(proyecto.icon.isEmpty ? proyecto.name
+                                                           : "\(proyecto.icon) \(proyecto.name)")
+                                    .tag(Optional(proyecto.id))
                             }
                         }
                     }
@@ -106,10 +135,32 @@ struct DetalleView: View {
         }
     }
 
-    private func conFecha(_ fecha: Date?) {
+    private func conFecha(_ fecha: Date?, cerrando: Bool = true) {
         guardar()
         store.schedule(item, to: fecha)
-        cerrar()
+        // Los atajos cierran la ficha —era una decisión y ya está tomada—, pero
+        // el calendario no: se abre, se elige un día y se ve que el día quedó
+        // puesto sin que la pantalla se vaya debajo del dedo.
+        if cerrando { cerrar() }
+    }
+
+    /// Meter la tarea en un proyecto, o sacarla.
+    ///
+    /// Sacarla **solo le quita el proyecto**: no se usa «mover a la bandeja»,
+    /// que además le quitaría el día. Una tarea de mañana que sale de un
+    /// proyecto sigue siendo de mañana.
+    private func ponerProyecto(_ id: UUID?) {
+        guardar()
+        if let id {
+            store.move(item, to: .project(id))
+        } else if var copia = actual {
+            copia.projectID = nil
+            store.update(copia)
+        }
+    }
+
+    private static var manana: Date {
+        Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now
     }
 
     /// Se guarda al salir y no en cada tecla: en el teléfono cada pulsación
