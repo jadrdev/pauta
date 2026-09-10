@@ -746,10 +746,19 @@ primeras tareas con su hora y lo que queda sin decidir en la bandeja. Lo que no
 cabe lo dice —«+3 más»—, y con el día vacío se convierte en un botón de apuntar.
 Un clic abre la app donde toca: Hoy, la bandeja, o el panel del atajo.
 
-**Solo lee.** El círculo de cada fila no es una casilla: desde el widget no se
-completa nada. Uno que pareciera pulsable sin serlo sería peor que no ponerlo, y
-para tachar cosas está el [panel de la barra de menús](#barra-de-menús), que sí
-es la app.
+**Aquí solo lee**, y no por gusto: en el teléfono el círculo de cada fila tacha
+la tarea —el widget escribe en la carpeta del grupo, que es donde viven los datos
+allí—, pero en el Mac la extensión va en sandbox y tus tareas están en iCloud
+Drive, así que **no puede escribirlas**. Para tachar sin abrir la ventana está el
+[panel de la barra de menús](#barra-de-menús), que sí es la app y hace
+exactamente eso.
+
+Lo que se podría hacer el día que moleste: que el widget deje una **orden
+pendiente** en la carpeta del grupo y la app la aplique al siguiente latido —el
+reloj de la barra ya late cada medio minuto—. Funcionaría con la app abierta, que
+es el caso normal con el arranque al iniciar sesión; con la app cerrada la orden
+esperaría, y el widget tendría que decir que está pedida y no hecha. Es un estado
+más que hay que dibujar con cuidado, y por eso no está.
 
 ### Por qué el Mac necesita una instantánea y el teléfono no
 
@@ -915,8 +924,9 @@ apuntar.
 Y trae **un widget**, que es la única parte de la app que se ve sin abrirla:
 «3 para hoy», las atrasadas aparte y en rojo, las primeras tareas con su hora y
 lo que queda en la bandeja. Con el día vacío se convierte en un botón de apuntar,
-porque es lo único útil que se puede hacer desde ahí. Solo lee tus datos: desde
-el widget no se completa nada.
+porque es lo único útil que se puede hacer desde ahí. Y **el círculo tacha**: se
+completa desde la pantalla de inicio sin abrir la app, que era la mitad que
+faltaba del gesto.
 
 **[El capítulo del teléfono →](docs/ios.md)** — la estructura, el widget, cómo se
 compila para el simulador y para un iPhone de verdad, sus ajustes y lo que
@@ -951,7 +961,7 @@ Y si prefieres compilarla: **[compilar, firmar y empaquetar →](docs/compilar.m
 
 ```bash
 ./run.sh      # compila y abre la app
-swift test    # los 234 tests del núcleo
+swift test    # los 237 tests del núcleo
 ```
 
 Eso es todo lo que hace falta para verla funcionando. La firma, el empaquetado

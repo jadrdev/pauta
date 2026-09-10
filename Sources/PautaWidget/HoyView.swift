@@ -139,15 +139,25 @@ private struct FilaDelVistazo: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 7) {
-            // El círculo de la app, sin ser un botón: desde aquí no se puede
-            // completar nada —hacerlo exigiría que el widget escribiera en tus
-            // datos—, y un círculo que parece pulsable y no lo es es peor que
-            // no ponerlo. Se queda porque es lo que hace que una lista se lea
-            // como una lista de tareas.
-            Circle()
-                .strokeBorder(fila.atrasada ? Papel.warning : Papel.inkFaint, lineWidth: 1.4)
-                .frame(width: pequeno ? 8 : 9, height: pequeno ? 8 : 9)
-                .offset(y: pequeno ? -1 : -0.5)
+            // El círculo **es** un botón: tacha la tarea sin abrir la app. Era
+            // lo único que faltaba para que mirar la lista y hacer algo con ella
+            // fueran el mismo gesto.
+            //
+            // El área de toque es mayor que el círculo —que mide ocho puntos— y
+            // no cabe hacerla de 44 como en la app: en un widget pequeño eso es
+            // un tercio del ancho. Se le dan los 22 que caben sin comerse el
+            // título.
+            Button(intent: CompletarTarea(fila.id)) {
+                Circle()
+                    .strokeBorder(fila.atrasada ? Papel.warning : Papel.inkFaint,
+                                  lineWidth: 1.4)
+                    .frame(width: pequeno ? 8 : 9, height: pequeno ? 8 : 9)
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .frame(width: 11, height: 11)
+            .offset(y: pequeno ? -1 : -0.5)
             Text(fila.titulo.isEmpty ? "Sin título" : fila.titulo)
                 .font(.system(size: pequeno ? 12.5 : 13.5))
                 .foregroundStyle(Papel.ink)

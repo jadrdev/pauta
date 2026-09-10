@@ -109,6 +109,8 @@ targets:
       - target: PautaCore
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
+      # Para el botón de tachar: en un widget, un botón es un `AppIntent`.
+      - sdk: AppIntents.framework
     info:
       path: build/ios/Widget-Info.plist
       properties:

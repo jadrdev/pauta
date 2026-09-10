@@ -3049,3 +3049,81 @@ struct RecorteTests {
         #expect(publicado.recortado(a: 3).restantes == 0)
     }
 }
+
+/// Completar desde el widget.
+///
+/// El widget es **otro proceso**: cuando marca una tarea, abre su propio almacén
+/// sobre la misma carpeta, la completa y se va. Lo que se prueba aquí es
+/// exactamente eso —dos almacenes distintos sobre una carpeta, uno escribe y el
+/// otro lo lee— porque es donde puede romperse: si el segundo no ve el cambio,
+/// el widget tacharía una tarea que la app sigue creyendo abierta.
+@MainActor
+struct CompletarDesdeFueraTests {
+    private func carpetaTemporal() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-widget-\(UUID().uuidString)", isDirectory: true)
+    }
+
+    @Test func whatOneStoreCompletesTheOtherSees() throws {
+        let carpeta = carpetaTemporal()
+        defer { try? FileManager.default.removeItem(at: carpeta) }
+
+        // La app: crea la tarea.
+        let app = Store(root: carpeta)
+        let tarea = app.addItem(title: "sacar la basura", in: .today)
+        #expect(app.items(for: .today).count == 1)
+
+        // El widget: otro almacén, la misma carpeta.
+        let widget = Store(root: carpeta)
+        let vista = try #require(widget.items.first { $0.id == tarea.id })
+        #expect(vista.isCompleted == false)
+        widget.toggleComplete(vista)
+
+        // Y la app, al releer, la ve hecha.
+        app.reload()
+        #expect(app.items(for: .today).isEmpty)
+        #expect(app.items.first { $0.id == tarea.id }?.isCompleted == true)
+    }
+
+    /// Y lo que hace que esto no se pueda reimplementar en el widget: completar
+    /// una repetitiva **pare la siguiente**. Si el widget tocara el campo a mano
+    /// en vez de usar el almacén, la serie se cortaría desde la pantalla de
+    /// inicio y nadie se enteraría hasta echar de menos la tarea de mañana.
+    @Test func completingARepeatingOneFromOutsideStillSpawnsTheNextOne() throws {
+        let carpeta = carpetaTemporal()
+        defer { try? FileManager.default.removeItem(at: carpeta) }
+
+        let app = Store(root: carpeta)
+        let pastilla = app.addItem(title: "pastilla", in: .today)
+        app.setTime(pastilla, to: 9 * 60)
+        app.setRecurrence(app.items.first { $0.id == pastilla.id }!, to: .diaria)
+
+        let widget = Store(root: carpeta)
+        widget.toggleComplete(try #require(widget.items.first { $0.id == pastilla.id }))
+
+        app.reload()
+        let sucesora = try #require(app.items.first { $0.spawnedFrom == pastilla.id })
+        #expect(sucesora.isCompleted == false)
+        #expect(sucesora.recurrence == .diaria)
+        #expect(sucesora.timeOfDay == 9 * 60)
+    }
+
+    /// Descompletar también: el círculo del widget es un interruptor, no un
+    /// botón de un solo sentido, y el arrepentimiento inmediato es el caso más
+    /// común de todos.
+    @Test func andItCanBeUndoneFromOutsideToo() throws {
+        let carpeta = carpetaTemporal()
+        defer { try? FileManager.default.removeItem(at: carpeta) }
+
+        let app = Store(root: carpeta)
+        let tarea = app.addItem(title: "regar", in: .today)
+        app.toggleComplete(tarea)
+        #expect(app.items(for: .today).isEmpty)
+
+        let widget = Store(root: carpeta)
+        widget.toggleComplete(try #require(widget.items.first { $0.id == tarea.id }))
+
+        app.reload()
+        #expect(app.items(for: .today).map(\.title) == ["regar"])
+    }
+}

@@ -249,14 +249,26 @@ exactamente lo que pasa entre los dos procesos de verdad.
 El orden es **el mismo que la lista de Hoy** de la app, no uno propio: dos listas
 que dicen ser lo mismo y no coinciden hacen que no te fíes de ninguna.
 
-### Solo lee
+### El círculo tacha
 
-El widget no escribe en tus datos, ni siquiera para completar una tarea. Por eso
-el círculo de la fila **no es un botón**: está porque es lo que hace que una
-lista se lea como una lista de tareas, y uno que pareciera pulsable sin serlo
-sería peor que no ponerlo. Tampoco usa `Store`, que crea carpetas, adopta datos
-viejos, normaliza posiciones y limpia lápidas — un widget no tiene ningún derecho
-a hacer nada de eso. Lee la carpeta y dibuja; lo que no entienda, se lo salta.
+Mirar la lista y no poder tachar lo que acabas de hacer es la mitad del gesto,
+así que el círculo **es un botón**: completa la tarea sin abrir la app. En un
+widget, un botón es un `AppIntent`, y el suyo hace una sola cosa.
+
+Y **no reimplementa completar**: abre el almacén de verdad y llama a
+`toggleComplete`. Es lo que sabe que una repetitiva pare la siguiente, que
+descompletar retire a la sucesora si nadie la tocó y que el aplazamiento se
+borre. Tocar `isCompleted` a mano desde aquí cortaría una serie diaria desde la
+pantalla de inicio sin que nadie se enterara hasta echar de menos la tarea de
+mañana. Hay tres pruebas que clavan justo eso —dos almacenes sobre una carpeta,
+uno escribe y el otro lo ve— porque es donde esto se rompería.
+
+**Lo que no hace es borrar.** Eliminar es de las que no se vuelve, y un widget es
+un sitio donde se pulsa sin mirar.
+
+Para dibujar, en cambio, no usa `Store`: `Vistazo.leer` abre la carpeta y ya. El
+almacén crea carpetas, adopta datos viejos, normaliza posiciones y limpia
+lápidas, y eso no tiene por qué pasar cada vez que el sistema pinta un widget.
 
 Y una carpeta que no existe no es un error: es un teléfono donde la app aún no se
 ha abierto, y ahí el widget dice «Nada para hoy».
