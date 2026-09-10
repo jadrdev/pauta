@@ -52,6 +52,19 @@ public enum Puente {
         let fm = FileManager.default
         let decoder = ISODate.decodificador()
 
+        /// Si el archivo está de verdad en el disco.
+        ///
+        /// Un archivo de iCloud puede existir en el listado y no estar bajado.
+        /// Sin esta comprobación, leerlo dispara la descarga y **espera**: es lo
+        /// que congelaba la app en el primer cruce con una carpeta de verdad.
+        /// Lo que no es de iCloud no tiene este estado y se da por bueno.
+        func enLocal(_ url: URL) -> Bool {
+            guard let valores = try? url.resourceValues(
+                    forKeys: [.ubiquitousItemDownloadingStatusKey]),
+                  let estado = valores.ubiquitousItemDownloadingStatus else { return true }
+            return estado == .current
+        }
+
         /// La fecha de un archivo, o `nil` si no se entiende. Un archivo que no
         /// se puede leer no gana nunca: sobrescribir datos buenos con algo
         /// ilegible es la única forma de perder información aquí.
@@ -76,13 +89,31 @@ public enum Puente {
             /// Los nombres de archivo de datos, y de paso la cuenta de lo que
             /// iCloud tiene desalojado. Un `.nombre.json.icloud` es un marcador
             /// vacío: copiarlo sería copiar la nada encima de una tarea.
+            ///
+            /// Y se descartan también los que iCloud tiene sin bajar **sin
+            /// marcador visible**, que es el caso de una carpeta compartida por
+            /// el selector de archivos. Ahí `Data(contentsOf:)` no falla: se
+            /// queda esperando la descarga, y con sesenta archivos eso es una
+            /// app que parece colgada. Se pide la descarga y se dejan para el
+            /// cruce siguiente.
             func nombres(_ dir: URL) -> Set<String> {
                 let todo = (try? fm.contentsOfDirectory(at: dir,
-                            includingPropertiesForKeys: nil)) ?? []
-                for url in todo where url.pathExtension == "icloud" {
-                    balance.pendientesDeBajar += 1
+                            includingPropertiesForKeys: [.ubiquitousItemDownloadingStatusKey])) ?? []
+                var buenos: Set<String> = []
+                for url in todo {
+                    if url.pathExtension == "icloud" {
+                        balance.pendientesDeBajar += 1
+                        continue
+                    }
+                    guard url.pathExtension == "json" else { continue }
+                    if enLocal(url) {
+                        buenos.insert(url.lastPathComponent)
+                    } else {
+                        balance.pendientesDeBajar += 1
+                        try? fm.startDownloadingUbiquitousItem(at: url)
+                    }
                 }
-                return Set(todo.filter { $0.pathExtension == "json" }.map(\.lastPathComponent))
+                return buenos
             }
 
             let deAqui = nombres(dirAqui)

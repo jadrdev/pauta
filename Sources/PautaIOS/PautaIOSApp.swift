@@ -107,8 +107,10 @@ struct RaizView: View {
             store.reload()
             // Al volver del fondo es cuando hace falta cruzar con el Mac: entre
             // dejar el teléfono y volver a cogerlo es cuando se ha estado
-            // delante del otro aparato. Sin carpeta elegida no hace nada.
-            Sincronizar.conElMac(store)
+            // delante del otro aparato. Sin carpeta elegida no hace nada, y
+            // nunca en el hilo principal: son archivos, y algunos hay que
+            // bajarlos.
+            Task { await Sincronizar.conElMac(store) }
             // Los eventos se releen a la fuerza: pudo aceptarse una invitación
             // o moverse una reunión mientras la app dormía, y el día que se
             // enseña ya no sería el de verdad.
@@ -132,6 +134,11 @@ struct RaizView: View {
             WidgetCenter.shared.reloadAllTimelines()
         }
         .task {
+            // También al arrancar en frío: apoyarse solo en el cambio de fase
+            // deja el primer cruce a merced de si el sistema pasa por
+            // «inactiva» antes de «activa». Cruzar dos veces no hace nada, así
+            // que sobra pedirlo dos veces y falta no pedirlo ninguna.
+            await Sincronizar.conElMac(store)
             await importar()
             // Y a partir de aquí, cada vez que cambie algo en Recordatorios:
             // con la app abierta, lo dictado aparece sin tocar nada.

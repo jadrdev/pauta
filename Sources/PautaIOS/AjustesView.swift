@@ -24,12 +24,25 @@ struct AjustesView: View {
     /// Lo que movió el último cruce, para poder decirlo en vez de dejar al
     /// usuario adivinando si sirvió de algo.
     @State private var balance: Puente.Balance?
+    /// Mientras cruza, se dice. El primer cruce con una carpeta de verdad tarda
+    /// —hay archivos que iCloud todavía tiene que bajar—, y un botón que no
+    /// responde y no explica nada es una app colgada a ojos de cualquiera.
+    @State private var cruzando = false
     @State private var avisos: UNAuthorizationStatus = .notDetermined
     @State private var calendario = Agenda.authorization
     @State private var recordatorios = RemindersInbox.authorization
 
     private static let horasDeRepaso = [7 * 60, 7 * 60 + 30, 8 * 60, 8 * 60 + 30,
                                         9 * 60, 9 * 60 + 30, 10 * 60]
+
+    private func cruzar() {
+        guard !cruzando else { return }
+        cruzando = true
+        Task {
+            balance = await Sincronizar.conElMac(store)
+            cruzando = false
+        }
+    }
 
     private static func resumen(_ b: Puente.Balance) -> String {
         if b.traidas == 0 && b.llevadas == 0 {
@@ -131,10 +144,17 @@ struct AjustesView: View {
                             .foregroundStyle(Papel.inkSoft)
                     }
                     Button {
-                        balance = Sincronizar.conElMac(store)
+                        cruzar()
                     } label: {
-                        Label("Cruzar ahora", systemImage: "arrow.triangle.2.circlepath")
+                        HStack {
+                            Label("Cruzar ahora", systemImage: "arrow.triangle.2.circlepath")
+                            if cruzando {
+                                Spacer()
+                                ProgressView()
+                            }
+                        }
                     }
+                    .disabled(cruzando)
                     if let balance {
                         Text(Self.resumen(balance))
                             .font(.system(size: 12.5))
@@ -203,7 +223,7 @@ struct AjustesView: View {
             guard carpeta.elegir(elegida) else { return }
             // Se cruza en el momento: elegir la carpeta y no ver pasar nada
             // dejaría la duda de si sirvió.
-            balance = Sincronizar.conElMac(store)
+            cruzar()
         }
         .scrollContentBackground(.hidden)
         .background(Papel.bg)
