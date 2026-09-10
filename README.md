@@ -1133,10 +1133,11 @@ AA (≥ 4.5) sobre los cuatro fondos. Si cambias un fondo, recalcúlalos.
 | `icon-mono` | Monograma blanco sobre el negro de marca. **La que está puesta** |
 | `icon-claro` | Monograma oscuro sobre fondo claro |
 | `ios` | La lámina del teléfono: a sangre, sin margen ni esquinas |
+| `reloj` | La del reloj: igual, pero con el monograma más pequeño — la máscara de watchOS es un **círculo**, y un círculo come más que el redondeo de iOS |
 
 ```bash
-python3 tools/make-icon.py ambas   # los dos .icns del Mac y el catálogo de iOS
-ICON=icon-claro ./build.sh
+python3 tools/make-icon.py ambas   # los .icns del Mac y los catálogos de iOS y reloj
+ICONO=icon-claro ./build.sh
 ```
 
 Al ser un monograma y no un wordmark, el mismo arte funciona de 16 a 1024 px sin

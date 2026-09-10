@@ -56,6 +56,19 @@ def lamina_ios(size, ground, art_name, frac=0.52):
     return img.convert("RGB")
 
 
+def lamina_reloj(size, ground, art_name, frac=0.46):
+    """La lámina del reloj: la de iOS con el monograma **más pequeño todavía**.
+
+    La máscara de watchOS es un **círculo**, y un círculo come mucho más que el
+    redondeo de iOS: lo que en un icono de iPhone queda holgado, aquí toca el
+    filo por los cuatro lados. De 0,52 a 0,46.
+
+    Y sigue siendo a sangre y sin alfa, por lo mismo que en iOS: la máscara la
+    pone el sistema, y donde hay transparencia sale negro sin avisar.
+    """
+    return lamina_ios(size, ground, art_name, frac)
+
+
 def icon_mono(size=1024):  return compose(size, BRAND_BLACK, "monogram.png")
 def icon_claro(size=1024): return compose(size, BRAND_LIGHT, "monogram-ink.png")
 
@@ -93,8 +106,30 @@ def build_ios():
     print(f"✓ {catalogo.relative_to(ROOT)}")
 
 
+def build_watch():
+    """El catálogo del icono del reloj.
+
+    Otro catálogo y no el de iOS: la plataforma va escrita dentro del
+    `Contents.json`, y sobre todo el arte no es el mismo — el monograma va más
+    pequeño porque la máscara es redonda.
+    """
+    catalogo = RES / "watch" / "Assets.xcassets" / "AppIcon.appiconset"
+    catalogo.mkdir(parents=True, exist_ok=True)
+    lamina_reloj(1024, BRAND_BLACK, "monogram.png").save(catalogo / "icon-1024.png")
+    (catalogo / "Contents.json").write_text(
+        '{\n  "images" : [\n    {\n      "filename" : "icon-1024.png",\n'
+        '      "idiom" : "universal",\n      "platform" : "watchos",\n'
+        '      "size" : "1024x1024"\n    }\n  ],\n'
+        '  "info" : { "author" : "pauta", "version" : 1 }\n}\n')
+    (RES / "watch" / "Assets.xcassets" / "Contents.json").write_text(
+        '{\n  "info" : { "author" : "pauta", "version" : 1 }\n}\n')
+    lamina_reloj(512, BRAND_BLACK, "monogram.png").save(RES / "icon-reloj-preview.png")
+    print(f"✓ {catalogo.relative_to(ROOT)}")
+
+
 if __name__ == "__main__":
     which = sys.argv[1] if len(sys.argv) > 1 else "ambas"
     if which in ("mono", "ambas"):  build("icon-mono", icon_mono)
     if which in ("claro", "ambas"): build("icon-claro", icon_claro)
     if which in ("ios", "ambas"):   build_ios()
+    if which in ("reloj", "ambas"): build_watch()

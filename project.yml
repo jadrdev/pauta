@@ -306,6 +306,10 @@ targets:
     platform: watchOS
     sources:
       - Sources/PautaWatch
+      # El icono, con su propio arte: la máscara de watchOS es un círculo y el
+      # monograma va más pequeño que en el iPhone. Se genera con
+      # `python3 tools/make-icon.py reloj`.
+      - Resources/watch/Assets.xcassets
     dependencies:
       - target: PautaCoreWatch
       - sdk: WatchConnectivity.framework
@@ -324,6 +328,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta.watchkitapp
         PRODUCT_NAME: Pauta
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         DEVELOPMENT_TEAM: 26W4G92PSS
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: "5.0"

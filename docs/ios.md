@@ -180,6 +180,13 @@ esquina y lo que en una lámina plana parece holgado ahí queda pegado al filo. 
 genera con `python3 tools/make-icon.py ios`, del mismo arte y en el mismo sitio
 que los del Mac, para que no puedan divergir.
 
+**El del reloj es el tercero**, y no una copia del de iOS: ahí la máscara es un
+**círculo**, y un círculo come bastante más que el redondeo de iOS. Con el arte
+del iPhone puesto bajo la máscara redonda, el monograma roza el borde por los
+lados — comprobado poniéndole la máscara a mano antes de decidir el tamaño—, así
+que va más pequeño: 0,46 del lienzo frente a 0,52. `python3 tools/make-icon.py
+reloj`.
+
 Va como catálogo de recursos con **una sola imagen de 1024**: desde Xcode 14 el
 sistema deriva los tamaños, y mantener quince a mano era garantizar que alguna se
 quedara con el arte viejo. Lo compila el propio proyecto —en iOS el icono no es
