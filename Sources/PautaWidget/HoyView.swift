@@ -159,17 +159,22 @@ private struct FilaDelVistazo: View {
             Button(intent: CompletarTarea(fila.id)) {
                 Circle()
                     .strokeBorder(fila.atrasada ? Papel.warning : Papel.inkFaint,
-                                  lineWidth: 1.5)
-                    .frame(width: pequeno ? 12 : 13, height: pequeno ? 12 : 13)
-                    .frame(width: 26, height: 19, alignment: .leading)
+                                  lineWidth: 1.6)
+                    // La proporción de la fila de la app y no un número a ojo:
+                    // allí el círculo mide 21 con un título de 16,5, o sea
+                    // 1,27×. Con títulos de 12,5 y 13,5 salen 16 y 17.
+                    .frame(width: pequeno ? 16 : 17, height: pequeno ? 16 : 17)
+                    // El alto del área es el de la fila: 20 y no más, porque
+                    // solapar con la fila de arriba significa tachar la tarea
+                    // equivocada.
+                    .frame(width: 30, height: 20, alignment: .leading)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .padding(.trailing, -13)
-            // Bajado a ojo y medido en la captura: con la línea alineada por la
-            // primera línea base, un círculo de doce puntos queda cuatro por
-            // encima del centro del texto.
-            .offset(y: pequeno ? 3.5 : 4)
+            .padding(.trailing, -15)
+            // Bajado y medido en la captura: con la fila alineada por la primera
+            // línea base, el círculo queda por encima del centro del texto.
+            .offset(y: pequeno ? 2 : 2.5)
             Text(fila.titulo.isEmpty ? "Sin título" : fila.titulo)
                 .font(.system(size: pequeno ? 12.5 : 13.5))
                 .foregroundStyle(Papel.ink)
