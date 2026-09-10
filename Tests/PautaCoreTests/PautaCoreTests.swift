@@ -1541,6 +1541,9 @@ struct TimeOfDayTests {
 struct AvisoTests {
     private let ahora = Date(timeIntervalSince1970: 1_700_000_000)
 
+    /// Se usa casi siempre por su efecto —dejar una tarea con hora en el
+    /// almacén— y de vez en cuando por lo que devuelve.
+    @discardableResult
     private func conHora(_ s: Store, _ titulo: String, _ dias: Int, _ minutos: Int) -> Item {
         let a = s.addItem(title: titulo, in: .inbox)
         s.schedule(a, to: Calendar.current.date(byAdding: .day, value: dias, to: .now))
@@ -1629,7 +1632,7 @@ struct RetrasoTests {
 
     @Test func onTimeMeansNoDelay() {
         let s = Store(inMemory: true)
-        let a = s.addItem(title: "hoy", in: .today)
+        s.addItem(title: "hoy", in: .today)
         let b = s.addItem(title: "mañana", in: .inbox)
         s.schedule(b, to: dentroDe(1))
         #expect(abierta(s, "hoy")?.daysLate == 0)

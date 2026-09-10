@@ -18,7 +18,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}
+. tools/xcode.sh
 CONFIG=${1:-release}
 DERIVED=${DERIVED:-build/mac-dd}
 APP="build/Pauta.app"

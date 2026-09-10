@@ -78,11 +78,30 @@ desbloquea las integraciones con Calendario y Recordatorios.
 La letra pequeña: los certificados «Apple Development» caducan (el actual, en
 mayo de 2027). Cuando caduque habrá que renovarlo y volver a conceder permisos.
 
-No hace falta abrir Xcode, pero sí tenerlo instalado: los scripts usan
-`DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer` porque
-`xcode-select` de este equipo apunta a las Command Line Tools. Si algún día
-cambias eso (`sudo xcode-select -s /Applications/Xcode-beta.app`), los scripts
-siguen funcionando.
+### Qué Xcode se usa
+
+No hace falta abrirlo, pero sí tenerlo instalado: de ahí salen `xcodebuild`, los
+SDK y la firma. Los guiones lo **buscan**, en [`tools/xcode.sh`](../tools/xcode.sh),
+por este orden:
+
+1. `DEVELOPER_DIR`, si ya viene puesto — manda quien llama, y es lo que permite
+   compilar con otra versión sin editar nada.
+2. Lo que diga `xcode-select`, **solo si apunta a un Xcode**. Si apunta a las
+   Command Line Tools no sirve para compilar apps, y ese es el caso que trajo
+   todo esto.
+3. El primer Xcode de `/Applications`, con la beta al final: si están las dos,
+   la estable es la que firma lo que se publica.
+
+Antes de eso, los guiones llevaban escrito `/Applications/Xcode-beta.app`. Era
+la ruta de **una app concreta**, y el día que la beta se desinstaló se rompieron
+los cinco a la vez con el mismo error:
+
+```
+xcrun: error: missing DEVELOPER_DIR path: /Applications/Xcode-beta.app/…
+```
+
+Si no encuentra ninguno, lo dice y para, en vez de fallar más adelante con un
+error sobre rutas que nadie escribió.
 
 ## Empaquetar el disco
 

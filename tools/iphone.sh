@@ -14,8 +14,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-: ${DEVELOPER_DIR:=/Applications/Xcode-beta.app/Contents/Developer}
-export DEVELOPER_DIR
+. tools/xcode.sh
 : ${DERIVED:=build/ios-device}
 
 command -v xcodegen >/dev/null || {

@@ -1202,6 +1202,11 @@ Sources/PautaWidgetMac/   el widget del Mac: lee la instantánea, no los datos
   PautaWidgetMac.swift    el paquete, la línea de tiempo y el día que descarta
   HoyViewMac.swift        lo que se dibuja, por tamaño
 Tests/PautaCoreTests/     tests del núcleo (swift test)
+build.sh · run.sh         compilar el Mac y relanzarlo
+tools/xcode.sh            dónde está Xcode, buscándolo en vez de escribiéndolo
+tools/ios.sh · iphone.sh  el simulador y un iPhone de verdad
+tools/make-dmg.sh         el disco de descarga
+tools/make-icon.py        los iconos, del mismo arte
 docs/ios.md               el capítulo del teléfono
 docs/compilar.md          compilar, firmar, empaquetar y el modo maqueta
 docs/tecnica.md           persistencia, orden, sincronización y decodificación
