@@ -11,6 +11,17 @@
 # generado de miles de líneas que se llena de conflictos y que nadie lee. Esto
 # son veinte líneas que se entienden.
 name: Pauta
+# La versión, en un solo sitio.
+#
+# Estaba escrita cuatro veces —app y widget, por plataforma— y las cuatro tienen
+# que decir lo mismo siempre: un widget que dice 0.1.0 dentro de una app que dice
+# 0.2.0 es un paquete que el sistema puede rechazar y, peor, una discrepancia que
+# nadie mira hasta que falla. Aquí se hereda.
+settings:
+  base:
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "2"
+
 options:
   bundleIdPrefix: dev.jadrdev
   deploymentTarget:
@@ -73,8 +84,6 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta
         CODE_SIGN_ENTITLEMENTS: Resources/ios/Pauta.entitlements
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
         # Equipo personal, con membresía de pago: el perfil que emite Apple
         # dura un año y admite grupos de aplicaciones —lo que necesita el
         # widget para ver los datos de la app—. El de la empresa está en la
@@ -112,8 +121,6 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta.widget
         CODE_SIGN_ENTITLEMENTS: Resources/ios/PautaWidget.entitlements
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
         DEVELOPMENT_TEAM: 26W4G92PSS
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: "5.0"
@@ -196,8 +203,6 @@ targets:
         PRODUCT_NAME: Pauta
         # Variante de icono: icon-mono (fondo oscuro) o icon-claro.
         ICONO: icon-mono
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_ENTITLEMENTS: Resources/mac/Pauta.entitlements
         # Tu equipo y no el de la empresa. `build.sh` firmaba con «la primera
         # identidad Apple Development del llavero», que resultó ser la del
@@ -232,8 +237,6 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta.widget
         PRODUCT_NAME: PautaWidget
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_ENTITLEMENTS: Resources/mac/PautaWidget.entitlements
         DEVELOPMENT_TEAM: 26W4G92PSS
         CODE_SIGN_STYLE: Automatic
