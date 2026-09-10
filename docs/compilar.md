@@ -104,6 +104,14 @@ Ahora la segunda copia **cede**: trae al frente a la que ya estaba y se va, como
 cualquier app de macOS. Y `--avisos` empieza diciendo de qué paquete habla, que
 es la línea que faltaba para ver esto en un segundo en vez de en media hora.
 
+Y al revés, también medido: copiar encima de Aplicaciones **el mismo binario**
+que ya tenía el permiso lo trae con él, y la copia instalada pasó a decir
+`authorized` sin volver a preguntar nada. Así que lo que mira el sistema no es
+el identificador —dos copias daban respuestas distintas— pero tampoco solo la
+ruta. No se documenta aquí una teoría de cómo lo decide Apple; se documenta lo
+que se puede comprobar con dos comandos, que es lo único que sirve el día que
+vuelva a pasar.
+
 ### Qué Xcode se usa
 
 No hace falta abrirlo, pero sí tenerlo instalado: de ahí salen `xcodebuild`, los
