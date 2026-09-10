@@ -38,14 +38,33 @@ struct CompletarTarea: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        guard let id = UUID(uuidString: tarea) else { return .result() }
+        // Si algo falla, **se avisa**. Un intent que devuelve «hecho» sin hacer
+        // nada es el peor error posible en un widget: el sistema no dibuja nada
+        // y desde fuera parece que el botón no existe. Aquí se lanza, y iOS lo
+        // dice.
+        guard let id = UUID(uuidString: tarea) else { throw Fallo.identificadorRoto }
         let store = Store()
-        guard let item = store.items.first(where: { $0.id == id }) else { return .result() }
+        guard let item = store.items.first(where: { $0.id == id }) else {
+            throw Fallo.tareaQueYaNoEstá
+        }
         store.toggleComplete(item)
         // El sistema recarga el widget al terminar un intent, pero la app puede
         // tener otro widget puesto —pequeño y mediano a la vez— y ese también
         // tiene que enterarse.
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
+    }
+}
+
+/// Lo que puede salir mal al tachar desde el widget, dicho en voz alta.
+enum Fallo: Error, CustomLocalizedStringResourceConvertible {
+    case identificadorRoto
+    case tareaQueYaNoEstá
+
+    var localizedStringResource: LocalizedStringResource {
+        switch self {
+        case .identificadorRoto: "Ese botón se quedó viejo. Abre Pauta."
+        case .tareaQueYaNoEstá: "Esa tarea ya no está. Abre Pauta para verla."
+        }
     }
 }

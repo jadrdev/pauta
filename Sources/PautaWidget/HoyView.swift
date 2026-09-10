@@ -143,21 +143,30 @@ private struct FilaDelVistazo: View {
             // lo único que faltaba para que mirar la lista y hacer algo con ella
             // fueran el mismo gesto.
             //
-            // El área de toque es mayor que el círculo —que mide ocho puntos— y
-            // no cabe hacerla de 44 como en la app: en un widget pequeño eso es
-            // un tercio del ancho. Se le dan los 22 que caben sin comerse el
-            // título.
+            // El área de toque, que es donde esto se hizo mal la primera vez:
+            // el círculo mide nueve puntos y el botón se cerró a once, o sea dos
+            // milímetros. Con un toque por coordenadas en el simulador acertaba
+            // siempre; con un dedo, casi nunca — y desde fuera eso se ve como
+            // «el widget no hace nada».
+            //
+            // Ahora el área es de 24×18 y el círculo va pegado a la izquierda
+            // dentro de ella, así que lo que crece es el hueco **a la derecha**,
+            // hacia el título. Los 18 de alto son los de la fila: más alto
+            // solaparía con la fila de arriba, y completar la tarea equivocada
+            // es peor que fallar el toque. El ancho vuelve a la fila con un
+            // margen negativo —el mismo truco que la casilla de la app—, así que
+            // el dibujo no se mueve y el toque sí crece.
             Button(intent: CompletarTarea(fila.id)) {
                 Circle()
                     .strokeBorder(fila.atrasada ? Papel.warning : Papel.inkFaint,
                                   lineWidth: 1.4)
-                    .frame(width: pequeno ? 8 : 9, height: pequeno ? 8 : 9)
-                    .frame(width: 22, height: 22)
+                    .frame(width: pequeno ? 9 : 10, height: pequeno ? 9 : 10)
+                    .frame(width: 24, height: 18, alignment: .leading)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .frame(width: 11, height: 11)
-            .offset(y: pequeno ? -1 : -0.5)
+            .padding(.trailing, -13)
+            .offset(y: pequeno ? -0.5 : 0)
             Text(fila.titulo.isEmpty ? "Sin título" : fila.titulo)
                 .font(.system(size: pequeno ? 12.5 : 13.5))
                 .foregroundStyle(Papel.ink)
