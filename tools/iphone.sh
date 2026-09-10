@@ -63,8 +63,20 @@ UDID=${INFO%% *}
 echo "▸ ${INFO#* }  ·  $UDID"
 
 xcodegen generate --quiet
-xcodebuild -project Pauta.xcodeproj -scheme Pauta -destination "id=$UDID" \
-    -derivedDataPath "$DERIVED" -allowProvisioningUpdates -quiet build
+# Si el teléfono está emparejado pero no alcanzable —desenchufado, o sin red—,
+# `xcodebuild` no encuentra el destino y contesta con la lista entera de destinos
+# compatibles, que son el Mac y dos marcadores. Eso no dice lo que pasa. El
+# guion sigue sin adivinar si se puede llegar —esa fue la lección de las tres
+# versiones anteriores del buscador— pero cuando el intento falla, lo traduce.
+if ! xcodebuild -project Pauta.xcodeproj -scheme Pauta -destination "id=$UDID" \
+        -derivedDataPath "$DERIVED" -allowProvisioningUpdates -quiet build; then
+    echo >&2
+    echo "no se pudo compilar contra ese teléfono." >&2
+    echo "  lo más probable es que esté emparejado pero no alcanzable:" >&2
+    echo "  enchúfalo por cable —o despiértalo en la misma red— y repite." >&2
+    echo "  para verlo:  xcrun devicectl list devices" >&2
+    exit 1
+fi
 
 APP="$DERIVED/Build/Products/Debug-iphoneos/Pauta.app"
 xcrun devicectl device install app --device "$UDID" "$APP" | grep -E "bundleID|App installed"
