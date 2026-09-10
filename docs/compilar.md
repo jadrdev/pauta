@@ -78,6 +78,32 @@ desbloquea las integraciones con Calendario y Recordatorios.
 La letra pequeña: los certificados «Apple Development» caducan (el actual, en
 mayo de 2027). Cuando caduque habrá que renovarlo y volver a conceder permisos.
 
+### Una sola copia
+
+Y algo que costó encontrar: **el permiso de avisos es de cada copia, no de la
+app**. Con `Pauta.app` en Aplicaciones y otra compilada en `build/`, macOS deja
+arrancar las dos —mismo identificador, misma firma, misma versión— y las trata
+como dos:
+
+```
+$ /Applications/Pauta.app/Contents/MacOS/Pauta --avisos
+app: /Applications/Pauta.app
+permiso de avisos: notDetermined      avisos programados: 0
+
+$ ./build/Pauta.app/Contents/MacOS/Pauta --avisos
+app: /Users/…/build/Pauta.app
+permiso de avisos: authorized         avisos programados: 4
+```
+
+Con las dos abiertas hay dos iconos en la barra de menús, dos apps peleándose
+por el atajo global, dos vigilantes escribiendo en la misma carpeta, y una que
+dice «los avisos están desactivados» mientras el sistema los da por activados
+—porque los activó la otra—.
+
+Ahora la segunda copia **cede**: trae al frente a la que ya estaba y se va, como
+cualquier app de macOS. Y `--avisos` empieza diciendo de qué paquete habla, que
+es la línea que faltaba para ver esto en un segundo en vez de en media hora.
+
 ### Qué Xcode se usa
 
 No hace falta abrirlo, pero sí tenerlo instalado: de ahí salen `xcodebuild`, los

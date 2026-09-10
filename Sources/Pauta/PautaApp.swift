@@ -136,6 +136,10 @@ struct Entry {
             // notificaciones responde por él, y esperando con un semáforo en el
             // hilo principal la respuesta no llegaría nunca.
             runOnMainLoop {
+                // Qué copia contesta. Sin esta línea, dos paquetes con el mismo
+                // identificador dan respuestas distintas y las dos parecen «la
+                // app».
+                print("app: \(Bundle.main.bundleURL.path)")
                 let nombres = ["notDetermined", "denied", "authorized", "provisional",
                                "ephemeral"]
                 let i = await Avisos.authorization().rawValue
@@ -293,6 +297,34 @@ struct Entry {
                       + (area.map { " · \($0.name)" } ?? "") + "] \(titles.count)")
                 titles.forEach { print("  · \($0)") }
             }
+            return
+        }
+        // Una sola copia viva.
+        //
+        // macOS no lo impide: dos paquetes con el mismo identificador —el que
+        // está en Aplicaciones y el que compilas— arrancan a la vez sin decir
+        // nada. Y entonces hay dos iconos en la barra de menús, dos apps
+        // peleándose por el atajo global, dos vigilantes escribiendo en la misma
+        // carpeta, dos reprogramando los mismos avisos... y lo que costó
+        // encontrar: **cada copia tiene su propio permiso de avisos**.
+        // Comprobado en este Mac —misma firma, mismo identificador, misma
+        // versión, y una decía `authorized` con cuatro avisos puestos mientras
+        // la otra decía `notDetermined` sin ninguno—. Con eso, la app enseñaba
+        // «los avisos están desactivados» y el sistema los daba por activados,
+        // que es exactamente lo que no se puede depurar mirando la pantalla.
+        //
+        // La segunda copia no avisa ni pregunta: trae al frente a la que ya
+        // estaba y se va. Es lo que hace cualquier app de macOS, y aquí además
+        // evita que dos procesos escriban tus tareas a la vez.
+        //
+        // Va **después** de los diagnósticos a propósito: `--avisos`, `--dump` y
+        // los demás se ejecutan con la app abierta, y cederles el turno sería
+        // dejarlos mudos justo cuando hacen falta.
+        if let identificador = Bundle.main.bundleIdentifier,
+           let otra = NSRunningApplication.runningApplications(withBundleIdentifier: identificador)
+            .first(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) {
+            print("ya había otra copia abierta: \(otra.bundleURL?.path ?? "?")")
+            otra.activate()
             return
         }
         PautaApp.main()
