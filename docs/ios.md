@@ -107,11 +107,8 @@ que hay entre el teléfono y el Mac**, y funciona sin pagar nada.
   siendo [Recordatorios](../README.md#captura-desde-recordatorios), que sincroniza
   gratis.
 
-  El otro camino, sin pagar nada, sería que el teléfono **adoptara la carpeta del
-  Mac**: elegirla una vez en el selector de archivos del sistema y guardar el
-  marcador de permiso. No mueve nada y no necesita entitlements; el precio es que
-  cada lectura pasa por un permiso con ámbito y que el día que la carpeta cambie
-  de sitio el teléfono deja de sincronizar **en silencio**.
+  Lo que sí hay, sin pagar nada, es **el puente**: elegir la carpeta del Mac una
+  vez en el selector del sistema. Está contado abajo.
 - **Enterarse de cambios de fuera.** `FolderWatcher` usa FSEvents, que no existe
   en iOS, así que se compila fuera. En su lugar recarga al volver del fondo. El
   equivalente para una carpeta sincronizada sería `NSMetadataQuery`, y hace falta
@@ -325,6 +322,40 @@ haría parecer eterna una serie que caduca— pero no lo cambia.
 En la lista, una repetitiva lleva **solo la flecha** de repetición, como en el
 Mac: poner «Cada día» al lado del título gasta media fila en algo que ya se sabe
 en cuanto se reconoce el icono.
+
+## El puente con el Mac
+
+En iOS una app solo entra donde le dejan, y lo que le deja entrar en una carpeta
+de iCloud Drive es que **la elijas tú** en el selector del sistema. En
+`Más ▸ Ajustes ▸ La carpeta del Mac` se elige una vez la carpeta `Pauta` de
+iCloud Drive, y a partir de ahí el teléfono cruza sus tareas con las del Mac.
+
+**No apunta el almacén a esa carpeta**, y esa es la decisión que importa. La
+carpeta puede no estar —el teléfono sin red, el permiso caducado, los archivos
+todavía en la nube— y un almacén apuntando ahí dejaría la app sin datos en vez de
+funcionar sola. Cada lado guarda lo suyo y
+[`Puente`](../Sources/PautaCore/Puente.swift) los cruza.
+
+La regla no es nueva: **gana la versión modificada más recientemente**, archivo a
+archivo, que es la misma que usa la sincronización del Mac. De ahí sale que dos
+aparatos tocando tareas distintas no se pisen nunca, y que un borrado viaje —una
+lápida es una versión más—. Los marcadores `.icloud` de lo que iCloud no ha
+bajado se cuentan y **no se copian**: copiar uno sería poner la nada encima de
+una tarea de verdad.
+
+Se cruza **al volver del fondo** —entre dejar el teléfono y volver a cogerlo es
+cuando se ha estado delante del Mac— y a mano, con un botón que dice qué se
+movió: «2 del Mac · 11 al Mac». Si no hay carpeta elegida, no hace nada y la app
+sigue igual.
+
+### El marcador se puede romper, y se dice
+
+Lo que se guarda de tu elección no es la ruta: una ruta no da permiso. Es un
+**marcador** que el sistema sabe volver a convertir en una carpeta con permiso.
+Si mueves o renombras esa carpeta, deja de resolver — y una sincronización que se
+detiene en silencio es peor que no tenerla. Así que
+[`CarpetaElegida`](../Sources/PautaCore/CarpetaElegida.swift) guarda que caducó,
+y los ajustes lo dicen en rojo y piden elegirla otra vez.
 
 ## Los ajustes del teléfono
 

@@ -961,7 +961,7 @@ Y si prefieres compilarla: **[compilar, firmar y empaquetar →](docs/compilar.m
 
 ```bash
 ./run.sh      # compila y abre la app
-swift test    # los 237 tests del núcleo
+swift test    # los 247 tests del núcleo
 ```
 
 Eso es todo lo que hace falta para verla funcionando. La firma, el empaquetado
@@ -1181,6 +1181,8 @@ Sources/PautaCore/        librería sin UI: la comparten macOS, iOS y el widget
   Atajo.swift             una combinación de teclas y si sirve como atajo
   Repaso.swift            el repaso de la mañana
   Vistazo.swift           lo que cabe en un widget, y de dónde se lee
+  Puente.swift            cruzar dos carpetas: gana la versión más reciente
+  CarpetaElegida.swift    el marcador de la carpeta que elegiste, y si caducó
                           —el almacén en iOS, una instantánea en el Mac—
 Sources/Pauta/            la app de macOS
   PautaApp.swift          punto de entrada, menús, atajos y barra de menús
@@ -1230,14 +1232,13 @@ docs/tecnica.md           persistencia, orden, sincronización y decodificación
   donde encajarían sin inventar nada. Se dejó fuera para no cargar de golpe una
   ventana de semanas de calendario: primero conviene ver si en `Hoy` estorban o
   ayudan
-- **La sincronización en el teléfono.** La app ya se instala y funciona en un
-  iPhone, pero guarda solo en su carpeta —la del grupo que comparte con el
-  widget—: entrar en iCloud exige el contenedor de ubicuidad, y eso **lo cierra
-  la cuenta**. Comprobado pidiéndoselo a Apple: «*Personal development teams do
-  not support the iCloud capability*». Con el programa de pago se abre; sin él,
-  el único camino es que el teléfono adopte la carpeta del Mac por el selector
-  de archivos del sistema, con su marcador de permiso — que funciona gratis y
-  se rompe en silencio el día que la carpeta se mueva
+- **La sincronización automática en el teléfono.** Entrar en iCloud como lo hace
+  el Mac exige el contenedor de ubicuidad, y eso **lo cierra la cuenta**:
+  comprobado pidiéndoselo a Apple, «*Personal development teams do not support
+  the iCloud capability*». Lo que sí hay es el
+  [puente](docs/ios.md#el-puente-con-el-mac): eliges la carpeta del Mac una vez
+  y el teléfono cruza con ella al volver a la app. Falta que sea automático de
+  verdad, sin elegir nada y sin volver a la app
 - **Completar desde el widget.** Hoy solo lee, que es lo prudente mientras sus
   datos vivan donde vivan; para tachar algo desde la pantalla de inicio haría
   falta que la extensión escribiera en el almacén, y eso se piensa antes de
