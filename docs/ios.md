@@ -370,6 +370,41 @@ detiene en silencio es peor que no tenerla. Así que
 [`CarpetaElegida`](../Sources/PautaCore/CarpetaElegida.swift) guarda que caducó,
 y los ajustes lo dicen en rojo y piden elegirla otra vez.
 
+## Apuntar con la voz
+
+*«Oye Siri, apuntar en Pauta»*, y lo que digas entra en la bandeja. Sin abrir la
+app: apuntar algo es lo que haces **mientras** estás en otra cosa, y si te sacara
+de donde estás no serviría para eso.
+
+Es un `AppIntent`, así que además sale en **Atajos**, en la pantalla bloqueada y
+en el botón de acción. Cuatro formas de pedirlo —*apuntar en*, *apunta en*,
+*añadir a*, *nueva tarea en*—, porque nadie recuerda la frase exacta: si solo
+valiera una, el atajo existiría para quien leyó esta página.
+
+Vive en la app y no en el widget. El intent del widget es un botón de ese widget
+—lleva un identificador crudo dentro y no aparece en Atajos—; este es una acción
+de la app y tiene que poder encontrarse.
+
+**No reimplementa apuntar**: usa `addItems(from:)`, el mismo que ya sabe partir
+varias líneas, quitar viñetas y descartar lo que queda en blanco. Un dictado es
+una línea, pero un atajo puede traer un texto entero, y ahí hacer una tarea con
+tres renglones dentro sería peor que hacer tres. Un dictado que no dice nada no
+crea una tarea vacía: se dice en voz alta, porque contestar «hecho» sin haber
+hecho nada es la forma más rápida de que dejes de fiarte.
+
+Y si la app está delante, lo apuntado aparece **ya**. El intent escribe en la
+carpeta por su cuenta, así que avisa, y la app recarga. Sin eso, dictar con Pauta
+abierta no cambiaría nada en pantalla hasta salir y volver — justo cuando parece
+que se perdió.
+
+### Qué queda de Recordatorios
+
+La captura por [Recordatorios](../README.md#captura-desde-recordatorios) sigue,
+y ya no es la única puerta. Lo que este atajo **no** cubre todavía es dictar
+desde el **reloj**: los App Intents del teléfono no llegan a la muñeca por su
+cuenta, y ahí Siri sigue entrando por Recordatorios. Hasta que el reloj tenga el
+suyo, esa es la razón que queda para mantenerlo.
+
 ## El reloj
 
 De **solo lectura**, y a propósito. Las dos cosas que una muñeca hace mejor que

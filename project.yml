@@ -61,6 +61,8 @@ targets:
           destination: wrapper
           subpath: Watch
       - sdk: WidgetKit.framework
+      # Para el atajo de Siri: apuntar en la bandeja sin abrir la app.
+      - sdk: AppIntents.framework
     info:
       path: build/ios/Generated-Info.plist
       properties:

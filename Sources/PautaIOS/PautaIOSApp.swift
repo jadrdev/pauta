@@ -167,6 +167,21 @@ struct RaizView: View {
             // Y a partir de aquí, cada vez que cambie algo en Recordatorios:
             // con la app abierta, lo dictado aparece sin tocar nada.
             recordatorios.observar { Task { await importar() } }
+            // Lo mismo para el atajo de Siri, que escribe en la carpeta por su
+            // cuenta: sin esto, apuntar con la app delante no cambiaría nada en
+            // pantalla hasta salir y volver, que es justo cuando parece que se
+            // perdió. Este bucle no termina, y va el último a propósito.
+            for await _ in NotificationCenter.default
+                .notifications(named: .pautaApuntadoDesdeFuera).map({ _ in () }) {
+                store.reload()
+            }
+            // Lo mismo para el atajo de Siri, que escribe en la carpeta por su
+            // cuenta: sin esto, apuntar con la app delante no cambiaría nada en
+            // pantalla hasta salir y volver.
+            for await _ in NotificationCenter.default
+                .notifications(named: .pautaApuntadoDesdeFuera).map({ _ in () }) {
+                store.reload()
+            }
         }
     }
 

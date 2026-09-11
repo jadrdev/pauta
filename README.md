@@ -546,6 +546,12 @@ Recordatorios de Apple sincroniza por iCloud y funciona con Siri, así que hace
 de bandeja de entrada remota: lo que apuntes en el iPhone aparece en Pauta sin
 necesidad de una app de iOS.
 
+> En el teléfono ya no es la única puerta para la voz: hay un atajo propio,
+> *«Oye Siri, apuntar en Pauta»*, que entra derecho sin lista intermedia — está
+> en [Apuntar con la voz](docs/ios.md#apuntar-con-la-voz). Esto sigue porque es
+> lo que llega desde el **reloj**, donde ese atajo todavía no alcanza, y desde
+> cualquier aparato que no tenga Pauta instalada.
+
 La app usa **una lista propia llamada «Pauta»**, que crea al arrancar si no
 existe, y nunca toca tus otras listas. Al importar, cada recordatorio entra en la
 bandeja y **se marca completado en Recordatorios**, para que fluya en vez de
@@ -1279,6 +1285,7 @@ Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
   ListaView.swift         una lista, con su título y su vacío
   FilaView.swift          la fila y sus marcas
   Captura.swift           el botón flotante y el campo de apuntar
+  Apuntar.swift           el atajo de Siri: apuntar sin abrir la app
   EventoRow.swift         un evento del calendario en la lista
   AjustesView.swift       ajustes, permisos y acerca de
   PuestaAPuntoView.swift  la tarjeta de bienvenida
