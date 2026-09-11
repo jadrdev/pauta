@@ -3508,3 +3508,175 @@ struct LoBorradoNoVuelveTests {
         #expect(revividas.isEmpty, "el teléfono resucitó la tarea borrada en el Mac")
     }
 }
+
+/// Comparar versiones, que es la única parte de un actualizador que piensa.
+///
+/// Y la que se rompe sola si se compara como texto: «0.10.0» es **posterior** a
+/// «0.9.0», y ordenando cadenas sale al revés. Con el número de versión que
+/// tenemos hoy —0.3.0— eso tardaría meses en morder, que es justo cuando nadie
+/// se acuerda de por qué la app dejó de avisar.
+struct VersionTests {
+    @Test func itReadsWhatGitHubWrites() throws {
+        // Las etiquetas del repositorio llevan «v» delante; el plist de la app,
+        // no. Las dos formas tienen que leerse igual.
+        #expect(Version("v0.3.0") == Version("0.3.0"))
+        #expect(Version("0.3.0") == Version(mayor: 0, menor: 3, parche: 0))
+        #expect(Version("0.3") == Version(mayor: 0, menor: 3, parche: 0))
+    }
+
+    @Test func nonsenseIsNotAVersion() {
+        #expect(Version("") == nil)
+        #expect(Version("hola") == nil)
+        #expect(Version("v") == nil)
+    }
+
+    @Test func theOrderIsByNumberAndNotByText() throws {
+        let nueve = try #require(Version("0.9.0"))
+        let diez = try #require(Version("0.10.0"))
+        #expect(nueve < diez, "0.10.0 tiene que ser posterior a 0.9.0")
+        #expect(try #require(Version("1.0.0")) > diez)
+        #expect(try #require(Version("0.3.1")) > #require(Version("0.3.0")))
+        #expect(try #require(Version("0.3.0")) == #require(Version("0.3.0")))
+    }
+
+    /// Lo que decide si se avisa. Una versión igual o anterior no es novedad, y
+    /// avisar de una que ya tienes es la forma más rápida de que dejes de leer
+    /// los avisos.
+    @Test func onlySomethingNewerIsNews() throws {
+        let mia = try #require(Version("0.3.0"))
+        #expect(Version.hayNovedad(tengo: mia, hay: try #require(Version("0.3.1"))))
+        #expect(Version.hayNovedad(tengo: mia, hay: try #require(Version("1.0.0"))))
+        #expect(Version.hayNovedad(tengo: mia, hay: mia) == false)
+        #expect(Version.hayNovedad(tengo: mia, hay: try #require(Version("0.2.9"))) == false)
+    }
+
+    /// Y se lee lo que contesta GitHub de verdad, no un JSON inventado: esta es
+    /// la forma exacta de su respuesta, recortada.
+    @Test func itUnderstandsWhatGitHubAnswers() throws {
+        let json = Data("""
+        {
+          "tag_name": "v0.3.0",
+          "name": "Pauta 0.3.0",
+          "html_url": "https://github.com/jadrdev/pauta/releases/tag/v0.3.0",
+          "published_at": "2026-09-10T11:41:38Z",
+          "draft": false,
+          "prerelease": false
+        }
+        """.utf8)
+        let ultima = try #require(Lanzamiento.desde(json))
+        #expect(ultima.version == Version("0.3.0"))
+        #expect(ultima.nombre == "Pauta 0.3.0")
+        #expect(ultima.url.absoluteString.hasSuffix("v0.3.0"))
+    }
+
+    /// Un borrador o una previa no son una versión para nadie.
+    @Test func draftsAndPreviewsDoNotCount() {
+        for campo in ["\"draft\": true, \"prerelease\": false",
+                      "\"draft\": false, \"prerelease\": true"] {
+            let json = Data("""
+            { "tag_name": "v9.9.9", "name": "x",
+              "html_url": "https://github.com/jadrdev/pauta/releases/tag/v9.9.9",
+              \(campo) }
+            """.utf8)
+            #expect(Lanzamiento.desde(json) == nil)
+        }
+    }
+}
+
+/// Cuándo se mira si hay versión nueva.
+@MainActor
+struct MiradaDeVersionesTests {
+    private func limpios(_ nombre: String) -> Ajustes {
+        let d = UserDefaults(suiteName: nombre)!
+        d.removePersistentDomain(forName: nombre)
+        return Ajustes(defaults: d)
+    }
+
+    @Test func theFirstTimeItLooks() {
+        let a = limpios("pauta.tests.versiones.primera")
+        #expect(a.avisarDeVersiones)
+        #expect(a.tocaMirarVersiones())
+    }
+
+    /// Una vez al día. Preguntar en cada arranque es gastar la red de otro por
+    /// costumbre, y esto se publica cada varios días.
+    @Test func onceADayIsEnough() {
+        let a = limpios("pauta.tests.versiones.dia")
+        let ahora = Date(timeIntervalSince1970: 1_800_000_000)
+        a.ultimaMiradaDeVersiones = ahora
+        #expect(a.tocaMirarVersiones(ahora: ahora.addingTimeInterval(3600)) == false)
+        #expect(a.tocaMirarVersiones(ahora: ahora.addingTimeInterval(23 * 3600)) == false)
+        #expect(a.tocaMirarVersiones(ahora: ahora.addingTimeInterval(25 * 3600)))
+    }
+
+    /// Y apagado es apagado: ni la primera vez.
+    @Test func offMeansOff() {
+        let a = limpios("pauta.tests.versiones.apagado")
+        a.avisarDeVersiones = false
+        #expect(a.tocaMirarVersiones() == false)
+    }
+}
+
+/// Un servidor de mentira para poder probar la consulta entera sin salir a
+/// internet: los tests no pueden depender de que GitHub esté en pie.
+private final class ServidorFalso: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var estado = 200
+    nonisolated(unsafe) static var cuerpo = Data()
+    nonisolated(unsafe) static var cabecera: String?
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func stopLoading() {}
+
+    override func startLoading() {
+        Self.cabecera = request.value(forHTTPHeaderField: "Accept")
+        let r = HTTPURLResponse(url: request.url!, statusCode: Self.estado,
+                                httpVersion: nil, headerFields: nil)!
+        client?.urlProtocol(self, didReceive: r, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Self.cuerpo)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    static func sesion() -> URLSession {
+        let c = URLSessionConfiguration.ephemeral
+        c.protocolClasses = [ServidorFalso.self]
+        return URLSession(configuration: c)
+    }
+}
+
+/// La consulta, de principio a fin.
+///
+/// En serie: el servidor de mentira es uno solo y compartido, y en paralelo
+/// cada prueba le cambiaría la respuesta a la de al lado.
+@Suite(.serialized)
+struct ConsultaDeVersionesTests {
+    private let respuesta = Data("""
+    { "tag_name": "v0.4.0", "name": "Pauta 0.4.0",
+      "html_url": "https://github.com/jadrdev/pauta/releases/tag/v0.4.0",
+      "draft": false, "prerelease": false }
+    """.utf8)
+
+    @Test func itAsksAndReadsTheAnswer() async throws {
+        ServidorFalso.estado = 200
+        ServidorFalso.cuerpo = respuesta
+        let ultima = try #require(await Novedades.ultima(sesion: ServidorFalso.sesion()))
+        #expect(ultima.version == Version("0.4.0"))
+        // Y se pide el formato de la API, no el HTML de la página.
+        #expect(ServidorFalso.cabecera == "application/vnd.github+json")
+    }
+
+    /// Que GitHub conteste un error no es un problema del usuario: se calla y
+    /// se prueba mañana.
+    @Test func aBadAnswerIsSilence() async {
+        ServidorFalso.estado = 500
+        ServidorFalso.cuerpo = respuesta
+        #expect(await Novedades.ultima(sesion: ServidorFalso.sesion()) == nil)
+    }
+
+    /// Y contestar algo que no se entiende tampoco rompe nada.
+    @Test func nonsenseIsSilenceToo() async {
+        ServidorFalso.estado = 200
+        ServidorFalso.cuerpo = Data("no soy json".utf8)
+        #expect(await Novedades.ultima(sesion: ServidorFalso.sesion()) == nil)
+    }
+}

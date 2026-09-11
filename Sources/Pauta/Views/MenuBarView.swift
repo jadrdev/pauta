@@ -70,6 +70,7 @@ struct MenuBarView: View {
     @Environment(\.openWindow) private var openWindow
 
     @State private var draftTitle = ""
+    @State private var novedad = Novedad.shared
 
     private var items: [Item] { store.items(for: .today) }
 
@@ -87,6 +88,28 @@ struct MenuBarView: View {
             .padding(.horizontal, 14)
             .padding(.top, 12)
             .padding(.bottom, 9)
+
+            // Si hay versión nueva, aquí: es el sitio donde esta app ya te
+            // cuenta cosas sin que las pidas, y el único que se mira varias
+            // veces al día. Una línea, y se va sola en cuanto actualizas.
+            if let nueva = novedad.hay {
+                Button {
+                    NSWorkspace.shared.open(nueva.url)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down.circle")
+                            .font(.system(size: 11))
+                        Text("Hay una versión nueva · \(nueva.version.description)")
+                            .font(.system(size: 11.5, weight: .medium))
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundStyle(Paper.accentInk)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 9)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
 
             Rectangle().fill(Paper.hairline).frame(height: 1)
 

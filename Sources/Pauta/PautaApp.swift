@@ -378,6 +378,13 @@ struct PautaApp: App {
                 .environment(agenda)
                 .frame(minWidth: 720, minHeight: 420)
                 .task {
+                    // Una vez al día, y solo si lo has dejado encendido: pregunta
+                    // a GitHub si hay versión nueva. No interrumpe —si la hay,
+                    // sale una línea en el panel de la barra y en los ajustes.
+                    guard !Launch.demo else { return }
+                    await Novedad.shared.mirarSiToca()
+                }
+                .task {
                     // Recoge lo que llegue de otro dispositivo mientras la app
                     // está abierta: sin esto solo se leería al arrancar.
                     guard !Launch.demo, watcher == nil else { return }

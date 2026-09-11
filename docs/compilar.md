@@ -179,6 +179,22 @@ sirve para repartir o solo para probar, y escupe el sha256 para poder publicarlo
 junto al archivo. Los detalles de por qué hace falta quitarle la cuarentena están
 en [Instalar](../README.md#instalar).
 
+## Publicar una versión
+
+La versión sale de `MARKETING_VERSION` en `project.yml`, en el `settings.base`
+del proyecto, que la heredan todos los objetivos. Se escribe una vez: el Mac, el
+iPhone, el reloj y los dos widgets tienen que decir lo mismo, y tener la versión
+repetida por objetivo es garantizar que un día discrepen.
+
+El orden es: subir `MARKETING_VERSION`, `./build.sh`, `./tools/make-dmg.sh`,
+`gh release create` con la etiqueta `vX.Y.Z` y el `.dmg` adjunto.
+
+La etiqueta importa: la app pregunta por **la última versión publicada** del
+repositorio y lee `tag_name`, así que una versión sin etiqueta o con una
+etiqueta que no sea un número no existe para el aviso. Un borrador o una previa
+tampoco cuentan, a propósito: sirven para preparar el texto sin avisar a nadie.
+Lo que la app hace con eso está en [Versiones nuevas](../README.md#versiones-nuevas).
+
 ## Modo maqueta
 
 Para revisar el diseño sin tocar tus datos reales: arranca con tareas de muestra

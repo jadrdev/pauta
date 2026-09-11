@@ -49,6 +49,7 @@ public final class Ajustes {
         margenPorDefecto = Ajustes.leer(defaults, .margen) ?? 0
         minutosAplazados = Ajustes.leer(defaults, .aplazar) ?? 10
         barraConCuenta = defaults.object(forKey: Clave.barra.rawValue) as? Bool ?? true
+        avisarDeVersiones = defaults.object(forKey: Clave.avisarVersiones.rawValue) as? Bool ?? true
         // Dos enteros y no un objeto codificado: son dos números, y en las
         // preferencias del sistema se pueden leer y arreglar a mano si un día
         // alguien se deja el teclado en una combinación imposible.
@@ -67,6 +68,8 @@ public final class Ajustes {
         case barra = "barra.cuenta"
         case atajoTecla = "atajo.tecla"
         case atajoModificadores = "atajo.modificadores"
+        case avisarVersiones = "versiones.avisar"
+        case ultimaMirada = "versiones.ultima"
     }
 
     /// El apagado se guarda como valor propio y no como ausencia: sin
@@ -120,11 +123,36 @@ public final class Ajustes {
         didSet { defaults.set(barraConCuenta, forKey: Clave.barra.rawValue) }
     }
 
+    /// Si la app mira si hay versión nueva.
+    ///
+    /// Se puede apagar, y por eso existe el ajuste: una app que pregunta cosas
+    /// por internet tiene que dejar decir que no. Es la única consulta de red
+    /// que hace Pauta por su cuenta, y no manda nada — pregunta cuál es la
+    /// última versión publicada y se calla.
+    public var avisarDeVersiones: Bool {
+        didSet { defaults.set(avisarDeVersiones, forKey: Clave.avisarVersiones.rawValue) }
+    }
+
+    /// Cuándo se miró por última vez, para no preguntar en cada arranque.
+    public var ultimaMiradaDeVersiones: Date? {
+        get { defaults.object(forKey: Clave.ultimaMirada.rawValue) as? Date }
+        set { defaults.set(newValue, forKey: Clave.ultimaMirada.rawValue) }
+    }
+
+    /// Si toca mirar: una vez al día basta para algo que se publica cada varios
+    /// días, y preguntar en cada arranque es gastar red de otro por costumbre.
+    public func tocaMirarVersiones(ahora: Date = .now) -> Bool {
+        guard avisarDeVersiones else { return false }
+        guard let ultima = ultimaMiradaDeVersiones else { return true }
+        return ahora.timeIntervalSince(ultima) >= 24 * 3600
+    }
+
     /// Vuelve a dejarlo todo como venía de fábrica.
     public func restaurar() {
         repasoHora = Ajustes.repasoPorDefecto
         margenPorDefecto = 0
         minutosAplazados = 10
+        avisarDeVersiones = true
         barraConCuenta = true
         atajo = Atajo.porDefecto
     }

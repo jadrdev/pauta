@@ -38,6 +38,17 @@ struct AjustesView: View {
     @State private var alArrancar = Arranque.activo
     @State private var falloDeArranque = false
     @State private var grabandoAtajo = false
+    @State private var novedad = Novedad.shared
+
+    /// Qué contar del último vistazo a las versiones. «No se pudo comprobar» no
+    /// es lo mismo que «estás al día», y decir lo segundo cuando pasó lo primero
+    /// es mentir en voz baja.
+    private var estadoDeVersiones: String {
+        if let hay = novedad.hay { return "Hay una nueva: \(hay.version)" }
+        if novedad.falloAlMirar { return "No se pudo comprobar" }
+        if Ajustes.shared.ultimaMiradaDeVersiones != nil { return "Tienes la última (\(Acercade.version))" }
+        return "Se mira una vez al día. Solo pregunta; no envía nada"
+    }
 
     private static let horasDeRepaso = [7 * 60, 7 * 60 + 30, 8 * 60, 8 * 60 + 30,
                                         9 * 60, 9 * 60 + 30, 10 * 60]
@@ -122,6 +133,31 @@ struct AjustesView: View {
             }
 
             grupo("BARRA DE MENÚS") {
+                Toggle(isOn: $ajustes.avisarDeVersiones) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Avisar de versiones nuevas")
+                        // Lo que hace de verdad, dicho sin adornos: es la única
+                        // vez que esta app habla con internet por su cuenta.
+                        Text(estadoDeVersiones)
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(novedad.hay != nil ? Paper.accentInk : Paper.inkFaint)
+                    }
+                }
+                .toggleStyle(.switch)
+                if ajustes.avisarDeVersiones {
+                    HStack(spacing: 10) {
+                        Button(novedad.mirando ? "Mirando…" : "Buscar ahora") {
+                            Task { await novedad.mirarAhora() }
+                        }
+                        .disabled(novedad.mirando)
+                        if let hay = novedad.hay {
+                            EnlaceDeTexto("Ver la \(hay.version)") {
+                                NSWorkspace.shared.open(hay.url)
+                            }
+                        }
+                    }
+                }
+
                 Toggle(isOn: $ajustes.barraConCuenta) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Enseñar la cuenta atrás").ajusteStyle()

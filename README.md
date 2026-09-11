@@ -796,7 +796,7 @@ es suyo.
 
 ## Ajustes
 
-`⌘,`. Cinco cosas, y son pocas a propósito: un ajuste por cada decisión de
+`⌘,`. Unas pocas cosas, y son pocas a propósito: un ajuste por cada decisión de
 diseño convierte la app en un panel de control y hace que todos los valores por
 defecto parezcan arbitrarios. Aquí solo está lo que **cambia de persona a
 persona**.
@@ -821,6 +821,9 @@ persona**.
   de todos y hay pantallas donde no sobra sitio.
 - **El atajo del alta rápida**. Se graba pulsándolo: el campo escucha la
   siguiente combinación y la registra.
+- **Avisar de versiones nuevas**, con su botón de `Buscar ahora`. Es la única
+  vez que la app habla con internet por su cuenta, así que se puede apagar y se
+  dice ahí mismo qué hace. Más abajo, [Versiones nuevas](#versiones-nuevas).
 
 Lo que no está y no va a estar: el umbral de lo rancio, la ventana de la cuenta
 atrás, la duración de una jornada contra la que medir el día. Son juicios de la
@@ -865,6 +868,47 @@ la importación de Recordatorios lo pedía al abrir la app, y **registrarse a lo
 cambios de un `EKEventStore` también lo pide** —conectar con el demonio de
 Recordatorios dispara el diálogo—, así que el vigilante no se monta hasta que hay
 permiso. Sin eso, la tarjeta llegaba tarde a su propia fiesta.
+
+## Versiones nuevas
+
+La app **avisa, no instala**.
+
+Una vez al día, al arrancar, le pregunta a la API de GitHub cuál es la última
+versión publicada del repositorio. Si es más nueva que la que tienes, aparece
+una línea discreta en el panel de la barra de menús —*Hay una versión nueva ·
+0.4.0*— y el estado cambia en los ajustes, con un enlace a la página de la
+versión. Nada más: ni ventana modal, ni insistencia, ni número rojo.
+
+**Por qué no se instala sola.** Lo normal aquí sería Sparkle. Instalar sola una
+app descargada obliga a verificar la firma de lo que se baja antes de sustituir
+lo que ya está —si no, el mecanismo de actualización es la forma más cómoda que
+existe de meterte otra cosa—, y esta app se firma con un certificado de
+desarrollo local y **sin notarizar**: no hay Developer ID con el que la
+comprobación signifique algo. El muro es la cuenta de Apple, no el código. Así
+que se avisa y el resto es arrastrar el `.app` al `.dmg`, como hasta ahora. El
+día que haya cuenta de pago, esto se puede convertir en una actualización de
+verdad sin tocar nada de lo demás.
+
+**Qué se manda.** Una petición `GET` a
+`api.github.com/repos/jadrdev/pauta/releases/latest`, sin cuenta, sin clave y
+sin nada tuyo dentro. No se manda qué tareas tienes, ni cuántas, ni desde dónde
+miras. La sesión es efímera y sin caché en disco, con diez segundos de paciencia:
+es una pregunta de fondo y no algo por lo que valga la pena esperar.
+
+**Cuándo.** Una vez cada veinticuatro horas como mucho, y solo al arrancar.
+Preguntar en cada apertura sería gastar la red de otro por costumbre, y esto se
+publica cada varios días. Apagado en los ajustes es apagado del todo: ni la
+primera vez. El botón `Buscar ahora` mira aunque no toque.
+
+**Y si falla.** Si no hay red, si GitHub está caído o si contesta algo que no se
+entiende, no pasa nada: no hay error, no hay diálogo, se prueba mañana. Lo que
+sí se distingue es *no se pudo comprobar* de *tienes la última*; decir lo
+segundo cuando pasó lo primero es mentir en voz baja.
+
+La versión con la que se compara sale del `Info.plist`, y se comparan **números
+y no textos**: como cadena, la `0.10.0` va antes que la `0.9.0`, y la app
+dejaría de avisar sin que nadie supiera por qué. Los borradores y las previas de
+GitHub no cuentan como versión.
 
 ## Acerca de y ayuda
 
