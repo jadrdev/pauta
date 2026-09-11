@@ -3444,3 +3444,67 @@ struct SucesoraSinDuplicarTests {
         #expect(sucesoras.count == 1, "quedaron \(sucesoras.count)")
     }
 }
+
+/// Lo borrado no vuelve.
+///
+/// Una vuelta de una repetitiva que borras a mano tiene que quedarse borrada.
+/// Si la madre se completa otra vez —desde el otro aparato, o descompletando y
+/// volviendo a completar— la vuelta **no se recrea**: la borraste tú.
+///
+/// Esto pasó de verdad: «esa tarea la borré ayer y volvió a aparecer».
+@MainActor
+struct LoBorradoNoVuelveTests {
+    private func carpeta() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-resucita-\(UUID().uuidString)", isDirectory: true)
+    }
+
+    @Test func aDeletedOccurrenceStaysDeleted() throws {
+        let dir = carpeta()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = Store(root: dir)
+        let madre = store.addItem(title: "Revisión diaria", in: .today)
+        store.setRecurrence(store.items.first { $0.id == madre.id }!, to: .diaria)
+
+        store.toggleComplete(store.items.first { $0.id == madre.id }!)
+        let vuelta = try #require(store.items.first { $0.spawnedFrom == madre.id })
+        store.delete(vuelta)
+        #expect(store.items.contains { $0.id == vuelta.id } == false)
+
+        // La madre se descompleta y se vuelve a completar.
+        store.toggleComplete(store.items.first { $0.id == madre.id }!)
+        store.toggleComplete(store.items.first { $0.id == madre.id }!)
+
+        let vueltas = store.items.filter { $0.spawnedFrom == madre.id }
+        #expect(vueltas.isEmpty, "resucitó: \(vueltas.map(\.title))")
+    }
+
+    /// Y tampoco vuelve desde el otro aparato. La lápida viaja por el puente, y
+    /// el que recibe tiene que respetarla aunque complete la madre después.
+    @Test func andItDoesNotComeBackFromTheOtherDevice() throws {
+        let aqui = carpeta(), alla = carpeta()
+        defer { try? FileManager.default.removeItem(at: aqui)
+                try? FileManager.default.removeItem(at: alla) }
+
+        let mac = Store(root: aqui)
+        let madre = mac.addItem(title: "Revisión diaria", in: .today)
+        mac.setRecurrence(mac.items.first { $0.id == madre.id }!, to: .diaria)
+        mac.toggleComplete(mac.items.first { $0.id == madre.id }!)
+        let vuelta = try #require(mac.items.first { $0.spawnedFrom == madre.id })
+        // Se borra aquí: eso deja lápida.
+        mac.delete(vuelta)
+
+        // El teléfono recibe la madre completada y la lápida de la vuelta.
+        Puente.cruzar(aqui, alla)
+        let telefono = Store(root: alla)
+        #expect(telefono.items.contains { $0.id == vuelta.id } == false)
+
+        // Y si el teléfono completa la madre por su cuenta, no la revive.
+        if let suya = telefono.items.first(where: { $0.id == madre.id }) {
+            telefono.toggleComplete(suya)   // descompletar
+            telefono.toggleComplete(telefono.items.first { $0.id == madre.id }!)
+        }
+        let revividas = telefono.items.filter { $0.id == vuelta.id }
+        #expect(revividas.isEmpty, "el teléfono resucitó la tarea borrada en el Mac")
+    }
+}

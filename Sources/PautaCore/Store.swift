@@ -83,6 +83,17 @@ public final class Store {
     /// repetida no las resucite.
     private var buriedSourceIDs: Set<String> = []
 
+    /// Vueltas de repetitivas que **borraste tú**, para no volver a parirlas.
+    ///
+    /// Sin esto, borrar la «Revisión diaria» de mañana no servía de nada: en
+    /// cuanto la madre se completaba otra vez —desde el otro aparato, o
+    /// descompletando y volviendo a completar— la vuelta se recreaba. Pasó de
+    /// verdad: «esa tarea la borré ayer y volvió a aparecer».
+    ///
+    /// Se llena al cargar, leyendo las lápidas de la carpeta, así que un
+    /// borrado hecho en el Mac también vale en el teléfono en cuanto cruza.
+    private var enterradas: Set<UUID> = []
+
     /// Lo leído de cada archivo en la última carga, por nombre de archivo.
     private var itemCache: [String: Cached<Item>] = [:]
     private var projectCache: [String: Cached<Project>] = [:]
@@ -391,8 +402,9 @@ public final class Store {
         for item in loadObjects(in: itemsDir, cache: &itemCache) {
             if item.deletedAt == nil {
                 live.append(item)
-            } else if let source = item.sourceID {
-                buriedSourceIDs.insert(source)
+            } else {
+                enterradas.insert(item.id)
+                if let source = item.sourceID { buriedSourceIDs.insert(source) }
             }
         }
         let freshItems = live.sorted(by: Item.byCreation)
@@ -791,6 +803,9 @@ public final class Store {
         // antes, o porque esta se completó, se descompletó y se volvió a
         // completar— no se crea otra.
         guard !items.contains(where: { $0.id == identidad }) else { return }
+        // Y si esa vuelta la borraste tú, se queda borrada. Volver a parirla
+        // sería discutir contigo cada vez que se completa la madre.
+        guard !enterradas.contains(identidad) else { return }
 
         var siguiente = Item(title: item.title)
         siguiente.id = identidad
@@ -823,6 +838,11 @@ public final class Store {
             $0.spawnedFrom == item.id && !$0.isCompleted
         }) else { return }
         delete(sucesora)
+        // Retirada por la app y no por ti. La lápida se queda —el otro aparato
+        // tiene que enterarse de que esa vuelta se fue— pero aquí deja de
+        // contar como «borrada a mano»: si vuelves a completar la madre, la
+        // vuelta tiene que volver.
+        enterradas.remove(sucesora.id)
     }
 
     /// Borrar deja una lápida en lugar de eliminar el archivo: si se eliminara,
@@ -833,6 +853,7 @@ public final class Store {
         buried.deletedAt = Store.stamped()
         buried.updatedAt = buried.deletedAt!
         if let source = buried.sourceID { buriedSourceIDs.insert(source) }
+        enterradas.insert(buried.id)
         persist(buried)
     }
 
