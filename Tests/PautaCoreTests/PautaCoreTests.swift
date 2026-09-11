@@ -3717,3 +3717,51 @@ struct EsferaTests {
         #expect(vistazo(dia: hoy, hoyCuenta: 12).cifra == "12")
     }
 }
+
+/// Lo que el reloj le pide al teléfono.
+@MainActor
+struct OrdenDesdeElRelojTests {
+    private func store() -> Store {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-orden-\(UUID().uuidString)")
+        return Store(root: dir)
+    }
+
+    /// El sobre en el que viaja: va y vuelve entero.
+    @Test func theOrderSurvivesTheTrip() throws {
+        let tarea = UUID()
+        let ida = Orden(que: .completar, tarea: tarea)
+        let vuelta = try #require(Orden.desde(ida.carga()))
+        #expect(vuelta == ida)
+    }
+
+    /// Y lo que no se entiende no se obedece. Una orden a medias es peor que
+    /// ninguna: tacharía la tarea equivocada.
+    @Test func nonsenseIsNotAnOrder() {
+        #expect(Orden.desde([:]) == nil)
+        #expect(Orden.desde([Orden.clave: Data("x".utf8)]) == nil)
+    }
+
+    /// **No alterna, marca.** Es la diferencia entre una orden y un
+    /// interruptor: la entrega puede repetirse —se reintenta cuando el reloj
+    /// vuelve a estar cerca— y un alternar repetido descompletaría la tarea que
+    /// acabas de tachar.
+    @Test func completingTwiceCompletesOnce() throws {
+        let s = store()
+        let item = s.addItem(title: "Regar", in: .inbox)
+        #expect(s.completar(item.id))
+        #expect(s.completar(item.id) == false)
+        let ahora = try #require(s.items.first { $0.id == item.id })
+        #expect(ahora.isCompleted)
+    }
+
+    /// Una tarea que ya no está no se tacha, y no es un error: puede haberse
+    /// borrado en el teléfono mientras la orden viajaba.
+    @Test func anOrderForSomethingGoneDoesNothing() {
+        let s = store()
+        let item = s.addItem(title: "Regar", in: .inbox)
+        s.delete(item)
+        #expect(s.completar(item.id) == false)
+        #expect(s.completar(UUID()) == false)
+    }
+}

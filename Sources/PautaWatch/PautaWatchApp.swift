@@ -19,7 +19,9 @@ struct PautaWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            HoyWatchView(vistazo: enlace.vistazo, esperando: enlace.esperando)
+            HoyWatchView(vistazo: enlace.vistazo, esperando: enlace.esperando,
+                         enCamino: enlace.enCamino,
+                         tachar: { enlace.tachar($0) })
                 .task { enlace.activar() }
         }
     }

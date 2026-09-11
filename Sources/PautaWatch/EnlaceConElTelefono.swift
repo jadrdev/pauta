@@ -19,6 +19,13 @@ final class EnlaceConElTelefono: NSObject, WCSessionDelegate {
     /// de «no sé nada del teléfono», que en un reloj son mensajes muy
     /// distintos.
     private(set) var esperando = true
+    /// Lo que se ha mandado tachar y todavía no ha vuelto confirmado.
+    ///
+    /// El reloj **no tiene los datos**: quien tacha de verdad es el teléfono, y
+    /// la confirmación llega con el vistazo siguiente. Sin esto, la tarea se
+    /// quedaría en pantalla sin marcar el segundo o dos que tarda el viaje, y
+    /// se pulsaría otra vez pensando que no se enteró.
+    private(set) var enCamino: Set<UUID> = []
 
     func activar() {
         guard WCSession.isSupported() else { esperando = false; return }
@@ -44,6 +51,41 @@ final class EnlaceConElTelefono: NSObject, WCSessionDelegate {
         Task { @MainActor in
             self.vistazo = recibido
             self.esperando = false
+            // Lo que ya no viene en el vistazo es que el teléfono lo tachó: la
+            // marca local sobra. Y lo que sigue viniendo se queda marcado, que
+            // es una orden aún en camino y no una que se perdió.
+            let vivas = Set(recibido.filas.map(\.id))
+            self.enCamino.formIntersection(vivas)
+        }
+    }
+
+    /// Manda tachar una tarea.
+    ///
+    /// Dos caminos, y los dos hacen falta. Si el teléfono está al alcance va por
+    /// mensaje, que llega en el acto y se ve tachado antes de bajar el brazo. Si
+    /// no lo está —y esa es justo la vez que el reloj sirve para algo— va en
+    /// cola: se guarda, sobrevive a que se cierre la app y se entrega cuando
+    /// vuelvan a verse.
+    ///
+    /// El mensaje puede fallar aunque el teléfono pareciera alcanzable, porque
+    /// entre mirar y mandar pasa un instante. Por eso el fallo no se cuenta a
+    /// nadie: se mete en la cola y se acabó. Lo que no puede pasar es que una
+    /// orden se pierda en silencio.
+    func tachar(_ id: UUID) {
+        guard WCSession.isSupported() else { return }
+        enCamino.insert(id)
+        let sesion = WCSession.default
+        let carga = Orden(que: .completar, tarea: id).carga()
+        guard sesion.activationState == .activated else {
+            sesion.transferUserInfo(carga)
+            return
+        }
+        if sesion.isReachable {
+            sesion.sendMessage(carga, replyHandler: nil) { _ in
+                sesion.transferUserInfo(carga)
+            }
+        } else {
+            sesion.transferUserInfo(carga)
         }
     }
 

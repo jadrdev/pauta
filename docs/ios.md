@@ -387,6 +387,51 @@ Y distingue **«no hay nada» de «no sé nada»**: con el vistazo recibido y va
 dice «Nada para hoy»; sin recibir nada dice «Abre Pauta en el iPhone». En un
 reloj esos dos mensajes son muy distintos y confundirlos sería mentir.
 
+### Tachar desde la muñeca
+
+Lo único que va en el otro sentido. El círculo de cada tarea es un botón, y
+ocupa más de lo que se ve —treinta puntos por catorce de dibujo—: en un reloj el
+dedo tapa lo que va a pulsar, y un blanco del tamaño del círculo se falla. El
+resto de la fila no hace nada al tocarlo; aquí no hay ficha que abrir, y una
+pulsación que a veces tacha y a veces no es peor que una que nunca lo hace.
+
+**El reloj no tacha: lo pide.** Quien tiene los datos es el teléfono, así que lo
+que viaja es una orden —`completar`, con el identificador de la tarea— y la
+confirmación llega con el vistazo siguiente, que ya no la trae. Mientras tanto
+la tarea se ve tachada y en gris: sin eso se quedaría igual el segundo que tarda
+el viaje, y se pulsaría otra vez pensando que no se enteró.
+
+**Dice qué hacer, no «cambia esto».** La entrega puede repetirse —el sistema
+reintenta cuando los dos aparatos vuelven a verse— y un `toggle` repetido
+descompletaría justo lo que acabas de tachar. Por eso el teléfono usa
+`Store.completar(_:)`, que marca y no alterna: obedecer dos veces la misma orden
+no deshace la primera, y una orden para algo que ya no existe —borrado mientras
+viajaba— no es un error, simplemente no hace nada.
+
+**Dos caminos para mandarla**, y los dos hacen falta:
+
+- Con el teléfono al alcance, **mensaje**: llega en el acto y lo ves tachado
+  antes de bajar el brazo.
+- Sin alcance —que es justo la vez que el reloj sirve para algo—, **cola**
+  (`transferUserInfo`): se guarda, sobrevive a que se cierre la app y se entrega
+  cuando vuelvan a verse.
+
+El mensaje puede fallar aunque el teléfono pareciera alcanzable, porque entre
+mirarlo y mandarlo pasa un instante. Ese fallo no se cuenta a nadie: se mete en
+la cola y se acabó. Lo que no puede pasar es que una orden se pierda en silencio.
+
+En el teléfono, quien obedece se instala desde la vista, que es donde vive el
+almacén — el enlace no guarda ninguno a propósito: un segundo almacén en el
+mismo proceso escribiendo los mismos archivos es exactamente el problema que no
+se quiere tener. Y como una orden puede llegar antes de que la vista esté
+montada, lo que llegue pronto espera en una cola y se atiende al instalarse.
+
+> **Del simulador:** las órdenes en cola del reloj al teléfono **no se entregan**
+> ahí. El camino del mensaje sí, y por él se comprobó la vuelta entera —la tarea
+> quedó marcada en el teléfono y desapareció del reloj—. La cola queda
+> verificada por su lado probado: el mismo sobre, la misma orden y el mismo
+> `completar` que no alterna.
+
 ### La complicación
 
 En la esfera, sin abrir nada. Cuatro formas del mismo dato, que es lo que cambia

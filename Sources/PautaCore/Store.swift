@@ -847,6 +847,23 @@ public final class Store {
 
     /// Borrar deja una lápida en lugar de eliminar el archivo: si se eliminara,
     /// un dispositivo que no vio el borrado resucitaría la tarea al sincronizar.
+    /// Marcar hecha una tarea por su identificador, **sin alternar**.
+    ///
+    /// Es lo que obedece una orden que viene de fuera —hoy, del reloj—, y por
+    /// eso no es `toggleComplete`: la entrega de una orden puede repetirse, y
+    /// alternar dos veces devolvería a pendiente lo que acabas de tachar.
+    ///
+    /// Devuelve si cambió algo. Falso no es un error: la tarea puede haberse
+    /// completado ya aquí, o haberse borrado mientras la orden viajaba, y
+    /// ninguna de las dos cosas hay que contársela a nadie.
+    @discardableResult
+    public func completar(_ id: UUID) -> Bool {
+        guard let item = items.first(where: { $0.id == id }),
+              !item.isCompleted, item.deletedAt == nil else { return false }
+        toggleComplete(item)
+        return true
+    }
+
     public func delete(_ item: Item) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         var buried = items.remove(at: idx)

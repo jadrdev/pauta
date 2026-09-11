@@ -150,6 +150,17 @@ struct RaizView: View {
             // simulador: cero recargas del widget en un arranque entero, y el
             // reloj esperando un vistazo que no salía.
             avisarAFuera()
+            // Y quién atiende lo que pida el reloj, que hasta ahora solo
+            // recibía. Se instala aquí porque el almacén vive en la vista: el
+            // enlace no guarda ninguno a propósito.
+            EnlaceConElReloj.shared.obedecer = { orden in
+                switch orden.que {
+                case .completar:
+                    // Solo se avisa a fuera si cambió algo: una orden repetida
+                    // —el sistema reintenta— no tiene por qué mover nada.
+                    if store.completar(orden.tarea) { avisarAFuera() }
+                }
+            }
             // Y a partir de aquí, cada vez que cambie algo en Recordatorios:
             // con la app abierta, lo dictado aparece sin tocar nada.
             recordatorios.observar { Task { await importar() } }

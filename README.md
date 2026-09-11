@@ -1289,7 +1289,7 @@ Sources/PautaWidget/      el widget de iOS: otro proceso, y solo lectura
 Sources/PautaWatch/       el reloj: recibe el vistazo del teléfono y lo enseña
   PautaWatchApp.swift     punto de entrada
   EnlaceConElTelefono.swift  lo que llega por WatchConnectivity
-  HoyWatchView.swift      el día, a la altura del brazo
+  HoyWatchView.swift      el día, a la altura del brazo, con su círculo para tachar
 Sources/PautaWatchWidget/ la complicación: lee lo que la app del reloj dejó escrito
   PautaWatchWidget.swift  el paquete y su línea de tiempo
   EsferaView.swift        cada forma de la esfera, por separado
@@ -1320,8 +1320,6 @@ docs/tecnica.md           persistencia, orden, sincronización y decodificación
   [puente](docs/ios.md#el-puente-con-el-mac): eliges la carpeta del Mac una vez
   y el teléfono cruza con ella al volver a la app. Falta que sea automático de
   verdad, sin elegir nada y sin volver a la app
-- **Tachar desde el reloj**, que exige mandar la orden de vuelta al teléfono y no
-  solo recibir
 - **Notarizar el disco**, que es lo que quitaría el paso de la cuarentena al
   instalar. Hace falta un certificado *Developer ID*, y ese lo da el **programa
   de pago** de Apple: con esta cuenta personal no hay ninguno en el llavero ni
