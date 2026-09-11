@@ -140,11 +140,34 @@ entera encendida** cuando es meter algo dentro. Son gestos que caen en el mismo
 sitio y no deben parecer el mismo.
 
 Pasando el cursor por el rótulo `PROYECTOS` aparece **«A–Z»**, que ordena áreas
-y proyectos alfabéticamente; también está en el menú contextual de cualquiera de
-los dos. Es el alfabético del idioma, no el de los códigos: la ñ va tras la n y
+y proyectos alfabéticamente; también está en el menú de cualquiera de los dos. Es el alfabético del idioma, no el de los códigos: la ñ va tras la n y
 los acentos cuentan como su letra. Los proyectos se ordenan **dentro de su
 grupo**, que es como se leen. Solo aparece con el cursor encima porque ordenar
 es algo que se hace de año en año.
+
+### El «⋯» y el clic secundario
+
+Al pasar el cursor por un proyecto, un área o una etiqueta, el número de la
+derecha deja sitio a un **«⋯»** con lo que se puede hacer con ella: eliminar,
+mover un proyecto de área, renombrar una etiqueta o quitarla de todas las
+tareas. Lo mismo sale con el **clic secundario**, y sale de la misma
+definición: un menú escrito dos veces acaba diciendo dos cosas distintas.
+
+Existe porque **esas acciones solo vivían en el botón derecho**. Un gesto que
+hay que conocer de antemano no es una función: para quien no lo conoce, eliminar
+un proyecto sencillamente no estaba. El menú contextual se queda como lo que
+debió ser siempre, un atajo para quien ya lo usa.
+
+El «⋯» no aparece en Bandeja, Hoy y las demás listas fijas: ahí no hay nada que
+ofrecer, y un botón que no hace nada es peor que ninguno. Y no se quita de la
+vista al abrirse el menú, solo se apaga: al desplegarse, el cursor deja la fila,
+y si desapareciera de verdad el menú se cerraría solo justo al ir a elegir.
+
+Las tareas tienen el suyo con el clic secundario: completar, programar para hoy
+o para mañana, aplazar, aparcar, quitar la fecha, **mover a** un proyecto y
+eliminar. Completar está el primero porque es lo que más se hace y hasta ahora
+solo se llegaba por el círculo, que mide dieciséis puntos: la acción más
+frecuente era también la que más puntería pedía.
 
 ### Áreas
 
@@ -465,7 +488,7 @@ solo se muestran las etiquetas que la lista no da ya por sabidas: dentro de
 Las etiquetas **salen de las tareas**, no de una lista aparte: existen mientras
 algo pendiente las lleve, así que no quedan huérfanas que limpiar. El precio es
 que renombrar una toca todas las tareas que la llevan; a cambio no hay una
-entidad más que mantener viva. Renombrar y quitar están en su menú contextual.
+entidad más que mantener viva. Renombrar y quitar están en su menú.
 
 Cada proyecto puede llevar un emoji: se elige pulsando el círculo junto a su
 título, de una paleta corta, y sustituye a su símbolo en la barra lateral.

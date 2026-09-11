@@ -171,7 +171,16 @@ private struct AreaRow: View {
                 Text("\(cuenta)")
                     .font(.system(size: 11, weight: .semibold).monospacedDigit())
                     .foregroundStyle(seleccionada ? Paper.accentInk : Paper.inkFaint)
+                    // Se apaga en vez de quitarse: el «⋯» ocupa su sitio al
+                    // pasar por encima y el ancho de la fila no debe bailar.
+                    .opacity(encima ? 0 : 1)
             }
+        }
+        // Colgado del contenido y no de la fila ya rellenada: el área lleva 22
+        // puntos de aire arriba y 7 abajo, y centrado sobre eso el «⋯» salía
+        // flotando por encima del número en vez de a su altura.
+        .overlay(alignment: .trailing) {
+            BotonDeOpciones(visible: encima) { opciones }
         }
         .padding(.leading, 15)
         .padding(.trailing, 18)
@@ -193,15 +202,19 @@ private struct AreaRow: View {
             isTargeted: { recibiendo = $0 }
         .onHover { encima = $0 }
         .onTapGesture { nav.go(to: .area(area.id)) }
-        .contextMenu {
-            Button("Ordenar áreas y proyectos alfabéticamente") {
-                store.sortAlphabetically()
-            }
-            Divider()
-            Button("Eliminar área", role: .destructive) {
-                if nav.perspective == .area(area.id) { nav.go(to: .inbox) }
-                store.delete(area)
-            }
+        .contextMenu { opciones }
+    }
+
+    /// Lo que se puede hacer con un área, dicho una sola vez: lo enseñan el
+    /// «⋯» y el clic secundario, y así no pueden discrepar.
+    @ViewBuilder private var opciones: some View {
+        Button("Ordenar áreas y proyectos alfabéticamente") {
+            store.sortAlphabetically()
+        }
+        Divider()
+        Button("Eliminar área", role: .destructive) {
+            if nav.perspective == .area(area.id) { nav.go(to: .inbox) }
+            store.delete(area)
         }
     }
 
@@ -254,6 +267,40 @@ enum Arrastre {
     }
 }
 
+/// El «⋯» que enseña las mismas opciones que el clic secundario.
+///
+/// Existe porque eliminar un área, eliminar un proyecto, moverlo de área,
+/// renombrar una etiqueta o quitarla de todas las tareas **solo** se podían
+/// hacer con el botón derecho. Un gesto que hay que conocer de antemano no es
+/// una función: para quien no lo conoce, esas acciones no existían. El menú
+/// contextual se queda como lo que debió ser siempre, un atajo.
+///
+/// Va en `overlay` y no en la fila: así no ocupa sitio cuando no se ve, y no
+/// hay que dejarle un hueco permanente en filas que no tienen nada que ofrecer.
+private struct BotonDeOpciones<Contenido: View>: View {
+    let visible: Bool
+    @ViewBuilder let contenido: () -> Contenido
+
+    var body: some View {
+        Menu {
+            contenido()
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 11, weight: .semibold))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .tint(Paper.inkSoft)
+        // Se apaga, no se quita. Al abrirse el menú el cursor deja la fila y
+        // `onHover` pasa a falso; si con eso desapareciera de la jerarquía, el
+        // menú se cerraría solo justo cuando vas a elegir algo.
+        .opacity(visible ? 1 : 0)
+        .allowsHitTesting(visible)
+        .help("Más opciones")
+    }
+}
+
 private struct SidebarRow: View {
     @Environment(Store.self) private var store
     @Environment(Navigation.self) private var nav
@@ -293,6 +340,16 @@ private struct SidebarRow: View {
                 Text("\(count)")
                     .font(.system(size: 11.5, weight: .semibold).monospacedDigit())
                     .foregroundStyle(isSelected ? Paper.accentInk : Paper.inkFaint)
+                    // Se apaga en vez de quitarse: el «⋯» ocupa su sitio al
+                    // pasar por encima y el ancho de la fila no debe bailar.
+                    .opacity(hovering && tieneOpciones ? 0 : 1)
+            }
+        }
+        // Igual que en las áreas: pegado al contenido, así cae exactamente
+        // donde estaba el número sin tener que repetir aquí sus rellenos.
+        .overlay(alignment: .trailing) {
+            if tieneOpciones {
+                BotonDeOpciones(visible: hovering) { opciones }
             }
         }
         .padding(.leading, 15 + sangria)
@@ -333,34 +390,42 @@ private struct SidebarRow: View {
                 renombrando = false
             }
         }
-        .contextMenu {
-            if let tag {
-                Button("Renombrar etiqueta…") { renombrando = true }
-                Button("Quitar de todas las tareas", role: .destructive) {
-                    if nav.perspective == .tag(tag) { nav.go(to: .inbox) }
-                    store.deleteTag(tag)
-                }
+        .contextMenu { opciones }
+    }
+
+    /// Las listas fijas —Bandeja, Hoy, Próximamente…— no se renombran ni se
+    /// eliminan: ahí un «⋯» sería un botón que no hace nada.
+    private var tieneOpciones: Bool { project != nil || tag != nil }
+
+    /// Lo que se puede hacer con un proyecto o una etiqueta, dicho una sola
+    /// vez: lo enseñan el «⋯» y el clic secundario, y así no pueden discrepar.
+    @ViewBuilder private var opciones: some View {
+        if let tag {
+            Button("Renombrar etiqueta…") { renombrando = true }
+            Button("Quitar de todas las tareas", role: .destructive) {
+                if nav.perspective == .tag(tag) { nav.go(to: .inbox) }
+                store.deleteTag(tag)
             }
-            if let project {
-                if !store.areas.isEmpty {
-                    Menu("Área") {
-                        Button("Sin área") { store.move(project, toArea: nil) }
-                        Divider()
-                        ForEach(store.areas) { area in
-                            Button(area.name.isEmpty ? "Sin título" : area.name) {
-                                store.move(project, toArea: area.id)
-                            }
+        }
+        if let project {
+            if !store.areas.isEmpty {
+                Menu("Área") {
+                    Button("Sin área") { store.move(project, toArea: nil) }
+                    Divider()
+                    ForEach(store.areas) { area in
+                        Button(area.name.isEmpty ? "Sin título" : area.name) {
+                            store.move(project, toArea: area.id)
                         }
                     }
                 }
-                Button("Ordenar áreas y proyectos alfabéticamente") {
-                    store.sortAlphabetically()
-                }
-                Divider()
-                Button("Eliminar proyecto", role: .destructive) {
-                    if nav.perspective == .project(project.id) { nav.go(to: .inbox) }
-                    store.delete(project)
-                }
+            }
+            Button("Ordenar áreas y proyectos alfabéticamente") {
+                store.sortAlphabetically()
+            }
+            Divider()
+            Button("Eliminar proyecto", role: .destructive) {
+                if nav.perspective == .project(project.id) { nav.go(to: .inbox) }
+                store.delete(project)
             }
         }
     }

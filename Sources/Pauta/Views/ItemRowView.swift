@@ -138,7 +138,18 @@ struct ItemRowView: View {
         .onChange(of: title) { guard isSelected else { return }; commitText() }
         .onChange(of: notes) { guard isSelected else { return }; commitText() }
         .contextMenu {
+            // Primero lo que más se hace. Hasta ahora completar solo se podía
+            // por el círculo, que mide dieciséis puntos: la acción más
+            // frecuente de la app era también la que más puntería pedía.
+            Button(item.isCompleted ? "Descompletar" : "Completar") {
+                store.toggleComplete(item)
+            }
+            Divider()
             Button("Programar para hoy") { store.schedule(item, to: .now) }
+            Button("Para mañana") {
+                store.schedule(item, to: Calendar.current.date(byAdding: .day,
+                                                               value: 1, to: .now))
+            }
             // Aplazar también desde la lista: el aviso es la puerta principal,
             // pero «ahora no puedo» se piensa igual mirando la lista.
             Button("Aplazar \(Avisos.minutosAplazados) min") {
@@ -147,7 +158,24 @@ struct ItemRowView: View {
             Button("Aparcar en Algún día") { store.park(item) }
             Button("Quitar fecha") { store.schedule(item, to: nil) }
             Divider()
-            Button("Eliminar", role: .destructive) { store.delete(item) }
+            // Mover de proyecto obligaba a desplegar la fila entera, y es lo
+            // que se hace al vaciar la bandeja: una tarea tras otra.
+            Menu("Mover a") {
+                Button("Bandeja") { move(to: nil) }
+                if !store.projects.isEmpty { Divider() }
+                ForEach(store.projects) { project in
+                    Button(project.name.isEmpty ? "Sin título" : project.name) {
+                        move(to: project.id)
+                    }
+                }
+            }
+            Divider()
+            Button("Eliminar", role: .destructive) {
+                // Si la que se va era la abierta, hay que soltar la selección:
+                // si no, queda apuntando a algo que ya no existe.
+                if isSelected { nav.selectedItemID = nil }
+                store.delete(item)
+            }
         }
     }
 
