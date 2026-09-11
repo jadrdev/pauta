@@ -1255,6 +1255,7 @@ Sources/PautaCore/        librería sin UI: la comparten macOS, iOS y el widget
   Atajo.swift             una combinación de teclas y si sirve como atajo
   Repaso.swift            el repaso de la mañana
   Vistazo.swift           lo que cabe en un widget, y de dónde se lee
+  Orden.swift             lo que el reloj le pide al teléfono
   Puente.swift            cruzar dos carpetas: gana la versión más reciente
   CarpetaElegida.swift    el marcador de la carpeta que elegiste, y si caducó
                           —el almacén en iOS, una instantánea en el Mac—
@@ -1286,7 +1287,7 @@ Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
 Sources/PautaWidget/      el widget de iOS: otro proceso, y solo lectura
   PautaWidget.swift       el paquete de widgets y su línea de tiempo
   HoyView.swift           lo que se dibuja, por tamaño
-Sources/PautaWatch/       el reloj: recibe el vistazo del teléfono y lo enseña
+Sources/PautaWatch/       el reloj: enseña el vistazo del teléfono y le pide tachar
   PautaWatchApp.swift     punto de entrada
   EnlaceConElTelefono.swift  lo que llega por WatchConnectivity
   HoyWatchView.swift      el día, a la altura del brazo, con su círculo para tachar
