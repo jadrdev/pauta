@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import WatchConnectivity
+import WidgetKit
 import PautaCore
 
 /// Lo que llega del teléfono.
@@ -35,6 +36,11 @@ final class EnlaceConElTelefono: NSObject, WCSessionDelegate {
     nonisolated private func leer(_ contexto: [String: Any]) {
         guard let datos = contexto[Vistazo.clave] as? Data,
               let recibido = Vistazo.desde(datos) else { return }
+        // Escrito en la carpeta del grupo antes de enseñarlo: la complicación
+        // es otro proceso y no ve esta memoria. Es su única fuente, así que
+        // hasta que esto se guarda, la esfera sigue contando lo de antes.
+        Vistazo.publicar(recibido)
+        WidgetCenter.shared.reloadAllTimelines()
         Task { @MainActor in
             self.vistazo = recibido
             self.esperando = false

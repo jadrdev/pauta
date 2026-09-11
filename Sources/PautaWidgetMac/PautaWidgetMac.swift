@@ -59,10 +59,10 @@ struct ProveedorMac: TimelineProvider {
         completion(Timeline(entries: [leer(context)], policy: .after(manana)))
     }
 
-    /// Lee la instantánea y **la descarta si no es de hoy**.
+    /// Lee la instantánea y **la descarta si no es de hoy**. La regla vive en el
+    /// núcleo porque la esfera del reloj hace exactamente lo mismo.
     private func leer(_ context: Context) -> MomentoMac {
-        guard let guardado = Vistazo.instantanea(),
-              Calendar.current.isDate(guardado.dia, inSameDayAs: .now)
+        guard let guardado = Vistazo.deHoy(Vistazo.instantanea())
         else { return MomentoMac(date: .now, vistazo: nil) }
         return MomentoMac(date: .now,
                           vistazo: guardado.recortado(a: ProveedorMac.caben(context.family)))

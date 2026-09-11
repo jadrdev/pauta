@@ -181,6 +181,42 @@ public struct Vistazo: Codable, Equatable, Sendable {
                        restantes: max(0, hoy - limite))
     }
 
+    // MARK: - En la esfera
+
+    /// El renglón de una línea: «3 para hoy · 2 atrasadas».
+    ///
+    /// Para el sitio más estrecho que hay, el que va al lado de la hora en la
+    /// esfera. Los dos números juntos y separados por un punto porque ahí no
+    /// hay dos líneas que repartir, y el de atrasadas es el que cambia lo que
+    /// haces con el día.
+    public var renglon: String {
+        guard let apunte else { return titular }
+        return "\(titular) · \(apunte)"
+    }
+
+    /// La cuenta, para el círculo de doce puntos de ancho.
+    ///
+    /// El cero se dice con su número. «Nada para hoy» no cabe ahí, y un círculo
+    /// en blanco no se lee como «no hay nada» sino como que algo se rompió.
+    public var cifra: String { "\(hoy)" }
+
+    /// Lo guardado, **solo si habla de hoy**.
+    ///
+    /// El reloj y el Mac enseñan una copia que les dejó escrita otro, y esa
+    /// copia envejece: con la app cerrada, lo que hay guardado es de cuando se
+    /// escribió. Una esfera o un widget que enseñen la cuenta de ayer como si
+    /// fuera la de hoy hacen más daño que uno que diga que no sabe — se miran
+    /// de reojo y nadie los comprueba.
+    ///
+    /// Aquí y no en cada extensión: la regla es la misma en las dos, y escrita
+    /// dos veces es cuestión de tiempo que una se quede atrás.
+    public static func deHoy(_ guardado: Vistazo?, ahora: Date = .now,
+                             calendar: Calendar = .current) -> Vistazo? {
+        guard let guardado,
+              calendar.isDate(guardado.dia, inSameDayAs: ahora) else { return nil }
+        return guardado
+    }
+
     // MARK: - Por el aire, al reloj
 
     /// La llave con la que viaja al reloj dentro del contexto de aplicación.

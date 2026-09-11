@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- El grupo, que aquí es la única forma de que la app del reloj y su
+         complicación vean lo mismo: son dos procesos y no comparten memoria.
+         El contenedor es el del reloj, no el del teléfono: cada aparato tiene
+         el suyo, y lo que cruza de uno a otro sigue siendo WatchConnectivity. -->
+    <key>com.apple.security.application-groups</key>
+    <array><string>group.dev.jadrdev.pauta</string></array>
+</dict>
+</plist>

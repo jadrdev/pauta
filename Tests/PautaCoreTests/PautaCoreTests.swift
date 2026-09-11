@@ -3680,3 +3680,40 @@ struct ConsultaDeVersionesTests {
         #expect(await Novedades.ultima(sesion: ServidorFalso.sesion()) == nil)
     }
 }
+
+/// Lo que se enseña en la esfera del reloj.
+///
+/// Son decisiones puras y se prueban aquí: en una complicación no hay pantalla
+/// que mirar, y menos todavía en un reloj que aún no se puede instalar.
+struct EsferaTests {
+    private let ayer = Date(timeIntervalSince1970: 1_800_000_000)
+    private var hoy: Date { ayer.addingTimeInterval(86_400) }
+
+    private func vistazo(dia: Date, hoyCuenta: Int, atrasadas: Int = 0) -> Vistazo {
+        Vistazo(dia: dia, hoy: hoyCuenta, atrasadas: atrasadas, bandeja: 0,
+                filas: [], restantes: 0)
+    }
+
+    /// Lo guardado solo vale si habla de hoy. Una esfera que enseñe la cuenta
+    /// de ayer como si fuera la de hoy hace más daño que una que diga que no
+    /// sabe: se mira de reojo y no se comprueba.
+    @Test func yesterdaysGlanceIsNotTodays() {
+        #expect(Vistazo.deHoy(vistazo(dia: hoy, hoyCuenta: 3), ahora: hoy) != nil)
+        #expect(Vistazo.deHoy(vistazo(dia: ayer, hoyCuenta: 3), ahora: hoy) == nil)
+        #expect(Vistazo.deHoy(nil, ahora: hoy) == nil)
+    }
+
+    /// El renglón de una línea: lo que cabe al lado de la hora.
+    @Test func oneLineSaysBothNumbers() {
+        #expect(vistazo(dia: hoy, hoyCuenta: 3).renglon == "3 para hoy")
+        #expect(vistazo(dia: hoy, hoyCuenta: 3, atrasadas: 2).renglon == "3 para hoy · 2 atrasadas")
+        #expect(vistazo(dia: hoy, hoyCuenta: 0).renglon == "Nada para hoy")
+    }
+
+    /// Y el cero se dice con su número. «Nada» en un círculo de doce puntos no
+    /// cabe, y dejarlo en blanco parece que la complicación se rompió.
+    @Test func zeroIsStillANumber() {
+        #expect(vistazo(dia: hoy, hoyCuenta: 0).cifra == "0")
+        #expect(vistazo(dia: hoy, hoyCuenta: 12).cifra == "12")
+    }
+}

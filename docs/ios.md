@@ -387,6 +387,44 @@ Y distingue **«no hay nada» de «no sé nada»**: con el vistazo recibido y va
 dice «Nada para hoy»; sin recibir nada dice «Abre Pauta en el iPhone». En un
 reloj esos dos mensajes son muy distintos y confundirlos sería mentir.
 
+### La complicación
+
+En la esfera, sin abrir nada. Cuatro formas del mismo dato, que es lo que cambia
+de un sitio a otro de la esfera:
+
+| Sitio | Qué enseña |
+|---|---|
+| Círculo | La cuenta y `HOY`, con un aro naranja si hay algo atrasado |
+| Esquina | La cuenta, con el renglón curvado alrededor |
+| En línea | `5 para hoy · 2 atrasadas`, al lado de la hora |
+| Rectángulo | El titular, lo atrasado y la primera tarea con su hora |
+
+Sin color propio: en una esfera manda el color que haya elegido quien la lleva,
+y una complicación que se pinta a su gusto se ve como un parche. Lo único que se
+permite es marcar lo atrasado, porque es el dato que cambia lo que haces con el
+día. Y el aro solo aparece cuando hay algo arrastrándose: si se viera siempre,
+dejaría de decir nada.
+
+**De dónde saca los datos.** Una complicación es **otro proceso** y no comparte
+memoria con la app del reloj, así que no puede preguntarle qué recibió. Lo que
+hay entre las dos es el contenedor del **grupo de aplicaciones**: la app del
+reloj escribe ahí el vistazo en cuanto llega del teléfono y avisa a WidgetKit;
+la complicación lo lee. Es el mismo arreglo que en el Mac y por el mismo motivo,
+con el mismo precio: es una copia y **envejece**.
+
+Por eso lo guardado lleva su día dentro y aquí se comprueba antes de dibujar. Si
+no es de hoy, el círculo dice `—` y el rectángulo «Abre Pauta en el reloj», en
+vez de enseñar la cuenta de ayer. Una esfera se mira de reojo y nadie la
+comprueba: equivocarse ahí es peor que callarse. Esa regla —`Vistazo.deHoy`—
+vive en el núcleo y la usan la complicación y el widget del Mac, que hacen lo
+mismo; escrita dos veces sería cuestión de tiempo que una se quedara atrás.
+
+**Cuándo se actualiza.** Cuando la app del reloj recibe algo del teléfono: al
+abrirla, y cuando el sistema la despierta para entregarle el contexto. No hay
+forma de que la complicación hable con el teléfono por su cuenta, así que el
+camino sigue siendo el mismo: iPhone → app del reloj → carpeta del grupo →
+esfera.
+
 ### Del núcleo, lo que en un reloj puede existir
 
 `PautaCoreWatch` compila las mismas fuentes menos tres:

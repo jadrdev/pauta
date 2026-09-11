@@ -802,6 +802,12 @@ El día que lleva dentro es lo que salva al widget de mentir: si la app está
 cerrada, lo escrito envejece, y entonces el widget dice **«Abre Pauta para ver el
 día»** en vez de enseñar la lista de ayer como si fuera la de hoy.
 
+El mismo arreglo, y por el mismo motivo, es el que lleva Pauta a la **esfera del
+reloj**: allí la app tampoco comparte memoria con su complicación, así que
+escribe el vistazo en la carpeta del grupo y la esfera lo lee. La regla de
+descartar lo que no es de hoy vive en el núcleo y la usan las dos. Está contado
+en [El reloj](docs/ios.md#la-complicación).
+
 Para ver qué tiene escrito, sin adivinar:
 
 ```bash
@@ -1284,6 +1290,9 @@ Sources/PautaWatch/       el reloj: recibe el vistazo del teléfono y lo enseña
   PautaWatchApp.swift     punto de entrada
   EnlaceConElTelefono.swift  lo que llega por WatchConnectivity
   HoyWatchView.swift      el día, a la altura del brazo
+Sources/PautaWatchWidget/ la complicación: lee lo que la app del reloj dejó escrito
+  PautaWatchWidget.swift  el paquete y su línea de tiempo
+  EsferaView.swift        cada forma de la esfera, por separado
 Sources/PautaWidgetMac/   el widget del Mac: lee la instantánea, no los datos
   PautaWidgetMac.swift    el paquete, la línea de tiempo y el día que descarta
   HoyViewMac.swift        lo que se dibuja, por tamaño
@@ -1311,9 +1320,6 @@ docs/tecnica.md           persistencia, orden, sincronización y decodificación
   [puente](docs/ios.md#el-puente-con-el-mac): eliges la carpeta del Mac una vez
   y el teléfono cruza con ella al volver a la app. Falta que sea automático de
   verdad, sin elegir nada y sin volver a la app
-- **La complicación del reloj.** La app del reloj ya enseña el día, pero en la
-  esfera todavía no hay nada: eso es otra extensión de widget, esta vez para
-  watchOS. Es el sitio donde el vistazo valdría más, porque no hay que abrir nada
 - **Tachar desde el reloj**, que exige mandar la orden de vuelta al teléfono y no
   solo recibir
 - **Notarizar el disco**, que es lo que quitaría el paso de la cuarentena al

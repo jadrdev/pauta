@@ -312,7 +312,10 @@ targets:
       - Resources/watch/Assets.xcassets
     dependencies:
       - target: PautaCoreWatch
+      - target: PautaWatchWidget
       - sdk: WatchConnectivity.framework
+      # Para avisar a la complicación de que hay vistazo nuevo.
+      - sdk: WidgetKit.framework
     info:
       path: build/watch/Generated-Info.plist
       properties:
@@ -328,7 +331,37 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta.watchkitapp
         PRODUCT_NAME: Pauta
+        CODE_SIGN_ENTITLEMENTS: Resources/watch/PautaWatch.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        DEVELOPMENT_TEAM: 26W4G92PSS
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "4"
+
+  PautaWatchWidget:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - Sources/PautaWatchWidget
+    dependencies:
+      - target: PautaCoreWatch
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    info:
+      path: build/watch/Widget-Info.plist
+      properties:
+        CFBundleDisplayName: Pauta
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        # Colgando del identificador de la app del reloj, que es lo que exige
+        # watchOS: una extensión suya y no una app aparte.
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta.watchkitapp.complicacion
+        PRODUCT_NAME: PautaWatchWidget
+        CODE_SIGN_ENTITLEMENTS: Resources/watch/PautaWatchWidget.entitlements
         DEVELOPMENT_TEAM: 26W4G92PSS
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: "5.0"
