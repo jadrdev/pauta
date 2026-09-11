@@ -743,6 +743,20 @@ public final class Store {
     /// La completada se queda en el historial y nace una sucesora con la fecha
     /// avanzada. La alternativa —mover la misma tarea hacia adelante— dejaría sin
     /// rastro de lo hecho, que es justo lo que uno quiere ver de una rutina.
+    /// El día, en texto, del que se deriva la identidad de una repetición.
+    ///
+    /// Sin hora y sin zona: lo que identifica una vuelta es el día del
+    /// calendario, y dos aparatos en la misma zona tienen que escribir la misma
+    /// cadena. Cruzando husos podrían discrepar un día y repetirse una tarea:
+    /// mucho menos malo que dos tareas cada día en el mismo huso.
+    nonisolated static let claveDeDia: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
     private func spawnNextOccurrence(of item: Item) {
         guard let recurrence = item.recurrence else { return }
         // La cuenta sale de la fecha que tenía y no de hoy, para que una semanal
@@ -767,7 +781,19 @@ public final class Store {
         if let fin = item.recurrenceEnd,
            cal.startOfDay(for: proxima) > cal.startOfDay(for: fin) { return }
 
+        // La identidad de la vuelta siguiente **se deriva**, no se sortea: de la
+        // tarea que la pare y del día que le toca. Con dos aparatos, cada uno
+        // completa por su lado y los dos llegan al mismo identificador, así que
+        // el cruce de carpetas las une en vez de dejar dos tareas iguales para
+        // mañana.
+        let identidad = UUID.derivada(de: item.id, y: Store.claveDeDia.string(from: proxima))
+        // Y si esa vuelta ya existe —porque la parió el otro aparato y llegó
+        // antes, o porque esta se completó, se descompletó y se volvió a
+        // completar— no se crea otra.
+        guard !items.contains(where: { $0.id == identidad }) else { return }
+
         var siguiente = Item(title: item.title)
+        siguiente.id = identidad
         siguiente.notes = item.notes
         siguiente.projectID = item.projectID
         siguiente.when = proxima

@@ -3373,3 +3373,74 @@ struct VistazoPorElAireTests {
         #expect(Vistazo.clave == "vistazo")
     }
 }
+
+/// La sucesora de una repetitiva, cuando hay dos aparatos.
+///
+/// Con el puente en marcha, la misma tarea vive en el Mac y en el teléfono. Si
+/// se completa en los dos —o en uno y luego cruza— cada lado paría **su propia**
+/// sucesora, con identidad distinta, y el cruce las traía las dos: dos
+/// «Revisión diaria» para mañana. Pasó de verdad.
+///
+/// La identidad de una repetición no puede ser aleatoria: la vuelta del día 11
+/// de una tarea **es la misma vuelta** la calcule quien la calcule.
+@MainActor
+struct SucesoraSinDuplicarTests {
+    private func carpeta() -> URL {
+        let u = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-sucesora-\(UUID().uuidString)", isDirectory: true)
+        return u
+    }
+
+    @Test func twoDevicesCompletingTheSameOneSpawnTheSameSuccessor() throws {
+        let unaCarpeta = carpeta(), otraCarpeta = carpeta()
+        defer { try? FileManager.default.removeItem(at: unaCarpeta)
+                try? FileManager.default.removeItem(at: otraCarpeta) }
+
+        // El Mac: una diaria con hora.
+        let mac = Store(root: unaCarpeta)
+        let diaria = mac.addItem(title: "Revisión diaria", in: .today)
+        mac.setTime(diaria, to: 20 * 60)
+        mac.setRecurrence(mac.items.first { $0.id == diaria.id }!, to: .diaria)
+
+        // El puente la lleva al teléfono.
+        Puente.cruzar(unaCarpeta, otraCarpeta)
+        let telefono = Store(root: otraCarpeta)
+        #expect(telefono.items.contains { $0.id == diaria.id })
+
+        // Y cada lado la completa por su cuenta, que es lo que pasa cuando la
+        // marcas en el Mac y el teléfono todavía no se había enterado.
+        mac.toggleComplete(mac.items.first { $0.id == diaria.id }!)
+        telefono.toggleComplete(telefono.items.first { $0.id == diaria.id }!)
+
+        // Las dos sucesoras tienen que ser **la misma**.
+        let unaSucesora = try #require(mac.items.first { $0.spawnedFrom == diaria.id })
+        let otraSucesora = try #require(telefono.items.first { $0.spawnedFrom == diaria.id })
+        #expect(unaSucesora.id == otraSucesora.id,
+                "cada aparato parió una sucesora distinta: al cruzar habrá dos")
+
+        // Y al cruzar queda una sola.
+        Puente.cruzar(unaCarpeta, otraCarpeta)
+        mac.reload()
+        let manana = mac.items.filter { $0.spawnedFrom == diaria.id && $0.deletedAt == nil }
+        #expect(manana.count == 1, "quedaron \(manana.count) sucesoras")
+    }
+
+    /// Y completar dos veces la misma vuelta tampoco duplica: si la sucesora ya
+    /// existe, no se crea otra.
+    @Test func spawningTwiceLeavesOne() throws {
+        let carpeta = carpeta()
+        defer { try? FileManager.default.removeItem(at: carpeta) }
+        let store = Store(root: carpeta)
+        let diaria = store.addItem(title: "pastilla", in: .today)
+        store.setRecurrence(store.items.first { $0.id == diaria.id }!, to: .diaria)
+
+        store.toggleComplete(store.items.first { $0.id == diaria.id }!)
+        // Se descompleta y se vuelve a completar: la vuelta de mañana es la
+        // misma, así que la sucesora tiene que seguir siendo una.
+        store.toggleComplete(store.items.first { $0.id == diaria.id }!)
+        store.toggleComplete(store.items.first { $0.id == diaria.id }!)
+
+        let sucesoras = store.items.filter { $0.spawnedFrom == diaria.id && $0.deletedAt == nil }
+        #expect(sucesoras.count == 1, "quedaron \(sucesoras.count)")
+    }
+}

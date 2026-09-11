@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 /// Cada cuánto se repite una tarea.
 public enum Recurrence: String, Codable, CaseIterable, Sendable {
@@ -441,6 +442,36 @@ extension Item {
         case (nil, _?): false
         case (nil, nil): byPosition(a, b)
         }
+    }
+}
+
+extension UUID {
+    /// Una identidad **derivada** de otra, y no sacada del aire.
+    ///
+    /// Existe por las repetitivas con dos aparatos. Al completar una diaria nace
+    /// la vuelta siguiente, y si su identidad es aleatoria, el Mac y el teléfono
+    /// paren cada uno la suya: al cruzar las carpetas quedan **dos** «Revisión
+    /// diaria» para mañana, que es exactamente lo que pasó.
+    ///
+    /// La vuelta del día 11 de una tarea es la misma vuelta la calcule quien la
+    /// calcule, así que su identidad sale de quién la parió y de qué día es.
+    /// Dos aparatos llegan al mismo identificador sin hablar entre ellos, y el
+    /// cruce —que se queda con la versión más reciente de cada archivo— las une
+    /// en vez de acumularlas.
+    ///
+    /// Es un UUID de versión 5 en todo menos en el espacio de nombres: lo que
+    /// importa aquí no es el estándar, es que sea estable y que no choque con
+    /// los aleatorios.
+    public static func derivada(de origen: UUID, y clave: String) -> UUID {
+        var digest = SHA256()
+        digest.update(data: Data(origen.uuidString.utf8))
+        digest.update(data: Data("|".utf8))
+        digest.update(data: Data(clave.utf8))
+        var b = Array(digest.finalize().prefix(16))
+        b[6] = (b[6] & 0x0F) | 0x50   // versión 5
+        b[8] = (b[8] & 0x3F) | 0x80   // variante RFC 4122
+        return UUID(uuid: (b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7],
+                           b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]))
     }
 }
 
