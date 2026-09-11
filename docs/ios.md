@@ -83,8 +83,14 @@ que lo que le dictes a Siri aparece en la bandeja sin tocar nada.
 No cambia de pestaña cuando entra algo. Mover la pantalla debajo del dedo es peor
 que no avisar; la cuenta de la bandeja ya lo dice.
 
-Mientras la carpeta de iCloud siga fuera de alcance, esto es **el único puente
-que hay entre el teléfono y el Mac**, y funciona sin pagar nada.
+Esto **no es el puente con el Mac**, aunque naciera para serlo. De eso se encarga
+ahora [la carpeta compartida](#el-puente-con-el-mac), que cruza fechas,
+proyectos y borrados en los dos sentidos; Recordatorios solo trae títulos y solo
+hacia dentro.
+
+Lo que sigue siendo, y hoy no sustituye nada, es **la captura por voz**: Pauta no
+tiene atajo propio de Siri, así que todo lo que le dictas —desde la muñeca, en el
+coche, con el teléfono bloqueado— entra por aquí o no entra.
 
 ## Lo que el teléfono todavía no puede
 

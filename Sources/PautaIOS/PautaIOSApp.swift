@@ -13,8 +13,11 @@ import PautaCore
 struct PautaIOSApp: App {
     @State private var store = Store()
     @State private var agenda = Agenda()
-    /// La bandeja de Recordatorios: el único puente que hoy funciona entre el
-    /// teléfono y el Mac, mientras la carpeta de iCloud siga fuera de alcance.
+    /// La bandeja de Recordatorios: **captura por voz**, que es la única forma
+    /// que hay de apuntar algo sin tener la app delante. Fue además el primer
+    /// puente con el Mac, y eso ya no lo es — lo hace la carpeta compartida, que
+    /// cruza fechas, proyectos y borrados en los dos sentidos, mientras que esto
+    /// solo trae títulos y solo hacia dentro.
     @State private var recordatorios = RemindersInbox()
 
     init() {
