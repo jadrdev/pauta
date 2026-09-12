@@ -84,12 +84,15 @@ struct ListaView: View {
             // —se dibujaba, pero no se veía—.
             VStack(spacing: 26) {
                 Spacer(minLength: 20)
-                VacioView(perspectiva: perspectiva)
+                // «Buen día para no hacer nada» es verdad cuando has vaciado
+                // el día, y mentira en un teléfono recién instalado: ahí no
+                // estás libre, es que aún no has empezado.
+                VacioView(perspectiva: perspectiva, estrenando: store.items.isEmpty)
                 // La bienvenida solo en Hoy: es la pestaña que se abre al
                 // arrancar, y ofrecer permisos desde una etiqueta sería
                 // pedirlos donde no se acaba de ver para qué sirven.
                 if case .today = perspectiva {
-                    PuestaAPuntoView { permiso in
+                    PuestaAPuntoView(alConceder: { permiso in
                         Task {
                             switch permiso {
                             case .avisos: await Avisos.reschedule(store.items)
@@ -98,7 +101,9 @@ struct ListaView: View {
                                 await RemindersInbox().importar(en: store)
                             }
                         }
-                    }
+                    }, alElegirCarpeta: {
+                        Task { await Sincronizar.conElMac(store) }
+                    })
                 }
                 Spacer(minLength: 90)
             }
@@ -236,6 +241,9 @@ struct ListaView: View {
 /// Lo que se dice cuando no hay nada, que no es lo mismo en cada lista.
 struct VacioView: View {
     let perspectiva: Perspective
+    /// No hay ni una tarea en ninguna lista: es el primer arranque, o uno que
+    /// se quedó sin datos.
+    var estrenando = false
 
     var body: some View {
         VStack(spacing: 7) {
@@ -262,7 +270,8 @@ struct VacioView: View {
     }
 
     private var texto: String {
-        switch perspectiva {
+        if estrenando { return "Todavía no hay nada. Pulsa + y apunta lo primero." }
+        return switch perspectiva {
         case .today: "Nada para hoy. Buen día para no hacer nada."
         case .inbox: "La bandeja está vacía."
         case .upcoming: "Nada planificado más adelante."
