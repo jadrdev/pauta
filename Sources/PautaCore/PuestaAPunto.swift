@@ -72,9 +72,17 @@ public enum PuestaAPunto {
 
     /// Pide uno. Devuelve si quedó concedido.
     ///
-    /// Se usa un almacén nuevo y no el de la app: el permiso es del programa
-    /// entero y no de una instancia, así que da igual quién pregunte, y así esto
-    /// no depende de que le pasen nada.
+    /// Por el mismo camino que la pantalla de ajustes, y no por uno propio:
+    /// `Agenda` y `RemindersInbox` **guardan su `EKEventStore`**, y eso no es
+    /// decoración. Un `EKEventStore()` creado al vuelo se suelta al terminar la
+    /// expresión, mientras el diálogo del sistema sigue abierto esperando tu
+    /// respuesta; cuando contestas ya no hay a quién avisar y la espera no vuelve
+    /// nunca. Desde fuera parece que el permiso no se dio: el botón se queda en
+    /// «…» y la tarjeta, igual que estaba.
+    ///
+    /// `withExtendedLifetime` y no confiar en que la variable local baste: lo que
+    /// mantiene vivo un objeto es su último uso, y aquí el último uso es la
+    /// llamada — justo la que hay que sobrevivir.
     @MainActor
     @discardableResult
     public static func pedir(_ permiso: Permiso) async -> Bool {
@@ -82,9 +90,15 @@ public enum PuestaAPunto {
         case .avisos:
             return await Avisos.request()
         case .calendario:
-            return (try? await EKEventStore().requestFullAccessToEvents()) ?? false
+            let agenda = Agenda()
+            let concedido = await agenda.requestAccess()
+            withExtendedLifetime(agenda) {}
+            return concedido
         case .recordatorios:
-            return (try? await EKEventStore().requestFullAccessToReminders()) ?? false
+            let bandeja = RemindersInbox()
+            let concedido = (try? await bandeja.requestAccess()) ?? false
+            withExtendedLifetime(bandeja) {}
+            return concedido
         }
     }
 

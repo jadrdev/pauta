@@ -13,6 +13,7 @@ struct PuestaAPuntoView: View {
 
     @State private var pendientes: [Permiso] = []
     @State private var pidiendo: Permiso?
+    @Environment(\.scenePhase) private var fase
 
     var body: some View {
         // Un `Color.clear` de altura cero cuando no hay nada, en vez de dejar
@@ -22,6 +23,18 @@ struct PuestaAPuntoView: View {
         // aunque no se vea, donde colgar la tarea.
         contenido
             .task { pendientes = await PuestaAPunto.pendientes() }
+            // Y al volver de fuera. Un permiso se puede conceder en los ajustes
+            // del sistema, y también se puede haber concedido aquí sin que la
+            // respuesta llegara de vuelta. En los dos casos la tarjeta se
+            // corrige sola al volver, en vez de quedarse pidiendo algo que ya
+            // tiene — que es la forma más rápida de que dejes de creerla.
+            .onChange(of: fase) { _, nueva in
+                guard nueva == .active else { return }
+                Task {
+                    pendientes = await PuestaAPunto.pendientes()
+                    pidiendo = nil
+                }
+            }
     }
 
     @ViewBuilder private var contenido: some View {
@@ -83,7 +96,10 @@ struct PuestaAPuntoView: View {
                     .contentShape(Capsule())
             }
             .buttonStyle(.plain)
-            .disabled(pidiendo != nil)
+            // Solo se apaga el que está preguntando. Apagarlos los tres mientras
+            // uno espera convierte un permiso atascado en una tarjeta muerta: no
+            // podías ni intentar los otros dos.
+            .disabled(pidiendo == permiso)
         }
     }
 }
