@@ -13,6 +13,8 @@ struct PuestaAPuntoView: View {
     /// Qué hacer cuando se elige la carpeta del Mac. Lo pone quien tenga el
     /// almacén: aquí no hay ninguno.
     let alElegirCarpeta: () -> Void
+    /// No hay ni una tarea en ninguna lista.
+    let estrenando: Bool
 
     @State private var pendientes: [Permiso] = []
     @State private var pidiendo: Permiso?
@@ -20,13 +22,25 @@ struct PuestaAPuntoView: View {
     @State private var eligiendo = false
     @Environment(\.scenePhase) private var fase
 
-    /// La carpeta se ofrece mientras no haya una elegida.
+    /// La carpeta se ofrece mientras no haya una elegida **y no haya nada
+    /// apuntado todavía**.
     ///
-    /// Y va **la última**, detrás de los permisos: los permisos son de esta app,
-    /// y esto es de otra que a lo mejor no tienes. Formulada como pregunta por lo
+    /// Las dos condiciones, y la segunda importa más de lo que parece. A un
+    /// permiso se le contesta que sí o que no y desaparece; a esto no hay forma
+    /// de contestarle «no uso el Mac». Sin la segunda condición, quien nunca haya
+    /// usado el Mac se queda la fila puesta para siempre, y un ofrecimiento que
+    /// no se va nunca deja de ser una bienvenida y pasa a ser un mueble.
+    ///
+    /// Atada al estreno se resuelve sola para los dos: quien viene del Mac elige
+    /// la carpeta, y quien empieza de cero apunta su primera tarea y la fila se
+    /// va. Y es el único momento en que la oferta significa algo — traer tus
+    /// tareas se ofrece cuando no hay ninguna.
+    ///
+    /// Va **la última**, detrás de los permisos: los permisos son de esta app, y
+    /// esto es de otra que a lo mejor no tienes. Formulada como pregunta por lo
     /// mismo — quien llega nuevo de verdad la lee, ve que no va con él y sigue.
     /// Una fila que dijera «conecta tu Mac» le haría creer que le falta un paso.
-    private var ofreceCarpeta: Bool { !carpeta.elegida }
+    private var ofreceCarpeta: Bool { estrenando && !carpeta.elegida }
 
     var body: some View {
         // Un `Color.clear` de altura cero cuando no hay nada, en vez de dejar

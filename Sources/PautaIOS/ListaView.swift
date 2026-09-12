@@ -103,7 +103,7 @@ struct ListaView: View {
                         }
                     }, alElegirCarpeta: {
                         Task { await Sincronizar.conElMac(store) }
-                    })
+                    }, estrenando: store.items.isEmpty)
                 }
                 Spacer(minLength: 90)
             }

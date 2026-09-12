@@ -339,9 +339,28 @@ en cuanto se reconoce el icono.
 ## El puente con el Mac
 
 En iOS una app solo entra donde le dejan, y lo que le deja entrar en una carpeta
-de iCloud Drive es que **la elijas tú** en el selector del sistema. En
-`Más ▸ Ajustes ▸ La carpeta del Mac` se elige una vez la carpeta `Pauta` de
-iCloud Drive, y a partir de ahí el teléfono cruza sus tareas con las del Mac.
+de iCloud Drive es que **la elijas tú** en el selector del sistema. Se elige una
+vez la carpeta `Pauta` de iCloud Drive, y a partir de ahí el teléfono cruza sus
+tareas con las del Mac.
+
+Se ofrece en dos sitios. Siempre en `Más ▸ Ajustes ▸ La carpeta del Mac`; y
+además como **última fila de la tarjeta de bienvenida**, debajo del vacío de
+`Hoy`, mientras no haya ni una tarea apuntada. Estaba solo en los ajustes y eso
+eran tres toques y una pantalla que únicamente abres si ya sospechas que existe:
+quien llegaba al teléfono con el Mac lleno de tareas veía una lista vacía y
+ningún camino.
+
+Ahí va **dicho como pregunta** —«¿Ya usas Pauta en el Mac?»— y no como una
+instrucción. Quien llega nuevo de verdad la lee, ve que no va con él y sigue;
+«conecta tu Mac» le haría creer que le falta un paso que no existe.
+
+Y se ofrece **solo mientras no hay nada apuntado**, que es la condición que hace
+que esto no se convierta en un mueble. A un permiso se le contesta que sí o que
+no y desaparece; a esto no hay forma de contestarle «no tengo Mac». Atada al
+estreno se resuelve sola para los dos casos: quien viene del Mac elige la
+carpeta, y quien empieza de cero apunta su primera tarea y la fila se va. Que
+además es el único momento en que la oferta significa algo — traer tus tareas se
+ofrece cuando no hay ninguna.
 
 **No apunta el almacén a esa carpeta**, y esa es la decisión que importa. La
 carpeta puede no estar —el teléfono sin red, el permiso caducado, los archivos
