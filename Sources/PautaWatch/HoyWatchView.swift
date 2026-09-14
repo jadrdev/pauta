@@ -6,8 +6,9 @@ import PautaCore
 /// Ni listas largas ni gestos: un titular que se lee de reojo y las tareas que
 /// caben. Lo que hace falta a la altura del brazo es el número, no el detalle.
 struct HoyWatchView: View {
+    /// Lo de hoy, o nada. Quien lo pasa ya ha descartado lo que no es de hoy:
+    /// aquí no se decide, se dibuja.
     let vistazo: Vistazo?
-    let esperando: Bool
     /// Las que se han mandado tachar y aún no han vuelto confirmadas.
     var enCamino: Set<UUID> = []
     /// Qué hacer al pulsar el círculo. Vacío en las vistas de solo mirar.
@@ -50,13 +51,15 @@ struct HoyWatchView: View {
                 }
             }
         } else {
-            // «No sé nada» y «no hay nada» no se dicen igual: el primero se
-            // arregla abriendo la app del teléfono, y el segundo se celebra.
+            // «No sé nada» y «no hay nada» no se dicen igual, y aquí siempre es
+            // lo primero: un día sin nada llega con su vistazo y lo dice en el
+            // titular —«Nada para hoy»—. Si no hay vistazo de hoy, lo honesto no
+            // es celebrar que no tienes tareas, es reconocer que no se sabe.
             VStack(spacing: 6) {
-                Image(systemName: esperando ? "iphone.badge.exclamationmark" : "sun.max")
+                Image(systemName: "iphone.badge.exclamationmark")
                     .font(.system(size: 22))
                     .foregroundStyle(.secondary)
-                Text(esperando ? "Abre Pauta en el iPhone" : "Nada para hoy")
+                Text("Abre Pauta en el iPhone")
                     .font(.system(size: 14))
                     .multilineTextAlignment(.center)
             }

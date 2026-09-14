@@ -15,9 +15,20 @@ import Foundation
 public struct Orden: Codable, Equatable, Sendable {
     public enum Que: String, Codable, Sendable {
         case completar
+        /// «Mándame el vistazo otra vez.»
+        ///
+        /// El reloj no puede saber si lo que tiene sigue valiendo: el contexto
+        /// de aplicación lo guarda el sistema y lo último que llegó puede ser de
+        /// hace días. Antes solo se refrescaba cuando el teléfono decidía
+        /// hablar, así que el reloj se quedaba esperando a que abrieras la app
+        /// del iPhone. Ahora lo pide él al abrirse.
+        case refrescar
     }
 
     public let que: Que
+    /// De qué tarea habla. En `refrescar` no habla de ninguna y va un
+    /// identificador cualquiera: el sobre es uno solo, y darle una forma
+    /// distinta a cada orden es dos formatos que un día dejan de coincidir.
     public let tarea: UUID
 
     public init(que: Que, tarea: UUID) {

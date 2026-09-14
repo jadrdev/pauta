@@ -162,6 +162,20 @@ struct RaizView: View {
                     // Solo se avisa a fuera si cambió algo: una orden repetida
                     // —el sistema reintenta— no tiene por qué mover nada.
                     if store.completar(orden.tarea) { avisarAFuera() }
+                case .refrescar:
+                    // El reloj no sabe si lo que tiene sigue valiendo, así que
+                    // lo pregunta. Se relee del disco antes de contestar: puede
+                    // haber cambiado algo desde otro sitio mientras esta app
+                    // dormía, y mandarle lo que había en memoria sería
+                    // contestarle con lo mismo que él ya tenía.
+                    store.reload()
+                    WidgetCenter.shared.reloadAllTimelines()
+                    // Por mensaje y no solo por contexto: el que pregunta suele
+                    // ser un reloj que no tiene el contexto, y el contexto no se
+                    // reenvía cuando no ha cambiado.
+                    EnlaceConElReloj.shared.responder(
+                        Vistazo.de(store.items, proyectos: store.projects,
+                                   limite: Vistazo.limitePublicado))
                 }
             }
             // Y a partir de aquí, cada vez que cambie algo en Recordatorios:

@@ -54,6 +54,28 @@ final class EnlaceConElReloj: NSObject, WCSessionDelegate {
         enviar()
     }
 
+    /// Contesta a un reloj que ha preguntado.
+    ///
+    /// Por **mensaje** y no solo por contexto, y esto costó encontrarlo:
+    /// `updateApplicationContext` no entrega nada si el contenido es igual al
+    /// último que mandó. Es lo correcto para el uso normal —ahorra batería
+    /// repitiendo lo que ya se sabe— y es exactamente lo contrario de lo que
+    /// hace falta aquí: quien pregunta es un reloj que **no tiene** ese contexto
+    /// —se reinstaló la app, se cambió de reloj, se borró—, y el teléfono le
+    /// contestaba con un silencio que desde fuera parece que no funciona.
+    ///
+    /// Un mensaje sí llega siempre, y quien preguntó está despierto por
+    /// definición. Se manda además el contexto, que es lo que sobrevive a que el
+    /// reloj se apague.
+    func responder(_ vistazo: Vistazo) {
+        publicar(vistazo)
+        guard WCSession.isSupported() else { return }
+        let sesion = WCSession.default
+        guard sesion.activationState == .activated, sesion.isReachable,
+              let datos = vistazo.datos() else { return }
+        sesion.sendMessage([Vistazo.clave: datos], replyHandler: nil, errorHandler: { _ in })
+    }
+
     /// Lo que pidió el reloj, cuando ya hay quien lo atienda.
     private func desatascar() {
         guard let obedecer else { return }

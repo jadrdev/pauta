@@ -3727,12 +3727,27 @@ struct OrdenDesdeElRelojTests {
         return Store(root: dir)
     }
 
-    /// El sobre en el que viaja: va y vuelve entero.
-    @Test func theOrderSurvivesTheTrip() throws {
-        let tarea = UUID()
-        let ida = Orden(que: .completar, tarea: tarea)
+    /// El sobre en el que viaja: va y vuelve entero, diga lo que diga.
+    @Test(arguments: [Orden.Que.completar, .refrescar])
+    func theOrderSurvivesTheTrip(_ que: Orden.Que) throws {
+        let ida = Orden(que: que, tarea: UUID())
         let vuelta = try #require(Orden.desde(ida.carga()))
         #expect(vuelta == ida)
+    }
+
+    /// Lo que el reloj enseña es de hoy o no se enseña.
+    ///
+    /// La complicación ya descartaba lo viejo; la app del reloj no, y enseñaba
+    /// las tareas del día que fuera como si fueran las de hoy. El contexto de
+    /// WatchConnectivity lo guarda el sistema y sobrevive a apagar el reloj, así
+    /// que «lo último que llegó» puede ser de hace días.
+    @Test func theWatchDoesNotShowOtherDaysTasks() {
+        let ayer = Date(timeIntervalSince1970: 1_800_000_000)
+        let hoy = ayer.addingTimeInterval(86_400)
+        let viejo = Vistazo(dia: ayer, hoy: 3, atrasadas: 0, bandeja: 0,
+                            filas: [], restantes: 0)
+        #expect(Vistazo.deHoy(viejo, ahora: hoy) == nil)
+        #expect(Vistazo.deHoy(viejo, ahora: ayer) != nil)
     }
 
     /// Y lo que no se entiende no se obedece. Una orden a medias es peor que

@@ -19,10 +19,15 @@ struct PautaWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            HoyWatchView(vistazo: enlace.vistazo, esperando: enlace.esperando,
+            HoyWatchView(vistazo: enlace.alDia,
                          enCamino: enlace.enCamino,
                          tachar: { enlace.tachar($0) })
-                .task { enlace.activar() }
+                .task {
+                    enlace.activar()
+                    // Y se pide lo de ahora en vez de esperar a que el teléfono
+                    // hable: habla cuando abres su app, y eso puede ser mañana.
+                    enlace.pedirVistazo()
+                }
         }
     }
 }

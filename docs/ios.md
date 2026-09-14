@@ -443,9 +443,37 @@ contexto es «lo último que se sabe», lo guarda el sistema y está ahí al lev
 la muñeca aunque el teléfono esté en otra habitación. Un mensaje exige a los dos
 despiertos a la vez, que es justo lo que no pasa entonces.
 
-Y distingue **«no hay nada» de «no sé nada»**: con el vistazo recibido y vacío
-dice «Nada para hoy»; sin recibir nada dice «Abre Pauta en el iPhone». En un
-reloj esos dos mensajes son muy distintos y confundirlos sería mentir.
+Y distingue **«no hay nada» de «no sé nada»**: con el vistazo de hoy recibido y
+vacío dice «Nada para hoy»; sin vistazo de hoy dice «Abre Pauta en el iPhone». En
+un reloj esos dos mensajes son muy distintos y confundirlos sería mentir.
+
+### Lo de hoy o nada
+
+El contexto de aplicación **lo guarda el sistema**: sobrevive a cerrar la app, a
+apagar el reloj y a pasar días lejos del teléfono. Así que «lo último que llegó»
+puede ser de la semana pasada, y durante un tiempo el reloj lo enseñó tal cual —
+las tareas de otro día como si fueran las de hoy. La complicación descartaba lo
+viejo desde el principio; la app no. Ahora las dos pasan por
+`Vistazo.deHoy`, y lo que no es de hoy no se enseña.
+
+Descartarlo no basta, porque entonces el reloj se queda mudo hasta que abras la
+app del teléfono — y el teléfono solo hablaba cuando la abrías. Así que **el
+reloj pregunta**: al abrirse, y cuando el teléfono vuelve a estar al alcance,
+manda una orden `refrescar`. Eso despierta la app del iPhone en segundo plano,
+que relee sus datos y contesta.
+
+La respuesta va **por mensaje y no solo por contexto**, y esto costó encontrarlo:
+`updateApplicationContext` no entrega nada si el contenido es igual al último que
+mandó. Para el uso normal está bien —ahorra repetir lo que ya se sabe— y es
+exactamente lo contrario de lo que hace falta al contestar una pregunta: quien
+pregunta suele ser un reloj que **no tiene** ese contexto, porque se reinstaló la
+app o se cambió de reloj, y se le contestaba con un silencio que desde fuera
+parece que no funciona. Se manda el mensaje **y** el contexto: el primero llega
+seguro, el segundo es el que sobrevive a apagar el reloj.
+
+La petición no se guarda en cola, a diferencia de la de tachar. Una orden de
+«dime lo de ahora» entregada media hora más tarde ya no pregunta por ahora; si no
+hay teléfono a mano no se pide y el reloj dice que no sabe, que es la verdad.
 
 ### Tachar desde la muñeca
 

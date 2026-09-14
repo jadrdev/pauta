@@ -15,10 +15,15 @@ import PautaCore
 final class EnlaceConElTelefono: NSObject, WCSessionDelegate {
     /// El último vistazo recibido, si hay alguno.
     private(set) var vistazo: Vistazo?
-    /// Si todavía no ha llegado nada: hay que poder distinguir «no hay tareas»
-    /// de «no sé nada del teléfono», que en un reloj son mensajes muy
-    /// distintos.
-    private(set) var esperando = true
+
+    /// Lo recibido, **solo si habla de hoy**.
+    ///
+    /// El contexto de aplicación lo guarda el sistema: sobrevive a cerrar la
+    /// app, a apagar el reloj y a no acercarse al teléfono en días. Sin esta
+    /// comprobación, «lo último que llegó» se enseñaba como si fuera lo de hoy,
+    /// y una muñeca se mira de reojo — nadie comprueba una lista que ya está
+    /// delante. La complicación lo hacía desde el principio; esto no.
+    var alDia: Vistazo? { Vistazo.deHoy(vistazo) }
     /// Lo que se ha mandado tachar y todavía no ha vuelto confirmado.
     ///
     /// El reloj **no tiene los datos**: quien tacha de verdad es el teléfono, y
@@ -28,7 +33,7 @@ final class EnlaceConElTelefono: NSObject, WCSessionDelegate {
     private(set) var enCamino: Set<UUID> = []
 
     func activar() {
-        guard WCSession.isSupported() else { esperando = false; return }
+        guard WCSession.isSupported() else { return }
         let sesion = WCSession.default
         sesion.delegate = self
         sesion.activate()
@@ -50,13 +55,31 @@ final class EnlaceConElTelefono: NSObject, WCSessionDelegate {
         WidgetCenter.shared.reloadAllTimelines()
         Task { @MainActor in
             self.vistazo = recibido
-            self.esperando = false
             // Lo que ya no viene en el vistazo es que el teléfono lo tachó: la
             // marca local sobra. Y lo que sigue viniendo se queda marcado, que
             // es una orden aún en camino y no una que se perdió.
             let vivas = Set(recibido.filas.map(\.id))
             self.enCamino.formIntersection(vivas)
         }
+    }
+
+    /// Pide al teléfono el vistazo de ahora.
+    ///
+    /// Al abrir la app, y solo si el teléfono está al alcance. Antes el reloj
+    /// esperaba sentado a que el teléfono decidiera hablar —y el teléfono habla
+    /// cuando abres su app—, así que levantar la muñeca un martes podía enseñar
+    /// el lunes. Pedirlo despierta la app del iPhone en segundo plano y la
+    /// respuesta llega sola por el camino de siempre.
+    ///
+    /// Sin cola a propósito: una petición de «dime lo de ahora» guardada para
+    /// entregarla más tarde ya no pregunta por ahora. Si no hay teléfono a mano
+    /// no se pide y se dice que no se sabe, que es la verdad.
+    func pedirVistazo() {
+        guard WCSession.isSupported() else { return }
+        let sesion = WCSession.default
+        guard sesion.activationState == .activated, sesion.isReachable else { return }
+        sesion.sendMessage(Orden(que: .refrescar, tarea: UUID()).carga(),
+                           replyHandler: nil, errorHandler: { _ in })
     }
 
     /// Manda tachar una tarea.
@@ -94,17 +117,27 @@ final class EnlaceConElTelefono: NSObject, WCSessionDelegate {
     nonisolated func session(_ session: WCSession,
                              activationDidCompleteWith state: WCSessionActivationState,
                              error: Error?) {
-        let contexto = session.receivedApplicationContext
-        Task { @MainActor in
-            // Sin nada recibido y sin error, seguimos esperando al teléfono; con
-            // error, ya no hay nada que esperar y se dice lo que hay.
-            if self.vistazo == nil { self.esperando = error == nil }
-        }
-        leer(contexto)
+        leer(session.receivedApplicationContext)
+        Task { @MainActor in self.pedirVistazo() }
     }
 
     nonisolated func session(_ session: WCSession,
                              didReceiveApplicationContext contexto: [String: Any]) {
         leer(contexto)
+    }
+
+    /// El vistazo que llega por mensaje, cuando lo hemos pedido nosotros. Mismo
+    /// sobre y misma llave: lo que cambia es por dónde entra, y eso no puede
+    /// cambiar lo que se hace con él.
+    nonisolated func session(_ session: WCSession,
+                             didReceiveMessage mensaje: [String: Any]) {
+        leer(mensaje)
+    }
+
+    /// Cuando el teléfono vuelve a estar cerca. Es el momento en que se puede
+    /// preguntar y, si lo que hay guardado es viejo, el momento en que hace más
+    /// falta.
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
+        Task { @MainActor in self.pedirVistazo() }
     }
 }
