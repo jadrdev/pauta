@@ -1018,19 +1018,22 @@ Con **Homebrew**, que además deja las actualizaciones a una orden:
 ```bash
 brew tap jadrdev/pauta
 brew trust jadrdev/pauta
-brew install --cask --no-quarantine pauta
+brew install --cask pauta
+xattr -dr com.apple.quarantine /Applications/Pauta.app
 ```
 
 El `brew trust` lo pide Homebrew 7 para cualquier tap que no sea el oficial, y
-tiene sentido: un cask es código que se ejecuta en tu Mac. Lo del
-`--no-quarantine` está explicado unas líneas más abajo — es el mismo muro de
-siempre con otro nombre.
+tiene sentido: un cask es código que se ejecuta en tu Mac. La última línea es el
+mismo muro de siempre —está explicado justo debajo— y hay que repetirla en cada
+actualización, porque cada versión se baja otra vez. Hubo una bandera
+`--no-quarantine` que se lo saltaba; **Homebrew 7 la quitó**.
 
 Y a partir de ahí, cuando la app [avise de que hay versión
 nueva](#versiones-nuevas):
 
 ```bash
 brew upgrade --cask pauta
+xattr -dr com.apple.quarantine /Applications/Pauta.app
 ```
 
 **Eso cierra la mitad que a la app le falta.** Pauta avisa pero no instala,
