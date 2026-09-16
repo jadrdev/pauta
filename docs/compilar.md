@@ -75,8 +75,60 @@ Comprobado: tras un cambio real de código el `cdhash` cambia y ese requisito no
 así que los permisos concedidos sobreviven a las recompilaciones. Esto es lo que
 desbloquea las integraciones con Calendario y Recordatorios.
 
-La letra pequeña: los certificados «Apple Development» caducan (el actual, en
-mayo de 2027). Cuando caduque habrá que renovarlo y volver a conceder permisos.
+La letra pequeña: los certificados «Apple Development» caducan. Cuando caduque
+habrá que renovarlo y volver a conceder permisos.
+
+### Dos Macs con la misma cuenta se revocan el certificado
+
+Y no caducan solos: se **revocan**, que es peor porque no avisa. Una cuenta
+tiene un cupo corto de certificados de desarrollo; al pedir uno por encima del
+cupo, Xcode revoca otro para hacer sitio. Con dos Macs usando el mismo Apple ID
+—el de casa y este— cada uno pide el suyo, y el que se queda fuera es el del
+otro. Ping-pong.
+
+El rastro que dejó, leído del llavero de este Mac:
+
+| Emitido | Estado |
+|---|---|
+| 18 may 2026 | revocado |
+| 21 may 2026 | revocado |
+| 10 sept 2026 | revocado |
+| 11 sept 2026 | revocado |
+| 12 sept 2026 | válido |
+
+Uno por día de uso. No es un patrón que haga una máquina sola.
+
+**Lo que pasa cuando te revocan el certificado** no es que deje de compilar: es
+que iOS **retira la app del teléfono**. No falla al abrirse, desaparece — con su
+contenedor y con las tareas que hubiera dentro. Pasó el 12 de septiembre de 2026
+y costó una mañana entenderlo, porque desde fuera parece que la app se rompió.
+En el Mac es más silencioso: la copia instalada sigue funcionando, pero deja de
+poder recompilarse.
+
+**El arreglo es compartir una sola identidad**, no dejar que cada Mac se cree la
+suya:
+
+1. En el Mac que tenga el certificado bueno, `Acceso a Llaveros` ▸ busca
+   *Apple Development* ▸ despliega la flecha para ver **la clave privada** ▸
+   selecciona las dos ▸ `Exportar` ▸ `.p12`, con una contraseña.
+2. En el otro Mac, doble clic en ese `.p12` y meter la contraseña.
+
+A partir de ahí los dos firman con el mismo certificado y ninguno necesita pedir
+otro. Lo que **no** vale es exportar solo el certificado: sin la clave privada no
+se puede firmar, y Xcode creará uno nuevo — que es justo lo que se quiere evitar.
+
+La alternativa, si no quieres andar con llaveros: instalar en los aparatos desde
+**un solo Mac**. Compilar en el otro no molesta; lo que pide certificado es
+firmar para un dispositivo.
+
+Para saber si te ha vuelto a pasar, sin esperar a que desaparezca nada:
+
+```bash
+security find-identity -v -p codesigning | grep 26W4G92PSS
+```
+
+Si el que sale dice `CSSMERR_TP_CERT_REVOKED`, ya está hecho: hay que volver a
+firmar e instalar.
 
 ### El widget del Mac y las dos casillas del sandbox
 
