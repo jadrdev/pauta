@@ -43,6 +43,21 @@ else
     echo "  y notarizar el disco, y ese certificado lo da el programa de pago."
 fi
 
+SHA=$(shasum -a 256 "$DMG" | cut -d' ' -f1)
+
 echo
 echo "✓ $DMG  ($(du -h "$DMG" | cut -f1))"
-echo "  sha256: $(shasum -a 256 "$DMG" | cut -d' ' -f1)"
+echo "  sha256: $SHA"
+
+# El cask ya relleno, para no copiar a mano una versión y un hash de sesenta y
+# cuatro caracteres. Escribirlos a mano es exactamente cómo se publica un cask
+# que baja el archivo bueno y se niega a instalarlo porque el hash no cuadra.
+echo
+echo "▸ Para el tap (jadrdev/homebrew-pauta, Casks/pauta.rb):"
+cat <<CASK
+  version "$VERSION"
+  sha256 "$SHA"
+CASK
+echo "  y publica la release con la etiqueta v$VERSION antes de subirlo:"
+echo "  el cask baja de ahí, y un cask que apunta a una release que no existe"
+echo "  falla en el ordenador de quien instala, no en el tuyo."

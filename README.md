@@ -1013,7 +1013,34 @@ todavía no puede hacer.
 
 ## Instalar
 
-El disco `.dmg` va en la [página de versiones](https://github.com/jadrdev/pauta/releases).
+Con **Homebrew**, que además deja las actualizaciones a una orden:
+
+```bash
+brew tap jadrdev/pauta
+brew trust jadrdev/pauta
+brew install --cask --no-quarantine pauta
+```
+
+El `brew trust` lo pide Homebrew 7 para cualquier tap que no sea el oficial, y
+tiene sentido: un cask es código que se ejecuta en tu Mac. Lo del
+`--no-quarantine` está explicado unas líneas más abajo — es el mismo muro de
+siempre con otro nombre.
+
+Y a partir de ahí, cuando la app [avise de que hay versión
+nueva](#versiones-nuevas):
+
+```bash
+brew upgrade --cask pauta
+```
+
+**Eso cierra la mitad que a la app le falta.** Pauta avisa pero no instala,
+porque instalar sola algo descargado obliga a verificar la firma de lo que se
+baja y con esta cuenta no hay con qué. Homebrew sí verifica —el cask lleva el
+`sha256` del disco y lo comprueba antes de tocar nada—, así que `brew upgrade`
+es el instalador que la app no puede tener. La receta vive en
+[jadrdev/homebrew-pauta](https://github.com/jadrdev/homebrew-pauta).
+
+**O a mano:** el disco `.dmg` va en la [página de versiones](https://github.com/jadrdev/pauta/releases).
 Se abre, se arrastra Pauta a `Aplicaciones` y ya está.
 
 La primera vez macOS **no la va a dejar abrirse**, y conviene saber por qué en

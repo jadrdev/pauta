@@ -239,7 +239,16 @@ iPhone, el reloj y los dos widgets tienen que decir lo mismo, y tener la versió
 repetida por objetivo es garantizar que un día discrepen.
 
 El orden es: subir `MARKETING_VERSION`, `./build.sh`, `./tools/make-dmg.sh`,
-`gh release create` con la etiqueta `vX.Y.Z` y el `.dmg` adjunto.
+`gh release create` con la etiqueta `vX.Y.Z` y el `.dmg` adjunto, y por último
+**actualizar el cask** en
+[jadrdev/homebrew-pauta](https://github.com/jadrdev/homebrew-pauta): la versión y
+el `sha256`. `make-dmg.sh` los escupe ya formateados al terminar, para no copiar
+a mano un hash de sesenta y cuatro caracteres — un cask con el hash mal baja el
+archivo bueno y se niega a instalarlo, y eso falla en el Mac de quien instala,
+no en el tuyo.
+
+El cask va **después** de publicar la release: apunta a la etiqueta, y si no
+existe todavía, lo que se rompe es la instalación de otro.
 
 La etiqueta importa: la app pregunta por **la última versión publicada** del
 repositorio y lee `tag_name`, así que una versión sin etiqueta o con una
