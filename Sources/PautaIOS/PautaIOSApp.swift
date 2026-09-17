@@ -157,11 +157,18 @@ struct RaizView: View {
             // recibía. Se instala aquí porque el almacén vive en la vista: el
             // enlace no guarda ninguno a propósito.
             EnlaceConElReloj.shared.obedecer = { orden in
-                switch orden.que {
-                case .completar:
+                switch orden {
+                case .completar(let tarea):
                     // Solo se avisa a fuera si cambió algo: una orden repetida
                     // —el sistema reintenta— no tiene por qué mover nada.
-                    if store.completar(orden.tarea) { avisarAFuera() }
+                    if store.completar(tarea) { avisarAFuera() }
+                case .apuntar(let texto):
+                    // Lo dictado en la muñeca. Por el mismo camino que el campo
+                    // de escribir, que es quien ya sabe partir líneas y
+                    // descartar lo que queda en blanco.
+                    if !store.addItems(from: texto, in: .inbox).isEmpty {
+                        avisarAFuera()
+                    }
                 case .refrescar:
                     // El reloj no sabe si lo que tiene sigue valiendo, así que
                     // lo pregunta. Se relee del disco antes de contestar: puede

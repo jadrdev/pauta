@@ -15,7 +15,9 @@ import PautaCore
 /// que se pueda perder aquí.
 @main
 struct PautaWatchApp: App {
-    @State private var enlace = EnlaceConElTelefono()
+    /// La compartida, la misma que usa el atajo de Siri: dos enlaces serían dos
+    /// sesiones peleándose por el mismo delegado.
+    @State private var enlace = EnlaceConElTelefono.shared
 
     var body: some Scene {
         WindowGroup {

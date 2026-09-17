@@ -546,11 +546,12 @@ Recordatorios de Apple sincroniza por iCloud y funciona con Siri, así que hace
 de bandeja de entrada remota: lo que apuntes en el iPhone aparece en Pauta sin
 necesidad de una app de iOS.
 
-> En el teléfono ya no es la única puerta para la voz: hay un atajo propio,
-> *«Oye Siri, apuntar en Pauta»*, que entra derecho sin lista intermedia — está
-> en [Apuntar con la voz](docs/ios.md#apuntar-con-la-voz). Esto sigue porque es
-> lo que llega desde el **reloj**, donde ese atajo todavía no alcanza, y desde
-> cualquier aparato que no tenga Pauta instalada.
+> Ya no es la puerta de la voz. El teléfono tiene su atajo —*«Oye Siri, apuntar
+> en Pauta»*, en [Apuntar con la voz](docs/ios.md#apuntar-con-la-voz)— y el reloj
+> [el suyo](docs/ios.md#apuntar-desde-la-muñeca), y los dos entran derechos sin
+> lista intermedia. Esto sigue por dos cosas: porque hay quien ya tiene el hábito
+> de dictarle a Recordatorios, y porque entra desde aparatos que no tienen Pauta
+> instalada — un HomePod, el coche, un iPad.
 
 La app usa **una lista propia llamada «Pauta»**, que crea al arrancar si no
 existe, y nunca toca tus otras listas. Al importar, cada recordatorio entra en la
@@ -1326,7 +1327,8 @@ Sources/PautaWidget/      el widget de iOS: otro proceso, y solo lectura
   HoyView.swift           lo que se dibuja, por tamaño
 Sources/PautaWatch/       el reloj: enseña el vistazo del teléfono y le pide tachar
   PautaWatchApp.swift     punto de entrada
-  EnlaceConElTelefono.swift  lo que llega por WatchConnectivity
+  EnlaceConElTelefono.swift  lo que llega por WatchConnectivity, y lo que se pide
+  ApuntarDesdeElReloj.swift  el atajo de Siri en la muñeca
   HoyWatchView.swift      el día, a la altura del brazo, con su círculo para tachar
 Sources/PautaWatchWidget/ la complicación: lee lo que la app del reloj dejó escrito
   PautaWatchWidget.swift  el paquete y su línea de tiempo

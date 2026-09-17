@@ -419,10 +419,11 @@ que se perdió.
 ### Qué queda de Recordatorios
 
 La captura por [Recordatorios](../README.md#captura-desde-recordatorios) sigue,
-y ya no es la única puerta. Lo que este atajo **no** cubre todavía es dictar
-desde el **reloj**: los App Intents del teléfono no llegan a la muñeca por su
-cuenta, y ahí Siri sigue entrando por Recordatorios. Hasta que el reloj tenga el
-suyo, esa es la razón que queda para mantenerlo.
+y ya no es puerta de nadie: el teléfono tiene su atajo y
+[el reloj el suyo](#apuntar-desde-la-muñeca). Se queda porque hay quien ya tiene
+el hábito de dictarle a Recordatorios, y porque entra desde cualquier aparato que
+no tenga Pauta instalada — un HomePod, el coche, un iPad. Eso es lo que aporta
+hoy, y no es lo que la trajo aquí.
 
 ## El reloj
 
@@ -519,6 +520,37 @@ montada, lo que llegue pronto espera en una cola y se atiende al instalarse.
 > quedó marcada en el teléfono y desapareció del reloj—. La cola queda
 > verificada por su lado probado: el mismo sobre, la misma orden y el mismo
 > `completar` que no alterna.
+
+### Apuntar desde la muñeca
+
+*«Oye Siri, apuntar en Pauta»*, dicho al reloj, y entra en la bandeja del
+teléfono. Las **mismas cuatro frases** que en el iPhone a propósito: la que te
+sabes es la que te sabes, y que cambie según el aparato que lleves encima es
+garantía de que no funcione justo cuando la necesitas.
+
+Hacen falta dos intents, uno en cada app, porque **los App Intents no cruzan de
+un aparato al otro**: los del teléfono no se ofrecen en la muñeca. Lo que sí
+comparten es el camino — el reloj no tiene los datos, así que no apunta: lo
+**pide**, por la misma tubería que usa para tachar.
+
+Con el teléfono cerca llega en el acto. Sin él, la orden se guarda y se entrega
+cuando vuelvan a verse, que es justo cuando esto sirve: apuntar algo caminando,
+con el teléfono en otra habitación. Y si la sesión todavía no está activada
+—dictarle a Siri es más rápido que activar `WCSession`— la orden espera en una
+cola y sale en cuanto hay por dónde; sin eso se pediría mandarla y se perdería en
+silencio.
+
+El texto viaja **tal cual**. Quien decide qué es un título —partir líneas, quitar
+viñetas, descartar lo que queda en blanco— es el almacén al recibirlo, que es
+quien ya sabe hacerlo para el campo de escribir; limpiarlo en el reloj sería una
+segunda opinión sobre lo mismo. Lo único que el reloj sí descarta es un dictado
+**vacío**: ahí el reconocimiento falla más que en un teléfono —ruido, viento, la
+muñeca lejos de la boca— y una tarea sin título habría que ir a borrarla desde
+otro sitio.
+
+Y contesta **«Mandado al iPhone»**, no «apuntado». Es la verdad: quien apunta es
+el teléfono y esto solo lo ha pedido. Decir «hecho» cuando aún puede estar en la
+cola es la clase de mentira pequeña que hace que dejes de fiarte de dictar.
 
 ### La complicación
 

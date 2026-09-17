@@ -318,6 +318,8 @@ targets:
       - sdk: WatchConnectivity.framework
       # Para avisar a la complicación de que hay vistazo nuevo.
       - sdk: WidgetKit.framework
+      # Para el atajo de Siri en la muñeca.
+      - sdk: AppIntents.framework
     info:
       path: build/watch/Generated-Info.plist
       properties:

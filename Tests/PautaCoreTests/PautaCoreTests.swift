@@ -3728,11 +3728,32 @@ struct OrdenDesdeElRelojTests {
     }
 
     /// El sobre en el que viaja: va y vuelve entero, diga lo que diga.
-    @Test(arguments: [Orden.Que.completar, .refrescar])
-    func theOrderSurvivesTheTrip(_ que: Orden.Que) throws {
-        let ida = Orden(que: que, tarea: UUID())
+    @Test(arguments: [Orden.completar(UUID()), .refrescar, .apuntar("Comprar pan")])
+    func theOrderSurvivesTheTrip(_ ida: Orden) throws {
         let vuelta = try #require(Orden.desde(ida.carga()))
         #expect(vuelta == ida)
+    }
+
+    /// Lo dictado viaja **tal cual**, con sus tildes y sus espacios: quien
+    /// decide qué es un título es el almacén al recibirlo, no el reloj al
+    /// mandarlo.
+    @Test func whatYouDictateTravelsUntouched() throws {
+        let dicho = "  Llamar a la  asegurAdora ñ  "
+        let vuelta = try #require(Orden.desde(Orden.apuntar(dicho).carga()))
+        #expect(vuelta == .apuntar(dicho))
+    }
+
+    /// Apuntar por voz mete en la bandeja, y usa lo mismo que el campo de
+    /// escribir: un dictado es una línea, pero un atajo puede traer un texto
+    /// entero y ahí son varias tareas, no una con tres renglones dentro.
+    @Test func dictatingAddsToTheInbox() throws {
+        let s = store()
+        let nuevas = s.addItems(from: "Comprar pan\nLlamar a Ana", in: .inbox)
+        #expect(nuevas.count == 2)
+        let primera = try #require(s.items.first { $0.title == "Comprar pan" })
+        #expect(primera.projectID == nil)
+        #expect(primera.when == nil)
+        #expect(primera.isSomeday == false)
     }
 
     /// Lo que el reloj enseña es de hoy o no se enseña.
@@ -3755,6 +3776,14 @@ struct OrdenDesdeElRelojTests {
     @Test func nonsenseIsNotAnOrder() {
         #expect(Orden.desde([:]) == nil)
         #expect(Orden.desde([Orden.clave: Data("x".utf8)]) == nil)
+    }
+
+    /// Y una orden de una versión que no se conoce tampoco se obedece a medias.
+    /// El reloj y el teléfono se instalan juntos, pero no siempre: quien se
+    /// quede atrás tiene que callarse, no adivinar.
+    @Test func anOrderFromTheFutureIsIgnored() {
+        let futura = Data(#"{"regalar":{"_0":"algo"}}"#.utf8)
+        #expect(Orden.desde([Orden.clave: futura]) == nil)
     }
 
     /// **No alterna, marca.** Es la diferencia entre una orden y un

@@ -13,6 +13,11 @@ import PautaCore
 @MainActor
 @Observable
 final class EnlaceConElTelefono: NSObject, WCSessionDelegate {
+    /// Una sola, porque el atajo de Siri también manda órdenes y no vive dentro
+    /// de la vista. Dos enlaces serían dos sesiones peleándose por el mismo
+    /// delegado.
+    static let shared = EnlaceConElTelefono()
+
     /// El último vistazo recibido, si hay alguno.
     private(set) var vistazo: Vistazo?
 
@@ -31,6 +36,14 @@ final class EnlaceConElTelefono: NSObject, WCSessionDelegate {
     /// quedaría en pantalla sin marcar el segundo o dos que tarda el viaje, y
     /// se pulsaría otra vez pensando que no se enteró.
     private(set) var enCamino: Set<UUID> = []
+
+    /// Lo que hay que mandar y todavía no se ha podido.
+    ///
+    /// Activar la sesión tarda, y una orden dictada a Siri puede salir antes de
+    /// que haya por dónde: sin esta cola se pediría mandarla y se perdería en
+    /// silencio. Es el mismo problema que el teléfono resolvió guardando el
+    /// último vistazo, y por el mismo motivo.
+    private var porMandar: [Orden] = []
 
     func activar() {
         guard WCSession.isSupported() else { return }
@@ -78,31 +91,45 @@ final class EnlaceConElTelefono: NSObject, WCSessionDelegate {
         guard WCSession.isSupported() else { return }
         let sesion = WCSession.default
         guard sesion.activationState == .activated, sesion.isReachable else { return }
-        sesion.sendMessage(Orden(que: .refrescar, tarea: UUID()).carga(),
+        sesion.sendMessage(Orden.refrescar.carga(),
                            replyHandler: nil, errorHandler: { _ in })
     }
 
     /// Manda tachar una tarea.
+    func tachar(_ id: UUID) {
+        enCamino.insert(id)
+        mandar(.completar(id))
+    }
+
+    /// Manda apuntar lo que se ha dictado.
+    func apuntar(_ texto: String) {
+        activar()
+        mandar(.apuntar(texto))
+    }
+
+    /// Una orden que **no se puede perder**.
     ///
     /// Dos caminos, y los dos hacen falta. Si el teléfono está al alcance va por
-    /// mensaje, que llega en el acto y se ve tachado antes de bajar el brazo. Si
-    /// no lo está —y esa es justo la vez que el reloj sirve para algo— va en
-    /// cola: se guarda, sobrevive a que se cierre la app y se entrega cuando
-    /// vuelvan a verse.
+    /// mensaje, que llega en el acto y se ve antes de bajar el brazo. Si no lo
+    /// está —y esa es justo la vez que el reloj sirve para algo— va en cola: se
+    /// guarda, sobrevive a que se cierre la app y se entrega cuando vuelvan a
+    /// verse.
     ///
     /// El mensaje puede fallar aunque el teléfono pareciera alcanzable, porque
     /// entre mirar y mandar pasa un instante. Por eso el fallo no se cuenta a
-    /// nadie: se mete en la cola y se acabó. Lo que no puede pasar es que una
-    /// orden se pierda en silencio.
-    func tachar(_ id: UUID) {
+    /// nadie: se mete en la cola y se acabó. Lo que no puede pasar es que se
+    /// pierda en silencio.
+    ///
+    /// Y si la sesión aún no está activada, espera aquí dentro: la orden dictada
+    /// a Siri sale antes de que haya por dónde más veces de las que parece.
+    private func mandar(_ orden: Orden) {
         guard WCSession.isSupported() else { return }
-        enCamino.insert(id)
-        let sesion = WCSession.default
-        let carga = Orden(que: .completar, tarea: id).carga()
-        guard sesion.activationState == .activated else {
-            sesion.transferUserInfo(carga)
+        guard WCSession.default.activationState == .activated else {
+            porMandar.append(orden)
             return
         }
+        let sesion = WCSession.default
+        let carga = orden.carga()
         if sesion.isReachable {
             sesion.sendMessage(carga, replyHandler: nil) { _ in
                 sesion.transferUserInfo(carga)
@@ -112,13 +139,23 @@ final class EnlaceConElTelefono: NSObject, WCSessionDelegate {
         }
     }
 
+    /// Lo que estuviera esperando a que hubiera sesión.
+    private func vaciarCola() {
+        let cola = porMandar
+        porMandar = []
+        for orden in cola { mandar(orden) }
+    }
+
     // MARK: - WCSessionDelegate
 
     nonisolated func session(_ session: WCSession,
                              activationDidCompleteWith state: WCSessionActivationState,
                              error: Error?) {
         leer(session.receivedApplicationContext)
-        Task { @MainActor in self.pedirVistazo() }
+        Task { @MainActor in
+            self.vaciarCola()
+            self.pedirVistazo()
+        }
     }
 
     nonisolated func session(_ session: WCSession,
@@ -138,6 +175,9 @@ final class EnlaceConElTelefono: NSObject, WCSessionDelegate {
     /// preguntar y, si lo que hay guardado es viejo, el momento en que hace más
     /// falta.
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
-        Task { @MainActor in self.pedirVistazo() }
+        Task { @MainActor in
+            self.vaciarCola()
+            self.pedirVistazo()
+        }
     }
 }
