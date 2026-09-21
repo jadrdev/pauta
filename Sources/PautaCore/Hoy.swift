@@ -31,8 +31,6 @@ public struct GrupoDeProyecto: Identifiable, Hashable {
     public var id: UUID { proyecto }
     public var hechas: Int { tareas.filter(\.isCompleted).count }
     public var total: Int { tareas.count }
-    public var entero: Bool { total > 0 && hechas == total }
-
     /// Lo que falta, que es con lo que se decide si te pones ahora.
     public var quedan: Int { total - hechas }
 
@@ -110,14 +108,16 @@ public enum Hoy {
             salida.append(.proyecto(grupo(id, porProyecto[id] ?? [])))
         }
 
-        // Un proyecto cuyas tareas de hoy están todas hechas ya no tiene una
-        // primera pendiente que lo coloque. Se queda al final —con el contador
-        // entero, que es el premio— porque ahí ya no hay nada que hacer.
-        let rezagados = agrupables.subtracting(colocados)
-            .map { grupo($0, porProyecto[$0] ?? []) }
-            .sorted { ($0.tareas.first?.completedAt ?? .distantPast)
-                    < ($1.tareas.first?.completedAt ?? .distantPast) }
-        return salida + rezagados.map(BloqueDeHoy.proyecto)
+        // Un proyecto sin ninguna pendiente no sale, y por eso el bucle de
+        // arriba —que solo recorre lo pendiente— basta: al terminar la última,
+        // el bloque desaparece igual que desaparece una tarea suelta al
+        // tacharla. En Pauta completar saca de Hoy, sin excepciones; el bloque
+        // se salta esa regla **solo mientras queda algo**, porque si no el
+        // denominador encogería con cada tacha y el filete no avanzaría. Sin
+        // pendientes ese motivo ya no existe, y lo que quedaría es una caja de
+        // tachadas al final del día que además la cabecera ya no cuenta. Que Hoy
+        // se acorte es el premio.
+        return salida
     }
 
     /// Lo pendiente en el orden en que venía; lo hecho, debajo y por hora de

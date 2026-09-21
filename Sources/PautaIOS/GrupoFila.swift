@@ -40,7 +40,7 @@ struct GrupoFila: View {
                 // nombre lo puedes adivinar por el emoji y por lo que cuelga
                 // debajo; lo que queda, no.
                 Text(restante)
-                    .rubrica(grupo.entero ? Papel.accentInk : Papel.inkFaint)
+                    .rubrica()
                     .fixedSize()
             }
             filete
@@ -72,8 +72,8 @@ struct GrupoFila: View {
         .accessibilityHidden(true)
     }
 
+    /// No hay estado «hecho»: al tachar la última, el bloque se va de Hoy.
     private var restante: String {
-        guard !grupo.entero else { return "HECHO" }
         guard let minutos = grupo.minutosRestantes else { return "QUEDAN \(grupo.quedan)" }
         return "QUEDAN \(grupo.quedan) · \(Duracion.etiqueta(minutos).uppercased())"
     }

@@ -275,8 +275,14 @@ los minutos son un suelo y el rótulo emergente lo dice.
 **Lo que tachas hoy sigue contando.** Al completarla, una tarea se cae de `Hoy`
 —deja de ser de hoy— pero no del bloque: si el denominador encogiera con cada
 tacha, el filete iría de «0 de 3» a «0 de 2» a «0 de 1» y no avanzaría nunca.
-Terminado lo de hoy de ese proyecto, el bloque baja al final con el filete entero
-y el rótulo en «HECHO»: ahí ya no hay nada que hacer.
+
+**Pero solo mientras quede alguna.** Al tachar la última, el bloque entero
+desaparece de `Hoy`, igual que desaparece una tarea suelta. En Pauta completar
+saca de Hoy sin excepciones, y el bloque se salta esa regla únicamente por el
+denominador; sin pendientes ese motivo ya no existe y lo que quedaría es una caja
+de tachadas al final del día que además la cabecera ya no cuenta. **Que `Hoy` se
+acorte es el premio** — el filete entero era uno peor, y para verlo cerrarse
+haría falta un retardo que ninguna otra fila de la app tiene.
 
 Esto mismo está en el teléfono, y lo decide el mismo código: `Hoy.bloques` y
 `Pliegue` viven en el núcleo, así que las dos pantallas no pueden discrepar sobre

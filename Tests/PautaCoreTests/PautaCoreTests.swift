@@ -3890,23 +3890,43 @@ struct OrdenDesdeElRelojTests {
         #expect(titulos(bloques(s)) == ["[comunidad gas furgoneta]"])
     }
 
-    /// Terminado lo de hoy de ese proyecto, el grupo sigue —con el queso
-    /// entero, que es el premio— pero baja al final: ya no hay nada que hacer.
-    @Test func aFullyDoneProjectSinksToTheBottom() throws {
+    /// **Terminado lo de hoy de ese proyecto, el bloque se va.**
+    ///
+    /// En Pauta completar saca de Hoy, sin excepciones. El bloque se salta esa
+    /// regla mientras queda algo pendiente, y por un motivo: si el denominador
+    /// encogiera con cada tacha, el filete iría de 0 de 3 a 0 de 2 sin avanzar
+    /// nunca. Sin pendientes ese motivo desaparece y lo que queda es una caja de
+    /// tareas tachadas ocupando el final del día — que además la cabecera ya no
+    /// cuenta. Que Hoy se acorte es el premio; el filete entero era uno peor.
+    @Test func aBlockWithNothingLeftLeavesTheDay() {
         let s = Store(inMemory: true)
         let p = s.addProject(name: "Mudanza")
         let a = tarea("furgoneta", de: p, en: s)
         let b = tarea("comunidad", de: p, en: s)
         _ = tarea("tinta", de: nil, en: s)
         s.toggleComplete(a)
-        s.toggleComplete(b)
+        #expect(titulos(bloques(s)) == ["[comunidad furgoneta]", "tinta"])
 
-        let salida = bloques(s)
-        #expect(titulos(salida) == ["tinta", "[furgoneta comunidad]"])
-        guard case .proyecto(let grupo) = try #require(salida.last) else {
+        s.toggleComplete(s.items.first { $0.title == "comunidad" }!)
+        #expect(titulos(bloques(s)) == ["tinta"])
+    }
+
+    /// Pero solo cuando no queda **ninguna**: lo tachado hoy sigue contando
+    /// mientras haya algo pendiente, que es lo que hace que el filete avance.
+    @Test func doneOnesStillCountWhileSomethingIsLeft() throws {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        let a = tarea("furgoneta", de: p, en: s)
+        _ = tarea("comunidad", de: p, en: s)
+        _ = tarea("gas", de: p, en: s)
+        s.toggleComplete(a)
+
+        guard case .proyecto(let grupo) = try #require(bloques(s).first) else {
             Issue.record("esperaba un grupo"); return
         }
-        #expect(grupo.entero)
+        #expect(grupo.total == 3)
+        #expect(grupo.hechas == 1)
+        #expect(grupo.quedan == 2)
     }
 
     /// El queso mide **lo de hoy**, no el proyecto entero: un proyecto de diez

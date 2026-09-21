@@ -48,7 +48,7 @@ struct GrupoRow: View {
                     .foregroundStyle(hovering ? Paper.accentInk : Paper.ink)
                 Spacer(minLength: 12)
                 Text(restante)
-                    .rubricStyle(grupo.entero ? Paper.accentInk : Paper.inkFaint)
+                    .rubricStyle()
             }
             .contentShape(Rectangle())
             .onTapGesture(perform: alternar)
@@ -90,12 +90,13 @@ struct GrupoRow: View {
         .accessibilityLabel("\(grupo.hechas) de \(grupo.total) hechas")
     }
 
-    /// «quedan 2 · 45 min», o «hecho» cuando ya no falta nada.
+    /// «quedan 2 · 45 min».
     ///
-    /// Los minutos solo salen si has estimado algo: son un extra y no un
-    /// requisito, así que un proyecto sin estimar enseña «quedan 2» y ya.
+    /// No hay estado «hecho»: al tachar la última, el bloque entero se va de
+    /// Hoy, igual que se va una tarea suelta. Los minutos solo salen si has
+    /// estimado algo —son un extra y no un requisito—, así que un proyecto sin
+    /// estimar enseña «quedan 2» y ya.
     private var restante: String {
-        guard !grupo.entero else { return "HECHO" }
         guard let minutos = grupo.minutosRestantes else { return "QUEDAN \(grupo.quedan)" }
         return "QUEDAN \(grupo.quedan) · \(Duracion.etiqueta(minutos).uppercased())"
     }
