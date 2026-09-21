@@ -209,6 +209,23 @@ public struct Item: Identifiable, Codable, Hashable {
         return Calendar.current.startOfDay(for: when) <= Calendar.current.startOfDay(for: .now)
     }
 
+    /// Estaba en Hoy y ya la has tachado hoy.
+    ///
+    /// `isToday` deja de ser cierto en cuanto se completa, así que la tarea se
+    /// cae de la lista al instante. Para contar bien un grupo hace falta esto:
+    /// si el denominador encogiera con cada tacha, el contador iría de «0 de 3»
+    /// a «0 de 2» a «0 de 1» y nunca llegaría a estar entero — justo al revés de
+    /// lo que tiene que enseñar.
+    public var seHizoHoy: Bool {
+        guard isCompleted, !isSomeday,
+              let completedAt, Calendar.current.isDateInToday(completedAt)
+        else { return false }
+        let hoy = Calendar.current.startOfDay(for: .now)
+        if let deadline, Calendar.current.startOfDay(for: deadline) <= hoy { return true }
+        guard let when else { return false }
+        return Calendar.current.startOfDay(for: when) <= hoy
+    }
+
     /// Cuántos días lleva arrastrándose desde el día para el que se planificó.
     /// Cero si es de hoy, del futuro, o si no tiene día.
     public var daysLate: Int {

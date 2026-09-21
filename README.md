@@ -235,6 +235,55 @@ el rótulo dice «4 EVENTOS · 7 ABIERTAS», porque un evento no es algo que hac
 ./build/Pauta.app/Contents/MacOS/Pauta --eventos
 ```
 
+### Varias del mismo proyecto
+
+<div align="center">
+<img src="docs/hoy-grupo.png" width="820" alt="Tres tareas de Mudanza agrupadas bajo el proyecto, con el filete a medio entintar">
+</div>
+
+Cuando en `Hoy` caen **dos o más tareas del mismo proyecto**, se agrupan bajo él
+en vez de repartirse por la lista. Desde dos, no desde una: una sola dentro de
+una caja con cabecera son tres líneas para decir lo que decía una, y con el
+umbral en uno un día variado se convierte en una lista de títulos con una tarea
+debajo de cada uno.
+
+**Se agrupa sin reordenar.** El bloque se coloca donde estaba su primera tarea
+pendiente y dentro conserva el orden manual: agrupar parte la lista, no vuelve a
+ordenarla. Lo que priorizaste arrastrando tiene que seguir mandando a la mañana
+siguiente. Dentro del grupo desaparece la pastilla del proyecto, que ya lo dice
+el título de encima — la misma regla que siguen las etiquetas y la lista de un
+proyecto.
+
+**Solo se agrupa el tramo sin hora.** Arriba manda el reloj: una reunión a las 10
+y una tarea a las 11 salen en ese orden aunque la tarea sea del proyecto del que
+hay otras cinco. Meter proyectos ahí se llevaría por delante lo único que ese
+tramo dice, que es qué va antes.
+
+#### El filete que se entinta
+
+El filete que separa la cabecera de sus tareas **es** el indicador: se entinta
+según despejas el bloque y queda entero al terminarlo. Hace dos trabajos con una
+raya —separa y mide— y habla el idioma de la app, que es de papel. Un gráfico de
+sectores sería de otra hoja.
+
+Al lado no se dice lo que llevas hecho, sino **lo que queda**: «3 de 5» es
+información sobre la mañana que ya pasó, y con lo que se decide si te pones ahora
+es con «QUEDAN 2 · 45 MIN». Los minutos salen de las estimaciones que ya llevaban
+las tareas, así que son un extra y no un requisito: un proyecto sin estimar
+enseña «QUEDAN 2» y no se rompe nada. Si de las que faltan hay alguna sin medir,
+los minutos son un suelo y el rótulo emergente lo dice.
+
+**Lo que tachas hoy sigue contando.** Al completarla, una tarea se cae de `Hoy`
+—deja de ser de hoy— pero no del bloque: si el denominador encogiera con cada
+tacha, el filete iría de «0 de 3» a «0 de 2» a «0 de 1» y no avanzaría nunca.
+Terminado lo de hoy de ese proyecto, el bloque baja al final con el filete entero
+y el rótulo en «HECHO»: ahí ya no hay nada que hacer.
+
+El filete cuenta **tareas** y no minutos, a propósito: es la ojeada, y tiene que
+estar definida también cuando no has estimado nada. El coste es conocido —cuatro
+cortas hechas y una larga pendiente lo pintan casi entero— y por eso la raya no
+va sola y lo exacto se dice al lado.
+
 ### Lo que no se hizo a tiempo
 
 Nada se pierde ni se queda atrás: una tarea planificada para un día que ya pasó
@@ -1282,6 +1331,7 @@ Sources/PautaCore/        librería sin UI: la comparten macOS, iOS y el widget
   Store.swift             estado + persistencia + consultas
   Avisos.swift            avisos del sistema para las tareas con hora
   Agenda.swift            eventos del calendario, solo de lectura
+  Hoy.swift               agrupar Hoy por proyecto, y cuánto queda de cada uno
   Cuenta.swift            cuánto falta para lo siguiente
   Duracion.swift          cuánto dura cada cosa y cuánto suma el día
   Ajustes.swift           las preferencias, en UserDefaults
@@ -1303,6 +1353,7 @@ Sources/Pauta/            la app de macOS
   Views/SidebarView.swift barra lateral
   Views/ItemListView.swift lista y cabecera
   Views/ItemRowView.swift fila, casilla y editor desplegado (Liquid Glass)
+  Views/GrupoRow.swift    la cabecera de un proyecto en Hoy, con su filete
   Views/MenuBarView.swift panel de la barra de menús y cuenta atrás
   Views/AcercaDe.swift    el panel «Acerca de» y los enlaces
   Views/Ayuda.swift       atajos y estado de los permisos

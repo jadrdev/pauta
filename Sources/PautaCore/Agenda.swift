@@ -201,6 +201,18 @@ public final class Agenda {
     /// Los eventos no se cuelan en el orden manual: no son tuyos, no se
     /// reordenan, y una reunión a las diez es a las diez.
     public static func filas(tareas: [Item], eventos: [Evento]) -> [FilaDelDia] {
+        let (conHora, sinHora) = dia(tareas: tareas, eventos: eventos)
+        return conHora + sinHora.map(FilaDelDia.tarea)
+    }
+
+    /// El día en sus dos tramos, para quien quiera tratarlos distinto.
+    ///
+    /// Arriba lo que tiene hora —eventos y tareas mezclados, por reloj— y abajo
+    /// lo que no la tiene. La lista del Mac agrupa por proyecto el segundo tramo
+    /// y deja el primero en paz: ahí el criterio es qué va antes, y un proyecto
+    /// metido en medio se llevaría por delante lo único que ese tramo dice.
+    public static func dia(tareas: [Item], eventos: [Evento])
+    -> (conHora: [FilaDelDia], sinHora: [Item]) {
         let todoElDia = eventos.filter(\.isAllDay).map(FilaDelDia.evento)
 
         var conHora: [(Date, FilaDelDia)] = eventos
@@ -219,8 +231,7 @@ public final class Agenda {
                                                   : $0.element.0 < $1.element.0 }
             .map(\.element.1)
 
-        let sinHora = tareas.filter { $0.timeOfDay == nil }.map(FilaDelDia.tarea)
-        return todoElDia + ordenadas + sinHora
+        return (todoElDia + ordenadas, tareas.filter { $0.timeOfDay == nil })
     }
 }
 

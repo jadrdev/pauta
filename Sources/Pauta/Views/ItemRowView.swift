@@ -60,6 +60,12 @@ struct ItemRowView: View {
     @Environment(Store.self) private var store
     @Environment(Navigation.self) private var nav
     let item: Item
+    /// Va colgando de la cabecera de su proyecto, en Hoy.
+    ///
+    /// Dentro del grupo la pastilla del proyecto sobra: lo dice el título que
+    /// tiene encima. Es la misma regla que ya siguen las etiquetas y la lista de
+    /// un proyecto — no se repite en cada fila lo que la lista ya dice arriba.
+    var enGrupo = false
 
     @State private var title = ""
     @State private var notes = ""
@@ -323,7 +329,7 @@ struct ItemRowView: View {
             // que se llaman igual es lo único que las distingue.
             if let projectID = item.projectID,
                let project = store.project(projectID),
-               !isProjectPerspective(projectID) {
+               !enGrupo, !isProjectPerspective(projectID) {
                 HStack(spacing: 4) {
                     if !project.icon.isEmpty {
                         Text(project.icon).font(.system(size: 10))

@@ -3809,3 +3809,209 @@ struct OrdenDesdeElRelojTests {
         #expect(s.completar(UUID()) == false)
     }
 }
+
+/// Hoy con varias tareas del mismo proyecto: se agrupan bajo él, con un
+/// contador que mide **lo de hoy** y no el proyecto entero.
+@MainActor
+@Suite struct AgrupadoDeHoyTests {
+
+    /// Crea una tarea de hoy dentro de un proyecto.
+    private func tarea(_ titulo: String, de proyecto: Project?, en s: Store) -> Item {
+        var item = s.addItem(title: titulo, in: .today)
+        item.projectID = proyecto?.id
+        s.update(item)
+        return s.items.first { $0.id == item.id }!
+    }
+
+    private func bloques(_ s: Store) -> [BloqueDeHoy] {
+        Hoy.bloques(sinHora: s.items(for: .today), hechasHoy: s.hechasHoy)
+    }
+
+    private func titulos(_ bloques: [BloqueDeHoy]) -> [String] {
+        bloques.map {
+            switch $0 {
+            case .suelta(let item): item.title
+            case .proyecto(let grupo): "[\(grupo.tareas.map(\.title).joined(separator: " "))]"
+            }
+        }
+    }
+
+    /// Una sola tarea de un proyecto no monta una caja con cabecera: serían tres
+    /// líneas para decir lo que decía una.
+    @Test func oneTaskIsNotWorthAGroup() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        _ = tarea("comprar tinta", de: nil, en: s)
+        _ = tarea("llamar a la gestoría", de: p, en: s)
+        #expect(titulos(bloques(s)) == ["comprar tinta", "llamar a la gestoría"])
+    }
+
+    /// Desde dos, sí.
+    @Test func twoTasksOfTheSameProjectGroup() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        _ = tarea("furgoneta", de: p, en: s)
+        _ = tarea("comunidad", de: p, en: s)
+        #expect(titulos(bloques(s)) == ["[furgoneta comunidad]"])
+    }
+
+    /// El grupo se coloca donde estaba su **primera** tarea en el orden manual:
+    /// agrupar no puede reordenarte la mañana.
+    @Test func theGroupSitsWhereItsFirstTaskWas() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        _ = tarea("gestoría", de: nil, en: s)
+        _ = tarea("furgoneta", de: p, en: s)
+        _ = tarea("tinta", de: nil, en: s)
+        _ = tarea("comunidad", de: p, en: s)
+        #expect(titulos(bloques(s)) == ["gestoría", "[furgoneta comunidad]", "tinta"])
+    }
+
+    /// Las que no tienen proyecto no se agrupan nunca entre sí.
+    @Test func tasksWithoutAProjectStayLoose() {
+        let s = Store(inMemory: true)
+        _ = tarea("a", de: nil, en: s)
+        _ = tarea("b", de: nil, en: s)
+        #expect(titulos(bloques(s)) == ["a", "b"])
+    }
+
+    /// **El denominador no encoge.** Al tachar, `isToday` deja de ser cierto y la
+    /// tarea se cae de la lista; si el grupo contara solo lo que queda, el queso
+    /// marcaría 0 de 2, luego 0 de 1, y nunca llegaría a estar entero.
+    @Test func whatYouFinishedTodayStillCounts() throws {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        let a = tarea("furgoneta", de: p, en: s)
+        _ = tarea("comunidad", de: p, en: s)
+        s.toggleComplete(a)
+
+        let salida = bloques(s)
+        #expect(salida.count == 1)
+        guard case .proyecto(let grupo) = try #require(salida.first) else {
+            Issue.record("esperaba un grupo"); return
+        }
+        #expect(grupo.total == 2)
+        #expect(grupo.hechas == 1)
+        #expect(grupo.fraccion == 0.5)
+    }
+
+    /// Lo hecho baja al fondo del grupo: lo que queda por hacer va primero.
+    @Test func finishedTasksSinkInsideTheGroup() throws {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        let a = tarea("furgoneta", de: p, en: s)
+        _ = tarea("comunidad", de: p, en: s)
+        _ = tarea("gas", de: p, en: s)
+        s.toggleComplete(a)
+        #expect(titulos(bloques(s)) == ["[comunidad gas furgoneta]"])
+    }
+
+    /// Terminado lo de hoy de ese proyecto, el grupo sigue —con el queso
+    /// entero, que es el premio— pero baja al final: ya no hay nada que hacer.
+    @Test func aFullyDoneProjectSinksToTheBottom() throws {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        let a = tarea("furgoneta", de: p, en: s)
+        let b = tarea("comunidad", de: p, en: s)
+        _ = tarea("tinta", de: nil, en: s)
+        s.toggleComplete(a)
+        s.toggleComplete(b)
+
+        let salida = bloques(s)
+        #expect(titulos(salida) == ["tinta", "[furgoneta comunidad]"])
+        guard case .proyecto(let grupo) = try #require(salida.last) else {
+            Issue.record("esperaba un grupo"); return
+        }
+        #expect(grupo.entero)
+    }
+
+    /// El queso mide **lo de hoy**, no el proyecto entero: un proyecto de diez
+    /// tareas del que hoy tocan dos marca sobre dos. Un contador sobre cuarenta
+    /// no se movería en toda la mañana, y entonces no informa de nada.
+    @Test func theDialMeasuresTodayNotTheWholeProject() throws {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        for i in 1...8 { _ = s.addItem(title: "futura \(i)", in: .project(p.id)) }
+        _ = tarea("furgoneta", de: p, en: s)
+        _ = tarea("comunidad", de: p, en: s)
+
+        let salida = bloques(s)
+        guard case .proyecto(let grupo) = try #require(salida.first) else {
+            Issue.record("esperaba un grupo"); return
+        }
+        #expect(grupo.total == 2)
+    }
+
+    /// La raya dice cuánto se ha despejado; el texto de al lado, lo que queda
+    /// de verdad. Sin estimaciones sigue habiendo cuenta: la hora es un extra.
+    @Test func withoutEstimatesThereIsStillACount() throws {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        _ = tarea("furgoneta", de: p, en: s)
+        _ = tarea("comunidad", de: p, en: s)
+
+        let salida = bloques(s)
+        guard case .proyecto(let grupo) = try #require(salida.first) else {
+            Issue.record("esperaba un grupo"); return
+        }
+        #expect(grupo.quedan == 2)
+        #expect(grupo.minutosRestantes == nil)
+        #expect(grupo.sinEstimar == 2)
+    }
+
+    /// Con estimaciones, lo que queda se dice en minutos — y **solo** lo que
+    /// queda: lo ya hecho no ocupa el día que te sobra.
+    @Test func whatIsLeftIsMeasuredInMinutes() throws {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        let a = tarea("furgoneta", de: p, en: s)
+        let b = tarea("banco", de: p, en: s)
+        let c = tarea("llaves", de: p, en: s)
+        s.setEstimate(a, to: 60)
+        s.setEstimate(b, to: 25)
+        s.setEstimate(c, to: 20)
+        s.toggleComplete(s.items.first { $0.id == a.id }!)
+
+        let salida = bloques(s)
+        guard case .proyecto(let grupo) = try #require(salida.first) else {
+            Issue.record("esperaba un grupo"); return
+        }
+        #expect(grupo.quedan == 2)
+        #expect(grupo.minutosRestantes == 45)
+        #expect(grupo.sinEstimar == 0)
+        #expect(grupo.fraccion == 1.0 / 3.0)
+    }
+
+    /// Medir a medias no se disimula: si de las que quedan hay alguna sin
+    /// estimar, los minutos son un suelo y hay que poder decirlo.
+    @Test func halfMeasuredGroupsSayHowManyAreUnmeasured() throws {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        let a = tarea("banco", de: p, en: s)
+        _ = tarea("llaves", de: p, en: s)
+        s.setEstimate(a, to: 25)
+
+        let salida = bloques(s)
+        guard case .proyecto(let grupo) = try #require(salida.first) else {
+            Issue.record("esperaba un grupo"); return
+        }
+        #expect(grupo.minutosRestantes == 25)
+        #expect(grupo.sinEstimar == 1)
+    }
+
+    /// Lo que tiene hora vive en la línea del reloj, arriba, y no baja al grupo:
+    /// el bloque es el tramo sin hora, agrupado, y nada más.
+    @Test func timedTasksNeverFallIntoAGroup() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        let a = tarea("presupuesto", de: p, en: s)
+        _ = tarea("furgoneta", de: p, en: s)
+        _ = tarea("comunidad", de: p, en: s)
+        s.setTime(a, to: 11 * 60)
+
+        let (conHora, sinHora) = Agenda.dia(tareas: s.items(for: .today), eventos: [])
+        #expect(conHora.count == 1)
+        #expect(titulos(Hoy.bloques(sinHora: sinHora, hechasHoy: s.hechasHoy))
+                == ["[furgoneta comunidad]"])
+    }
+}

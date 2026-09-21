@@ -557,6 +557,15 @@ public final class Store {
 
     // MARK: - Consultas
 
+    /// Lo que estaba en Hoy y ya has tachado hoy.
+    ///
+    /// No sale en ninguna lista —al completar, una tarea se cae de Hoy— pero
+    /// hace falta para contar: un grupo de proyecto que solo contara lo que
+    /// queda tendría un denominador que encoge, y el contador nunca se cerraría.
+    public var hechasHoy: [Item] {
+        items.filter(\.seHizoHoy).sorted(by: Item.byPosition)
+    }
+
     public func items(for perspective: Perspective) -> [Item] {
         switch perspective {
         case .inbox:
@@ -1438,6 +1447,17 @@ extension Store {
         let bici = store.addProject(name: "Bicicleta")
         store.setIcon(bici, to: "💪")
         store.addItem(title: "Pedir cajas", in: .project(mudanza.id))
+        // Tres de un mismo proyecto en Hoy, para ver el agrupado y el filete a
+        // medio entintar. Una ya hecha: el contador tiene que seguir contándola
+        // o el denominador encogería y la raya no avanzaría nunca.
+        for (titulo, minutos) in [("Pedir presupuesto de furgoneta", 30),
+                                  ("Cambiar la dirección en el banco", 25),
+                                  ("Recoger las llaves", 20)] {
+            let t = store.addItem(title: titulo, in: .project(mudanza.id))
+            store.schedule(t, to: .now)
+            store.setEstimate(store.items.first { $0.id == t.id }!, to: minutos)
+        }
+        store.toggleComplete(store.items.first { $0.title == "Pedir presupuesto de furgoneta" }!)
         store.addItem(title: "Cambiar la cadena", in: .project(bici.id))
         let casa = store.addArea(name: "Casa")
         store.setIcon(casa, to: "🏠")

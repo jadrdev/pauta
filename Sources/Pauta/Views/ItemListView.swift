@@ -40,10 +40,30 @@ struct ItemListView: View {
                         // Hoy es el día entero, no solo la lista de tareas: lo
                         // que hay que hacer y lo que ya está comprometido, en el
                         // orden en que va a ocurrir.
-                        ForEach(Agenda.filas(tareas: items, eventos: agenda.eventos)) { fila in
+                        //
+                        // El tramo con hora va tal cual: ahí manda el reloj, y
+                        // agrupar por proyecto se llevaría por delante lo único
+                        // que ese tramo dice, que es qué va antes. Lo que se
+                        // agrupa es el montón de abajo, que no tiene más orden
+                        // que el que le diste tú.
+                        let dia = Agenda.dia(tareas: items, eventos: agenda.eventos)
+                        ForEach(dia.conHora) { fila in
                             switch fila {
                             case .tarea(let item): ItemRowView(item: item)
                             case .evento(let evento): EventoRow(evento: evento)
+                            }
+                        }
+                        ForEach(Hoy.bloques(sinHora: dia.sinHora,
+                                            hechasHoy: store.hechasHoy)) { bloque in
+                            switch bloque {
+                            case .suelta(let item):
+                                ItemRowView(item: item)
+                            case .proyecto(let grupo):
+                                GrupoRow(grupo: grupo)
+                                ForEach(grupo.tareas) { tarea in
+                                    ItemRowView(item: tarea, enGrupo: true)
+                                        .padding(.leading, 18)
+                                }
                             }
                         }
                     } else {
