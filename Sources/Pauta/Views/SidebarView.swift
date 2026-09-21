@@ -5,12 +5,34 @@ struct SidebarView: View {
     @Environment(Store.self) private var store
     @Environment(Navigation.self) private var nav
 
+    /// Las listas fijas, menos la bandeja cuando no tiene nada.
+    ///
+    /// La bandeja es una estación de paso: existe para vaciarse, así que vacía
+    /// es lo normal y no un estado que haya que anunciar todos los días. Cuando
+    /// aparece, aparecer **es** el aviso de que hay algo por colocar — la misma
+    /// regla que la papelera.
+    ///
+    /// Sigue estando si es la que estás mirando: vaciarla y que la lista
+    /// desaparezca de debajo mientras la tienes delante se lee como un fallo, no
+    /// como un premio.
+    ///
+    /// Y **no se esconde en el teléfono**, donde es una de las cuatro pestañas:
+    /// una fila que aparece en una barra lateral no molesta a nadie, pero una
+    /// barra de pestañas que se recoloca bajo el pulgar cambia de sitio los tres
+    /// botones que sí usas.
+    private var listasVisibles: [Perspective] {
+        Perspective.allCases.filter { perspectiva in
+            guard case .inbox = perspectiva else { return true }
+            return store.count(for: .inbox) > 0 || nav.perspective == .inbox
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Sin cabecera de marca: el icono del Dock ya identifica la app, y un
             // logo dentro de su propia barra lateral solo come espacio vertical.
             VStack(alignment: .leading, spacing: 1) {
-                ForEach(Perspective.allCases, id: \.self) { perspective in
+                ForEach(listasVisibles, id: \.self) { perspective in
                     SidebarRow(perspective: perspective, label: perspective.title)
                 }
             }

@@ -523,6 +523,9 @@ struct PautaApp: App {
             }
             CommandGroup(after: .toolbar) {
                 // ⌘1…⌘6 en el mismo orden en que aparecen en la barra lateral.
+                // Siempre las seis y siempre el mismo número, aunque la bandeja
+                // no esté en la barra lateral por estar vacía: un atajo que
+                // cambia de destino según lo que haya dentro no es un atajo.
                 ForEach(Array(Perspective.allCases.enumerated()), id: \.element) { index, perspective in
                     Button(perspective.title) { nav.go(to: perspective) }
                         .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")),

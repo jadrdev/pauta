@@ -630,6 +630,30 @@ marca se convierta en parte del paisaje.
 No se reordena la lista por esto. La prioridad manual es la que pusiste tú; una
 marca informa, y reordenar sería decidir por ti.
 
+### La bandeja se esconde cuando está vacía
+
+La bandeja es una **estación de paso**: existe para vaciarse, así que vacía es su
+estado normal y no algo que haya que anunciar cada mañana. Cuando aparece,
+aparecer *es* el aviso de que hay algo por colocar — la misma regla que la
+papelera.
+
+Sigue estando si es la que estás mirando. Vaciarla y que la lista desaparezca de
+debajo mientras la tienes delante se lee como un fallo, no como un premio.
+
+`⌘1…⌘6` **no se mueven**. Aunque la bandeja no esté en la barra lateral, `⌘1`
+sigue llevando a la bandeja: un atajo que cambia de destino según lo que haya
+dentro no es un atajo.
+
+Y **no se esconde en el teléfono**, donde la bandeja es una de las cuatro
+pestañas. Una fila que aparece en una barra lateral no molesta a nadie; una barra
+de pestañas que se recoloca bajo el pulgar cambia de sitio los tres botones que
+sí usas.
+
+Lo que llega ahí, por si hacía falta contarlo: lo que dictas por voz en el
+iPhone y en el reloj, lo que apuntas con `⌃Espacio` sin marcar «hoy», una tarea
+nueva creada desde una lista que no la admite, las tareas que suelta un proyecto
+al borrarse, y lo que devuelves de la papelera cuyo proyecto ya no existe.
+
 ## La papelera
 
 **Borrar nunca borró.** Desde siempre pone una lápida y la carpeta la guarda
