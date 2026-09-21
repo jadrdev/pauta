@@ -59,6 +59,19 @@ enum ISODate {
 /// lápidas eternas.
 public enum Retention {
     public static let tombstones: TimeInterval = 30 * 24 * 3600
+
+    /// Cuánto le queda a una lápida antes de irse sola.
+    ///
+    /// Es lo que enseña la papelera en cada fila, y no cuándo se borró: lo que
+    /// hace falta saber mirándola es de cuánto tiempo dispones, no cuándo
+    /// metiste la pata. Sale del mismo plazo que hace la limpieza, así que no
+    /// puede decir una cosa y que pase otra.
+    public static func leQuedan(desde borrado: Date, ahora: Date = .now) -> String {
+        let segundos = tombstones - ahora.timeIntervalSince(borrado)
+        let dias = Int((segundos / 86_400).rounded(.up))
+        if dias <= 0 { return "se va hoy" }
+        return dias == 1 ? "queda 1 día" : "quedan \(dias) días"
+    }
 }
 
 /// Estado de la app + persistencia en JSON.
@@ -93,6 +106,31 @@ public final class Store {
     /// Se llena al cargar, leyendo las lápidas de la carpeta, así que un
     /// borrado hecho en el Mac también vale en el teléfono en cuanto cruza.
     private var enterradas: Set<UUID> = []
+
+    /// Lo borrado que todavía se puede recuperar, lo último arriba.
+    ///
+    /// Borrar nunca borró: pone una lápida y `Retention.tombstones` la guarda
+    /// treinta días. Lo que faltaba no era guardar, era una puerta — y sin ella
+    /// borrar era la única acción sin vuelta atrás de toda la app, alcanzable
+    /// desde un deslizamiento en el teléfono y propagada a los demás aparatos
+    /// por la carpeta antes de que levantes el dedo.
+    public private(set) var borradas: [Item] = []
+    public private(set) var proyectosBorrados: [Project] = []
+    public private(set) var areasBorradas: [Area] = []
+
+    /// Si hay algo que recuperar. La papelera solo se enseña cuando tiene algo:
+    /// una lista vacía permanente en la barra lateral es ruido.
+    public var papeleraLlena: Bool {
+        !borradas.isEmpty || !proyectosBorrados.isEmpty || !areasBorradas.isEmpty
+    }
+
+    /// En qué orden se fue borrando, para deshacer por el final.
+    ///
+    /// No se guarda en disco a propósito: deshacer es de esta sesión y de este
+    /// aparato. Lo que sí sobrevive es la papelera, que es donde se va a buscar
+    /// lo de ayer.
+    private enum Borrado { case tarea(UUID), proyecto(UUID), area(UUID) }
+    private var pilaDeBorrados: [Borrado] = []
 
     /// Lo leído de cada archivo en la última carga, por nombre de archivo.
     private var itemCache: [String: Cached<Item>] = [:]
@@ -399,26 +437,45 @@ public final class Store {
             + requestDownloads(in: areasDir)
 
         var live: [Item] = []
+        // Las lápidas se guardan enteras y no solo su identidad: son lo que
+        // enseña y devuelve la papelera.
+        var enterrado: [Item] = []
         for item in loadObjects(in: itemsDir, cache: &itemCache) {
             if item.deletedAt == nil {
                 live.append(item)
             } else {
                 enterradas.insert(item.id)
+                enterrado.append(item)
                 if let source = item.sourceID { buriedSourceIDs.insert(source) }
             }
         }
         let freshItems = live.sorted(by: Item.byCreation)
         if freshItems != items { items = freshItems }
+        let freshBorradas = enterrado.sorted { ($0.deletedAt ?? .distantPast)
+                                             > ($1.deletedAt ?? .distantPast) }
+        if freshBorradas != borradas { borradas = freshBorradas }
 
-        let freshProjects = loadObjects(in: projectsDir, cache: &projectCache)
+        let todosProyectos = loadObjects(in: projectsDir, cache: &projectCache)
+        let freshProjects = todosProyectos
             .filter { $0.deletedAt == nil }
             .sorted(by: Project.byPosition)
         if freshProjects != projects { projects = freshProjects }
+        let freshProyectosBorrados = todosProyectos
+            .filter { $0.deletedAt != nil }
+            .sorted { ($0.deletedAt ?? .distantPast) > ($1.deletedAt ?? .distantPast) }
+        if freshProyectosBorrados != proyectosBorrados {
+            proyectosBorrados = freshProyectosBorrados
+        }
 
-        let freshAreas = loadObjects(in: areasDir, cache: &areaCache)
+        let todasAreas = loadObjects(in: areasDir, cache: &areaCache)
+        let freshAreas = todasAreas
             .filter { $0.deletedAt == nil }
             .sorted(by: Area.byPosition)
         if freshAreas != areas { areas = freshAreas }
+        let freshAreasBorradas = todasAreas
+            .filter { $0.deletedAt != nil }
+            .sorted { ($0.deletedAt ?? .distantPast) > ($1.deletedAt ?? .distantPast) }
+        if freshAreasBorradas != areasBorradas { areasBorradas = freshAreasBorradas }
     }
 
     /// Escritura atómica del objeto tocado, y solo de ese: reescribir todo en
@@ -601,6 +658,9 @@ public final class Store {
         case .tag(let name):
             items.filter { !$0.isCompleted && $0.hasTag(name) }
                 .sorted(by: Item.byPosition)
+        // Ya vienen ordenadas por cuándo se borraron, lo último arriba.
+        case .papelera:
+            borradas
         }
     }
 
@@ -706,8 +766,9 @@ public final class Store {
         case .tag(let name):
             item.tags = [name]
         // Un área no puede recibir una tarea: no sabría a qué proyecto colgarla.
-        // La interfaz ni siquiera ofrece añadir estando en una.
-        case .inbox, .completed, .area:
+        // La interfaz ni siquiera ofrece añadir estando en una. Y en la papelera
+        // no se crea: es lo que ya no está.
+        case .inbox, .completed, .area, .papelera:
             break
         }
         stampCreation(&item)
@@ -880,6 +941,8 @@ public final class Store {
         buried.updatedAt = buried.deletedAt!
         if let source = buried.sourceID { buriedSourceIDs.insert(source) }
         enterradas.insert(buried.id)
+        borradas.insert(buried, at: 0)
+        pilaDeBorrados.append(.tarea(buried.id))
         persist(buried)
     }
 
@@ -1143,6 +1206,11 @@ public final class Store {
         // que para eso no son excluyentes.
         case .tag(let name):
             addTag(item, name)
+        // A la papelera no se «mueve»: se borra, que es otra cosa y tiene su
+        // propio gesto. Arrastrar hasta ahí sería un segundo camino para lo
+        // único irreversible que hay.
+        case .papelera:
+            break
         }
     }
 
@@ -1389,26 +1457,157 @@ public final class Store {
     /// contenedor del que las cosas dependan para existir. Borrarla arrastrando
     /// consigo el trabajo de dentro sería una pérdida difícil de deshacer.
     public func delete(_ area: Area) {
-        for project in projects where project.areaID == area.id {
-            mutateProject(project.id) { $0.areaID = nil }
-        }
+        let sueltos = projects.filter { $0.areaID == area.id }.map(\.id)
+        for id in sueltos { mutateProject(id) { $0.areaID = nil } }
         guard let idx = areas.firstIndex(where: { $0.id == area.id }) else { return }
         var buried = areas.remove(at: idx)
         buried.deletedAt = Store.stamped()
         buried.updatedAt = buried.deletedAt!
+        buried.sueltos = sueltos
+        areasBorradas.insert(buried, at: 0)
+        pilaDeBorrados.append(.area(buried.id))
         persist(buried)
     }
 
     /// Borra el proyecto y devuelve sus tareas a la bandeja de entrada.
     public func delete(_ project: Project) {
-        for item in items where item.projectID == project.id {
-            mutateItem(item.id) { $0.projectID = nil }
-        }
+        let sueltas = items.filter { $0.projectID == project.id }.map(\.id)
+        for id in sueltas { mutateItem(id) { $0.projectID = nil } }
         guard let idx = projects.firstIndex(where: { $0.id == project.id }) else { return }
         var buried = projects.remove(at: idx)
         buried.deletedAt = Store.stamped()
         buried.updatedAt = buried.deletedAt!
+        buried.sueltos = sueltas
+        proyectosBorrados.insert(buried, at: 0)
+        pilaDeBorrados.append(.proyecto(buried.id))
         persist(buried)
+    }
+
+    // MARK: - La papelera
+
+    /// Devuelve una tarea a donde estaba.
+    ///
+    /// Si su proyecto desapareció mientras ella esperaba, vuelve a la bandeja:
+    /// una tarea con un `projectID` que no existe no sale en ninguna lista, y un
+    /// «recuperado» que la deja invisible es peor que no recuperarla.
+    @discardableResult
+    public func restaurar(_ id: UUID) -> Bool {
+        guard let idx = borradas.firstIndex(where: { $0.id == id }) else { return false }
+        var vuelta = borradas.remove(at: idx)
+        vuelta.deletedAt = nil
+        vuelta.updatedAt = Store.stamped()
+        if let proyecto = vuelta.projectID,
+           !projects.contains(where: { $0.id == proyecto }) {
+            vuelta.projectID = nil
+        }
+        enterradas.remove(vuelta.id)
+        if let source = vuelta.sourceID { buriedSourceIDs.remove(source) }
+        items.append(vuelta)
+        items.sort(by: Item.byCreation)
+        persist(vuelta)
+        return true
+    }
+
+    /// Devuelve un proyecto y le reengancha lo que soltó al borrarse.
+    ///
+    /// Solo lo que sigue suelto: si mientras tanto le diste otro sitio a una
+    /// tarea, ese sitio gana. Fue una decisión tuya y posterior, y deshacer un
+    /// borrado no puede deshacer también lo que hiciste después.
+    @discardableResult
+    public func restaurarProyecto(_ id: UUID) -> Bool {
+        guard let idx = proyectosBorrados.firstIndex(where: { $0.id == id }) else { return false }
+        var vuelto = proyectosBorrados.remove(at: idx)
+        let recuperables = vuelto.sueltos
+        vuelto.deletedAt = nil
+        vuelto.updatedAt = Store.stamped()
+        vuelto.sueltos = []
+        if let area = vuelto.areaID, !areas.contains(where: { $0.id == area }) {
+            vuelto.areaID = nil
+        }
+        projects.append(vuelto)
+        projects.sort(by: Project.byPosition)
+        persist(vuelto)
+        for tarea in recuperables where items.contains(where: {
+            $0.id == tarea && $0.projectID == nil
+        }) {
+            mutateItem(tarea) { $0.projectID = vuelto.id }
+        }
+        return true
+    }
+
+    /// Lo mismo un escalón más arriba: un área recupera sus proyectos.
+    @discardableResult
+    public func restaurarArea(_ id: UUID) -> Bool {
+        guard let idx = areasBorradas.firstIndex(where: { $0.id == id }) else { return false }
+        var vuelta = areasBorradas.remove(at: idx)
+        let recuperables = vuelta.sueltos
+        vuelta.deletedAt = nil
+        vuelta.updatedAt = Store.stamped()
+        vuelta.sueltos = []
+        areas.append(vuelta)
+        areas.sort(by: Area.byPosition)
+        persist(vuelta)
+        for proyecto in recuperables where projects.contains(where: {
+            $0.id == proyecto && $0.areaID == nil
+        }) {
+            mutateProject(proyecto) { $0.areaID = vuelta.id }
+        }
+        return true
+    }
+
+    /// Devuelve lo último que se borró, sea tarea, proyecto o área.
+    ///
+    /// Es lo que hay detrás de `⌘Z`: el error que se deshace es casi siempre el
+    /// que acabas de cometer, y para ese caso abrir una lista y buscar la fila es
+    /// más camino del que hace falta. Devuelve el nombre de lo devuelto, para
+    /// poder decirlo.
+    ///
+    /// El orden sale de una pila y **no de la fecha de borrado**: las fechas se
+    /// redondean al milisegundo, así que dos borrados seguidos empatan y el
+    /// desempate lo decidiría el orden en que se miraran las listas. Una pila
+    /// sabe cuál fue el último porque estaba delante cuando pasó.
+    @discardableResult
+    public func deshacerUltimoBorrado() -> String? {
+        // Se descartan los que ya no están: pueden haberse devuelto a mano desde
+        // la papelera, o haberse ido en un vaciado.
+        while let ultimo = pilaDeBorrados.popLast() {
+            switch ultimo {
+            case .tarea(let id):
+                guard let t = borradas.first(where: { $0.id == id }) else { continue }
+                let nombre = t.title.isEmpty ? "Sin título" : t.title
+                if restaurar(id) { return nombre }
+            case .proyecto(let id):
+                guard let p = proyectosBorrados.first(where: { $0.id == id }) else { continue }
+                let nombre = p.name.isEmpty ? "Sin título" : p.name
+                if restaurarProyecto(id) { return nombre }
+            case .area(let id):
+                guard let a = areasBorradas.first(where: { $0.id == id }) else { continue }
+                let nombre = a.name.isEmpty ? "Sin título" : a.name
+                if restaurarArea(id) { return nombre }
+            }
+        }
+        return nil
+    }
+
+    /// Si hay algo que deshacer, para poder apagar el comando del menú en vez de
+    /// ofrecer un `⌘Z` que no hace nada.
+    public var hayAlgoQueDeshacer: Bool { !pilaDeBorrados.isEmpty }
+
+    /// Vacía la papelera. **Es lo único que borra de verdad**, y por eso se pide
+    /// a mano: lo demás se va solo a los treinta días.
+    public func vaciarPapelera() {
+        for item in borradas { olvidar(item.id, in: itemsDir) }
+        for p in proyectosBorrados { olvidar(p.id, in: projectsDir) }
+        for a in areasBorradas { olvidar(a.id, in: areasDir) }
+        borradas = []
+        proyectosBorrados = []
+        areasBorradas = []
+        pilaDeBorrados = []
+    }
+
+    private func olvidar(_ id: UUID, in dir: URL) {
+        guard !inMemory else { return }
+        try? FileManager.default.removeItem(at: dir.appendingPathComponent("\(id).json"))
     }
 }
 
@@ -1517,6 +1716,16 @@ extension Store {
         store.addItem(title: "Rehacer la estantería del salón", in: .someday)
         let done = store.addItem(title: "Reservar mesa para el viernes", in: .inbox)
         store.toggleComplete(done)
+        // Algo en la papelera, para poder mirarla: una tarea y un proyecto con
+        // tareas dentro, que es el caso que hay que ver —al devolverlo tiene que
+        // decir con cuántas vuelve.
+        let borrada = store.addItem(title: "Mirar lo del seguro", in: .inbox)
+        store.delete(borrada)
+        let cursillo = store.addProject(name: "Cursillo de cerámica")
+        store.setIcon(cursillo, to: "🏺")
+        store.addItem(title: "Buscar horarios", in: .project(cursillo.id))
+        store.addItem(title: "Preguntar el precio", in: .project(cursillo.id))
+        store.delete(cursillo)
         return store
     }
 }

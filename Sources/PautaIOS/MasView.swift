@@ -94,6 +94,18 @@ struct MasView: View {
                         }
                     }
                 }
+                // Solo cuando hay algo dentro: una papelera vacía permanente
+                // es un recordatorio diario de una cosa que no ha pasado. Y
+                // cuando aparece, aparecer **es** el aviso de que algo se borró.
+                if store.papeleraLlena {
+                    Section {
+                        NavigationLink {
+                            PapeleraView()
+                        } label: {
+                            Label("Papelera", systemImage: "trash")
+                        }
+                    }
+                }
                 // Al final, siempre: los ajustes son lo que menos se abre, y
                 // ponerlos entre las listas los cruza con lo que sí se usa.
                 Section {

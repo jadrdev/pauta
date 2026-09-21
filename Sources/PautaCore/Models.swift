@@ -526,6 +526,13 @@ public struct Project: Identifiable, Codable, Hashable {
     public var position: Double = 0
     /// El área a la que pertenece, si está en alguna.
     public var areaID: UUID?
+    /// Lo que este objeto dejó suelto al borrarse, para poder devolvérselo.
+    ///
+    /// **Solo significa algo en una lápida.** Borrar un proyecto no borra sus
+    /// tareas: las suelta en la bandeja. Sin apuntar cuáles eran, recuperarlo
+    /// devolvería un proyecto vacío y habría que volver a archivar quince tareas
+    /// a mano, que no es recuperar nada.
+    public var sueltos: [UUID] = []
 
     public init(id: UUID = UUID(), name: String) {
         self.id = id
@@ -544,6 +551,7 @@ public struct Project: Identifiable, Codable, Hashable {
         deletedAt   = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
         position    = try c.decodeIfPresent(Double.self, forKey: .position) ?? 0
         areaID      = try c.decodeIfPresent(UUID.self,   forKey: .areaID)
+        sueltos     = try c.decodeIfPresent([UUID].self, forKey: .sueltos) ?? []
     }
 }
 
@@ -561,6 +569,9 @@ public struct Area: Identifiable, Codable, Hashable {
     public var updatedAt = Date()
     public var deletedAt: Date?
     public var position: Double = 0
+    /// Los proyectos que dejó sueltos al borrarse. Como en `Project`, solo
+    /// significa algo en una lápida.
+    public var sueltos: [UUID] = []
 
     public init(id: UUID = UUID(), name: String) {
         self.id = id
@@ -575,6 +586,7 @@ public struct Area: Identifiable, Codable, Hashable {
         createdAt = try c.decodeIfPresent(Date.self,   forKey: .createdAt) ?? Date()
         updatedAt = try c.decodeIfPresent(Date.self,   forKey: .updatedAt) ?? createdAt
         deletedAt = try c.decodeIfPresent(Date.self,   forKey: .deletedAt)
+        sueltos   = try c.decodeIfPresent([UUID].self, forKey: .sueltos) ?? []
         position  = try c.decodeIfPresent(Double.self, forKey: .position) ?? 0
     }
 }
@@ -630,6 +642,12 @@ public enum Perspective: Hashable, CaseIterable {
     case project(UUID)
     case area(UUID)
     case tag(String)
+    /// Lo borrado que todavía se puede recuperar.
+    ///
+    /// Fuera de `allCases` a propósito: no es una de las listas fijas, solo
+    /// aparece cuando tiene algo dentro. Una papelera vacía permanente en la
+    /// barra lateral es un recordatorio diario de una cosa que no ha pasado.
+    case papelera
 
     /// Las fijas, en el orden en que se muestran. Los proyectos van aparte.
     public static var allCases: [Perspective] { [.inbox, .today, .upcoming, .anytime, .someday, .completed] }
@@ -645,6 +663,7 @@ public enum Perspective: Hashable, CaseIterable {
         case .project: "Proyecto"
         case .area: "Área"
         case .tag(let name): name
+        case .papelera: "Papelera"
         }
     }
 
@@ -662,6 +681,7 @@ public enum Perspective: Hashable, CaseIterable {
         case .project: "circle.dotted"
         case .area: "square.stack"
         case .tag: "tag"
+        case .papelera: "trash"
         }
     }
 
@@ -670,7 +690,7 @@ public enum Perspective: Hashable, CaseIterable {
     /// agrupa son proyectos.
     public var acceptsNewItems: Bool {
         switch self {
-        case .completed, .area: false
+        case .completed, .area, .papelera: false
         default: true
         }
     }

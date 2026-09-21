@@ -4197,3 +4197,186 @@ struct OrdenDesdeElRelojTests {
         #expect(visto(s) == ["gestoría", "tinta", "furgoneta"])
     }
 }
+
+/// La papelera: borrar deja de ser la única acción sin vuelta atrás.
+@MainActor
+@Suite struct PapeleraTests {
+
+    @Test func deletingPutsItInTheTrashInsteadOfNowhere() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "Llamar a la gestoría", in: .inbox)
+        s.delete(a)
+        #expect(s.items.contains { $0.id == a.id } == false)
+        #expect(s.borradas.map(\.title) == ["Llamar a la gestoría"])
+    }
+
+    /// Lo último borrado va arriba: es lo que más probablemente quieres
+    /// recuperar, porque el error que se recupera es el que acabas de cometer.
+    @Test func theLatestDeletionIsOnTop() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "a", in: .inbox)
+        let b = s.addItem(title: "b", in: .inbox)
+        s.delete(a)
+        s.delete(b)
+        #expect(s.borradas.map(\.title) == ["b", "a"])
+    }
+
+    @Test func restoringBringsItBack() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "Llamar a la gestoría", in: .today)
+        s.delete(a)
+        #expect(s.restaurar(a.id))
+        #expect(s.borradas.isEmpty)
+        #expect(s.items(for: .today).map(\.title) == ["Llamar a la gestoría"])
+    }
+
+    /// Recuperar algo que ya no está no es un error: puede haberlo recuperado el
+    /// otro dispositivo mientras mirabas la lista.
+    @Test func restoringSomethingGoneIsNotAnError() {
+        let s = Store(inMemory: true)
+        #expect(s.restaurar(UUID()) == false)
+    }
+
+    /// **Una tarea con un proyecto que ya no existe no sale en ninguna lista.**
+    /// Si su sitio desapareció mientras estaba en la papelera, vuelve a la
+    /// bandeja, que es donde va lo que no tiene nada decidido — y no al limbo.
+    @Test func aTaskWhoseProjectIsGoneComesBackToTheInbox() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        let a = s.addItem(title: "Pedir cajas", in: .project(p.id))
+        s.delete(a)
+        s.delete(p)          // el proyecto ya no está entre los vivos
+        #expect(s.restaurar(a.id))
+        let vuelta = s.items.first { $0.id == a.id }
+        #expect(vuelta?.projectID == nil)
+        #expect(s.items(for: .inbox).map(\.title) == ["Pedir cajas"])
+    }
+
+    /// Borrar un proyecto suelta sus tareas en la bandeja. Recuperarlo tiene que
+    /// devolvérselas: recuperar un proyecto vacío y volver a archivar quince
+    /// tareas a mano no es recuperar nada.
+    @Test func restoringAProjectTakesItsTasksBack() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        _ = s.addItem(title: "Pedir cajas", in: .project(p.id))
+        _ = s.addItem(title: "Llamar a la gestoría", in: .project(p.id))
+        s.delete(p)
+        #expect(s.items(for: .inbox).count == 2)
+
+        #expect(s.restaurarProyecto(p.id))
+        #expect(s.projects.map(\.name) == ["Mudanza"])
+        #expect(s.items(for: .project(p.id)).count == 2)
+        #expect(s.items(for: .inbox).isEmpty)
+    }
+
+    /// Pero no roba lo que hayas archivado tú mientras tanto. Si le diste otro
+    /// sitio a una tarea, ese sitio gana: fue una decisión posterior y explícita.
+    @Test func restoringAProjectDoesNotStealWhatYouRefiled() {
+        let s = Store(inMemory: true)
+        let viejo = s.addProject(name: "Mudanza")
+        let nuevo = s.addProject(name: "Casa nueva")
+        let cajas = s.addItem(title: "Pedir cajas", in: .project(viejo.id))
+        _ = s.addItem(title: "Llamar a la gestoría", in: .project(viejo.id))
+        s.delete(viejo)
+        s.move(s.items.first { $0.id == cajas.id }!, to: .project(nuevo.id))
+
+        #expect(s.restaurarProyecto(viejo.id))
+        #expect(s.items(for: .project(nuevo.id)).map(\.title) == ["Pedir cajas"])
+        #expect(s.items(for: .project(viejo.id)).map(\.title) == ["Llamar a la gestoría"])
+    }
+
+    /// Lo mismo un escalón más arriba: un área recupera sus proyectos.
+    @Test func restoringAnAreaTakesItsProjectsBack() {
+        let s = Store(inMemory: true)
+        let casa = s.addArea(name: "Casa")
+        let p = s.addProject(name: "Mudanza")
+        s.move(p, toArea: casa.id)
+        s.delete(casa)
+        #expect(s.projects.first { $0.id == p.id }?.areaID == nil)
+
+        #expect(s.restaurarArea(casa.id))
+        #expect(s.areas.map(\.name) == ["Casa"])
+        #expect(s.projects.first { $0.id == p.id }?.areaID == casa.id)
+    }
+
+    /// Una tarea que vino de Recordatorios y vuelve de la papelera no se importa
+    /// otra vez: sería un duplicado de sí misma.
+    @Test func aRestoredCaptureIsNotImportedAgain() {
+        let s = Store(inMemory: true)
+        #expect(s.addCaptured([Captured(sourceID: "x", title: "Comprar pan", notes: "")]) == 1)
+        let a = s.items.first { $0.sourceID == "x" }!
+        s.delete(a)
+        #expect(s.restaurar(a.id))
+        #expect(s.addCaptured([Captured(sourceID: "x", title: "Comprar pan", notes: "")]) == 0)
+    }
+
+    /// Vaciar la papelera es lo único que borra de verdad, y por eso se pide a
+    /// mano: lo demás se va solo a los treinta días.
+    @Test func emptyingIsTheOnlyRealDeletion() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "a", in: .inbox)
+        s.delete(a)
+        s.vaciarPapelera()
+        #expect(s.borradas.isEmpty)
+        #expect(s.restaurar(a.id) == false)
+    }
+}
+
+/// `⌘Z`: devolver lo último borrado, sea lo que sea.
+@MainActor
+@Suite struct DeshacerTests {
+
+    @Test func withNothingDeletedThereIsNothingToUndo() {
+        #expect(Store(inMemory: true).deshacerUltimoBorrado() == nil)
+    }
+
+    @Test func itUndoesTheLastDeletionAndSaysWhat() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "Llamar a la gestoría", in: .inbox)
+        s.delete(a)
+        #expect(s.deshacerUltimoBorrado() == "Llamar a la gestoría")
+        #expect(s.items.contains { $0.id == a.id })
+        #expect(s.deshacerUltimoBorrado() == nil)
+    }
+
+    /// Lo último es lo último, aunque sea de otra clase: si acabas de cargarte un
+    /// proyecto, `⌘Z` tiene que devolver el proyecto y no la tarea de hace un
+    /// rato.
+    @Test func theLastOneWinsWhateverItIs() {
+        let s = Store(inMemory: true)
+        let tarea = s.addItem(title: "Pedir cajas", in: .inbox)
+        s.delete(tarea)
+        let proyecto = s.addProject(name: "Mudanza")
+        s.delete(proyecto)
+
+        #expect(s.deshacerUltimoBorrado() == "Mudanza")
+        #expect(s.projects.map(\.name) == ["Mudanza"])
+        #expect(s.deshacerUltimoBorrado() == "Pedir cajas")
+    }
+}
+
+/// Lo que dice cada fila de la papelera: cuánto le queda, no cuándo se borró.
+@Suite struct PlazoDeLaPapeleraTests {
+
+    private func hace(_ dias: Double) -> Date {
+        Date.now.addingTimeInterval(-dias * 86_400)
+    }
+
+    /// Recién borrado: el plazo entero. Y no «hace 0 segundos», que es lo que
+    /// salía antes y además se iba al futuro al redondear la fecha.
+    @Test func freshlyDeletedHasTheWholeWindow() {
+        #expect(Retention.leQuedan(desde: .now) == "quedan 30 días")
+    }
+
+    @Test func itCountsDown() {
+        #expect(Retention.leQuedan(desde: hace(10)) == "quedan 20 días")
+        #expect(Retention.leQuedan(desde: hace(29.5)) == "queda 1 día")
+    }
+
+    /// En el último día no se dice «quedan 0 días», que se lee como que ya no
+    /// está: se dice que hoy es el día.
+    @Test func theLastDaySaysSo() {
+        #expect(Retention.leQuedan(desde: hace(30)) == "se va hoy")
+        #expect(Retention.leQuedan(desde: hace(45)) == "se va hoy")
+    }
+}

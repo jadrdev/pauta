@@ -54,6 +54,16 @@ struct SidebarView: View {
                 }
             }
 
+            // Solo cuando hay algo dentro. Una papelera vacía permanente es un
+            // recordatorio diario de una cosa que no ha pasado; y cuando aparece,
+            // aparecer **es** el aviso de que algo se borró.
+            if store.papeleraLlena {
+                VStack(alignment: .leading, spacing: 1) {
+                    SidebarRow(perspective: .papelera, label: "Papelera")
+                }
+                .padding(.top, 26)
+            }
+
             Spacer(minLength: 20)
 
             botonNuevo("Nuevo proyecto") {

@@ -105,9 +105,14 @@ struct Entry {
         if CommandLine.arguments.contains("--light") { Launch.appearance = .aqua }
         if CommandLine.arguments.contains("--dark")  { Launch.appearance = .darkAqua }
         if let i = CommandLine.arguments.firstIndex(of: "--view"),
-           let n = CommandLine.arguments.dropFirst(i + 1).first.flatMap(Int.init),
-           (1...Perspective.allCases.count).contains(n) {
-            Launch.view = Perspective.allCases[n - 1]
+           let cual = CommandLine.arguments.dropFirst(i + 1).first {
+            if let n = Int(cual), (1...Perspective.allCases.count).contains(n) {
+                Launch.view = Perspective.allCases[n - 1]
+            } else if cual == "papelera" {
+                // Por nombre y no por número: la papelera no está en `allCases`
+                // —solo existe cuando tiene algo— así que no tiene sitio fijo.
+                Launch.view = .papelera
+            }
         }
         // Importación y siembra desde la línea de comandos: permiten probar la
         // integración con Recordatorios sin abrir la interfaz. El bucle de
@@ -551,6 +556,25 @@ struct PautaApp: App {
                 }
                 .keyboardShortcut("n", modifiers: [.command, .option])
             }
+            // Deshacer, que hasta ahora no existía: borrar era lo único sin
+            // vuelta atrás de toda la app. `⌘Z` devuelve lo último que se
+            // borró —tarea, proyecto o área— porque el error que se deshace es
+            // casi siempre el que acabas de cometer; para lo de ayer está la
+            // papelera, que guarda treinta días.
+            CommandGroup(replacing: .undoRedo) {
+                Button("Deshacer eliminar") {
+                    if store.deshacerUltimoBorrado() != nil, store.papeleraLlena == false,
+                       case .papelera = nav.perspective {
+                        // Si era lo último y estabas mirando la papelera, esa
+                        // lista deja de existir bajo tus pies.
+                        nav.perspective = .today
+                    }
+                }
+                .keyboardShortcut("z", modifiers: .command)
+                .disabled(!store.hayAlgoQueDeshacer)
+                Button("Papelera") { nav.go(to: .papelera) }
+                    .disabled(!store.papeleraLlena)
+            }
             // Sin esto, cerrar la ventana deja la app sin forma de volver salvo el
             // panel de la barra de menús: quien no lo conozca se queda fuera.
             CommandGroup(after: .windowList) {
@@ -620,7 +644,13 @@ struct RootView: View {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 190, ideal: 218, max: 300)
         } detail: {
-            ItemListView()
+            // La papelera no es una lista de tareas y no se dibuja como una:
+            // allí nada se tacha ni se edita, solo se devuelve.
+            if case .papelera = nav.perspective {
+                PapeleraView()
+            } else {
+                ItemListView()
+            }
         }
         .navigationSplitViewStyle(.balanced)
         // El tint colorea las etiquetas de los Menu sin borde, así que tiene que ser

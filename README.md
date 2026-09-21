@@ -685,6 +685,61 @@ atribuye la petición al proceso responsable, que es la consola.
 Escribir tareas de Pauta como recordatorios, en cambio, no está previsto: duplica
 y obliga a resolver conflictos en los dos lados.
 
+## La papelera
+
+**Borrar nunca borró.** Desde siempre pone una lápida y la carpeta la guarda
+treinta días; lo que faltaba no era guardar, era **una puerta**. Sin ella, borrar
+era la única acción sin vuelta atrás de toda la app — alcanzable en el teléfono
+con un deslizamiento, el mismo gesto con el que se archiva un correo, sobre una
+lista que también borra proyectos y áreas enteras. Y como la carpeta va por
+iCloud, un deslizamiento mal dado llegaba al Mac y al reloj antes de que
+levantaras el dedo.
+
+La papelera **solo aparece cuando tiene algo**. Una lista vacía permanente en la
+barra lateral es un recordatorio diario de una cosa que no ha pasado; y cuando
+aparece, aparecer *es* el aviso de que algo se borró.
+
+Ahí dentro nada se tacha ni se edita: una tarea borrada no es una tarea
+pendiente. Solo se devuelve. Y cada fila dice **cuánto le queda**, no cuándo se
+borró — lo que hace falta saber mirando la papelera es de cuánto tiempo
+dispones. Sale del mismo plazo que hace la limpieza, así que no puede decir una
+cosa y que pase otra.
+
+### `⌘Z`
+
+Deshacer devuelve **lo último que borraste**, sea tarea, proyecto o área: el
+error que se deshace es casi siempre el que acabas de cometer, y para ese caso
+abrir una lista y buscar la fila es más camino del que hace falta. Para lo de
+ayer está la papelera.
+
+El orden sale de una pila y no de la fecha de borrado. Las fechas se redondean
+al milisegundo, así que dos borrados seguidos empatan y el desempate lo decidiría
+el orden en que se miraran las listas; una pila sabe cuál fue el último porque
+estaba delante cuando pasó. No se guarda en disco: deshacer es de esta sesión y
+de este aparato, y lo que sobrevive es la papelera.
+
+### Recuperar un proyecto recupera sus tareas
+
+Borrar un proyecto no borra sus tareas: las suelta en la bandeja. Devolverlo
+tiene que devolvérselas, porque recuperar un proyecto vacío y volver a archivar
+quince tareas a mano no es recuperar nada — así que la lápida apunta cuáles
+soltó.
+
+Pero **solo lo que sigue suelto**. Si mientras tanto le diste otro sitio a una
+tarea, ese sitio gana: fue una decisión tuya y posterior, y deshacer un borrado
+no puede deshacer también lo que hiciste después. Lo mismo un escalón más arriba:
+un área recupera sus proyectos. Y la fila lo dice antes de que pulses —«vuelve
+con 2 tareas»—, que un proyecto vacío y uno con quince dentro se leen igual en
+una lista.
+
+Si la tarea que devuelves tenía un proyecto que ya no existe, vuelve a la
+bandeja: una tarea con un `projectID` que no está no sale en ninguna lista, y un
+«recuperado» que la deja invisible es peor que no recuperarla.
+
+**Vaciar la papelera es lo único que borra de verdad**, y por eso se pide a mano
+y con una confirmación que lo dice. Lo que no toques se va solo a los treinta
+días.
+
 ## Vaciar la bandeja
 
 La bandeja existe para poder **apuntar sin decidir**. El precio es decidir
@@ -1397,6 +1452,7 @@ Sources/Pauta/            la app de macOS
   Views/ItemListView.swift lista y cabecera
   Views/ItemRowView.swift fila, casilla y editor desplegado (Liquid Glass)
   Views/GrupoRow.swift    la cabecera de un proyecto en Hoy, con su filete
+  Views/PapeleraView.swift lo borrado, y el botón de devolverlo
   Views/MenuBarView.swift panel de la barra de menús y cuenta atrás
   Views/AcercaDe.swift    el panel «Acerca de» y los enlaces
   Views/Ayuda.swift       atajos y estado de los permisos
@@ -1410,6 +1466,7 @@ Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
   ListaView.swift         una lista, con su título y su vacío
   FilaView.swift          la fila y sus marcas
   GrupoFila.swift         la cabecera de un proyecto en Hoy, con su filete
+  PapeleraView.swift      lo borrado, y devolverlo deslizando
   Captura.swift           el botón flotante y el campo de apuntar
   Apuntar.swift           el atajo de Siri: apuntar sin abrir la app
   EventoRow.swift         un evento del calendario en la lista

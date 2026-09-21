@@ -121,6 +121,26 @@ Tampoco hay arrastre que arreglar: en el teléfono se ordena con gestos de
 deslizar, no arrastrando una fila sobre otra, así que el caso que hubo que
 corregir en el Mac —soltar dentro de un bloque— aquí no existe.
 
+## La papelera
+
+<div align="center">
+<img src="ios-papelera.png" width="300" alt="La papelera del teléfono: un proyecto que vuelve con 2 tareas y una tarea suelta, con lo que le queda a cada uno">
+</div>
+
+Está en *Más*, y **solo aparece cuando tiene algo**. Aquí hacía más falta que en
+el Mac: allí hay que abrir un menú para borrar, y en el teléfono basta
+**deslizar** —el mismo gesto con el que se archiva un correo— sobre listas que
+también borran proyectos y áreas enteras. Y como la carpeta va por iCloud, un
+deslizamiento mal dado llegaba al Mac y al reloj antes de que levantaras el dedo.
+
+Devolver también se desliza: aquí el deslizamiento es el que arregla, no el que
+rompe. Las reglas —qué vuelve con qué, qué pasa si su sitio ya no existe, los
+treinta días— están en el núcleo y las cuenta el [README](../README.md); esta
+pantalla solo las dibuja.
+
+Lo que **no** hay en el teléfono es `⌘Z`. Ahí deshacer es un atajo de teclado, y
+lo que hay es la lista.
+
 ## Lo que el teléfono todavía no puede
 
 - **Sincronizar.** En iOS la app va en sandbox y no puede entrar en la carpeta de

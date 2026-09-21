@@ -277,6 +277,7 @@ struct ItemListView: View {
         case .project: "Este proyecto no tiene tareas."
         case .area: "Los proyectos de esta área no tienen nada pendiente."
         case .tag: "Nada lleva esta etiqueta."
+        case .papelera: "La papelera está vacía."
         }
     }
 
