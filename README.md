@@ -279,6 +279,10 @@ tacha, el filete iría de «0 de 3» a «0 de 2» a «0 de 1» y no avanzaría n
 Terminado lo de hoy de ese proyecto, el bloque baja al final con el filete entero
 y el rótulo en «HECHO»: ahí ya no hay nada que hacer.
 
+Esto mismo está en el teléfono, y lo decide el mismo código: `Hoy.bloques` y
+`Pliegue` viven en el núcleo, así que las dos pantallas no pueden discrepar sobre
+qué se agrupa ni sobre cuánto queda. Lo cuenta [`docs/ios.md`](docs/ios.md).
+
 #### Arrastrar dentro y fuera
 
 Soltar una tarea **dentro de un bloque la mete en ese proyecto**. La fila sobre
@@ -1405,6 +1409,7 @@ Sources/PautaIOS/         la app de iOS: su propia interfaz, el mismo núcleo
   PautaIOSApp.swift       punto de entrada y las cuatro pestañas
   ListaView.swift         una lista, con su título y su vacío
   FilaView.swift          la fila y sus marcas
+  GrupoFila.swift         la cabecera de un proyecto en Hoy, con su filete
   Captura.swift           el botón flotante y el campo de apuntar
   Apuntar.swift           el atajo de Siri: apuntar sin abrir la app
   EventoRow.swift         un evento del calendario en la lista

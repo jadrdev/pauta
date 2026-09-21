@@ -92,6 +92,35 @@ Lo que sigue siendo, y hoy no sustituye nada, es **la captura por voz**: Pauta n
 tiene atajo propio de Siri, así que todo lo que le dictas —desde la muñeca, en el
 coche, con el teléfono bloqueado— entra por aquí o no entra.
 
+## Hoy se agrupa por proyecto
+
+<div align="center">
+<img src="ios-grupo.png" width="300" alt="Hoy en el teléfono, con tres tareas de Mudanza colgando del proyecto">
+</div>
+
+Lo mismo que en el Mac, y por las mismas razones — pero aquí pesa más: en una
+pantalla de teléfono un proyecto con diez tareas **es** la lista entera. Un toque
+en la cabecera y el bloque se pliega, dejando solo su línea; como el rótulo dice
+lo que queda y no lo que llevas hecho, cerrado sigue informando.
+
+**Quien decide es el núcleo.** `Hoy.bloques` y `Pliegue` viven en `PautaCore`, así
+que el Mac y el teléfono no pueden discrepar sobre qué se agrupa, dónde cae el
+bloque o cuánto queda. Es la misma regla que ya seguía el widget: dos listas que
+dicen ser lo mismo y no coinciden hacen que no te fíes de ninguna. Lo único
+propio del teléfono es el dibujo — la sangría de las filas que cuelgan y que el
+nombre del proyecto se encoja antes que la cuenta, que el nombre lo adivinas por
+el emoji y por lo que hay debajo, y lo que queda no.
+
+Sin ratón no hay rótulo emergente donde esconder nada, así que el galón va
+siempre visible. Lo que **no** está aquí es *ir al proyecto*: en el Mac vive en el
+menú secundario de la cabecera, y en el teléfono esa cabecera solo pliega. Las
+listas del teléfono se eligen desde *Más*, y meter una navegación lateral dentro
+de `Hoy` por un gesto que ya tiene su sitio no compensaba.
+
+Tampoco hay arrastre que arreglar: en el teléfono se ordena con gestos de
+deslizar, no arrastrando una fila sobre otra, así que el caso que hubo que
+corregir en el Mac —soltar dentro de un bloque— aquí no existe.
+
 ## Lo que el teléfono todavía no puede
 
 - **Sincronizar.** En iOS la app va en sandbox y no puede entrar en la carpeta de

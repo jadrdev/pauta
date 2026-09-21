@@ -10,6 +10,12 @@ import PautaCore
 /// fila. Todo junto en una línea sería una fila que no se puede leer de reojo.
 struct FilaView: View {
     let item: Item
+    /// Cuelga de la cabecera de su proyecto, en Hoy.
+    ///
+    /// Dentro del grupo la marca del proyecto sobra: lo dice el título que tiene
+    /// encima, y en un teléfono repetirlo en cada fila gasta la segunda línea de
+    /// la fila en algo que ya se sabe.
+    var enGrupo = false
     let alPulsar: () -> Void
     @Environment(Store.self) private var store
 
@@ -114,7 +120,7 @@ struct FilaView: View {
 
     /// Proyecto, etiquetas y pasos. Solo si hay algo que decir.
     @ViewBuilder private var contexto: some View {
-        let proyecto = item.projectID.flatMap(store.project)
+        let proyecto = enGrupo ? nil : item.projectID.flatMap(store.project)
         if proyecto != nil || !item.tags.isEmpty || !item.checklist.isEmpty
             || item.recurrence != nil {
             HStack(spacing: 8) {

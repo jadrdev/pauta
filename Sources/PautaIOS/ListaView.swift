@@ -21,6 +21,7 @@ struct ListaView: View {
     @State private var vaciando = false
 
     private var items: [Item] { store.items(for: perspectiva) }
+    private var pliegue: Pliegue { Pliegue.shared }
 
     /// Los eventos solo salen en Hoy: en las demás listas no hay día que llenar.
     private var eventos: [Evento] {
@@ -120,35 +121,48 @@ struct ListaView: View {
                 // Hoy es el día entero, no solo la lista de tareas: lo que hay
                 // que hacer y lo que ya está comprometido, en el orden en que va
                 // a ocurrir. La mezcla la hace el núcleo, igual que en el Mac.
-                ForEach(Agenda.filas(tareas: items, eventos: eventos)) { fila in
-                    switch fila {
-                    case .tarea(let item):
-                        FilaView(item: item) { abierta = item }
-                            .listRowBackground(Papel.bg)
-                            .listRowInsets(EdgeInsets(top: 9, leading: 16,
-                                                      bottom: 9, trailing: 16))
-                            .listRowSeparatorTint(Papel.hairline)
-                            .swipeActions(edge: .trailing) {
-                                // En verde —el tinte de la app se come el
-                                // papel destructivo— era idéntico al de
-                                // programar del otro lado.
-                                Button("Eliminar", role: .destructive) { store.delete(item) }
-                                    .tint(Papel.warning)
+                //
+                // Y en Hoy el tramo sin hora se agrupa por proyecto, también
+                // igual que en el Mac: quien decide es `Hoy.bloques`, así que
+                // las dos pantallas no pueden discrepar. Aquí pesa más, que en
+                // un teléfono un proyecto con diez tareas es la lista entera.
+                if case .today = perspectiva {
+                    let dia = Agenda.dia(tareas: items, eventos: eventos)
+                    ForEach(dia.conHora) { fila in
+                        switch fila {
+                        case .tarea(let item): filaDeTarea(item)
+                        case .evento(let evento): filaDeEvento(evento)
+                        }
+                    }
+                    ForEach(Hoy.bloques(sinHora: dia.sinHora,
+                                        hechasHoy: store.hechasHoy)) { bloque in
+                        switch bloque {
+                        case .suelta(let item):
+                            filaDeTarea(item)
+                        case .proyecto(let grupo):
+                            GrupoFila(grupo: grupo,
+                                      cerrado: pliegue.estaCerrado(grupo.proyecto)) {
+                                withAnimation(.easeOut(duration: 0.18)) {
+                                    pliegue.alternar(grupo.proyecto)
+                                }
                             }
-                            .swipeActions(edge: .leading) {
-                                // Aplazar a mano es lo que evita que una tarea
-                                // se quede mirándote todo el día sin poder
-                                // tocarla.
-                                Button("Hoy") { store.schedule(item, to: .now) }
-                                    .tint(Papel.accentInk)
-                            }
-                    case .evento(let evento):
-                        // Sin gestos: un evento no es tuyo, se lee y punto.
-                        EventoRow(evento: evento)
                             .listRowBackground(Papel.bg)
-                            .listRowInsets(EdgeInsets(top: 9, leading: 16,
-                                                      bottom: 9, trailing: 16))
-                            .listRowSeparatorTint(Papel.hairline)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 16, leading: 16,
+                                                      bottom: 4, trailing: 16))
+                            if !pliegue.estaCerrado(grupo.proyecto) {
+                                ForEach(grupo.tareas) { tarea in
+                                    filaDeTarea(tarea, enGrupo: true)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    ForEach(Agenda.filas(tareas: items, eventos: eventos)) { fila in
+                        switch fila {
+                        case .tarea(let item): filaDeTarea(item)
+                        case .evento(let evento): filaDeEvento(evento)
+                        }
                     }
                 }
                 // Aire al final: sin esto, el botón de apuntar tapa la última
@@ -161,6 +175,39 @@ struct ListaView: View {
             .scrollContentBackground(.hidden)
             .scrollDismissesKeyboard(.interactively)
         }
+    }
+
+    /// Una fila de tarea con sus gestos. En una función y no repetida tres
+    /// veces: las listas de siempre, el tramo con hora y lo que cuelga de un
+    /// bloque son la misma fila, y tres copias acaban discrepando.
+    @ViewBuilder
+    private func filaDeTarea(_ item: Item, enGrupo: Bool = false) -> some View {
+        FilaView(item: item, enGrupo: enGrupo) { abierta = item }
+            .listRowBackground(Papel.bg)
+            // Sangrada cuando cuelga de un proyecto: es lo que dice que cuelga.
+            .listRowInsets(EdgeInsets(top: 9, leading: enGrupo ? 34 : 16,
+                                      bottom: 9, trailing: 16))
+            .listRowSeparatorTint(Papel.hairline)
+            .swipeActions(edge: .trailing) {
+                // En verde —el tinte de la app se come el papel destructivo—
+                // era idéntico al de programar del otro lado.
+                Button("Eliminar", role: .destructive) { store.delete(item) }
+                    .tint(Papel.warning)
+            }
+            .swipeActions(edge: .leading) {
+                // Aplazar a mano es lo que evita que una tarea se quede
+                // mirándote todo el día sin poder tocarla.
+                Button("Hoy") { store.schedule(item, to: .now) }
+                    .tint(Papel.accentInk)
+            }
+    }
+
+    /// Sin gestos: un evento no es tuyo, se lee y punto.
+    private func filaDeEvento(_ evento: Evento) -> some View {
+        EventoRow(evento: evento)
+            .listRowBackground(Papel.bg)
+            .listRowInsets(EdgeInsets(top: 9, leading: 16, bottom: 9, trailing: 16))
+            .listRowSeparatorTint(Papel.hairline)
     }
 
     private var cuenta: String {
