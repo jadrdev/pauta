@@ -20,7 +20,7 @@ name: Pauta
 settings:
   base:
     MARKETING_VERSION: "0.3.4"
-    CURRENT_PROJECT_VERSION: "8"
+    CURRENT_PROJECT_VERSION: "9"
 
 options:
   bundleIdPrefix: dev.jadrdev
