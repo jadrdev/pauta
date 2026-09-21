@@ -30,10 +30,17 @@ struct MomentoMac: TimelineEntry {
 }
 
 struct ProveedorMac: TimelineProvider {
+    /// El mediano llevaba **cuatro y no caben**. El modo en que fallaba lo
+    /// escondía: el contenido pasaba de alto, SwiftUI se comía los márgenes que
+    /// pone WidgetKit y quedaba todo pegado a los bordes con el pie cortado. No
+    /// parecía un desbordamiento, parecía un widget mal hecho.
+    ///
+    /// Aquí aprieta más que en el teléfono: el mediano del escritorio mide 155
+    /// de alto y no 169, o sea catorce puntos menos para lo mismo.
     static func caben(_ familia: WidgetFamily) -> Int {
         switch familia {
         case .systemSmall: 3
-        case .systemMedium: 4
+        case .systemMedium: 3
         case .systemLarge: 9
         default: 1
         }

@@ -27,10 +27,30 @@ struct Proveedor: TimelineProvider {
     /// Cuántas tareas caben, por tamaño. Se recorta a lo que **cabe** y no a lo
     /// que hay: una fila cortada por la mitad no se lee, y el resto se dice con
     /// un «+3 más».
+    ///
+    /// El mediano llevaba **cuatro y no caben**, y el modo en que fallaba lo
+    /// escondía: el contenido pasaba de alto, SwiftUI se comía los márgenes que
+    /// pone WidgetKit y todo quedaba pegado a los bordes con el pie cortado por
+    /// la mitad. No parecía un desbordamiento, parecía un widget mal diseñado.
+    ///
+    /// Las cuentas, para que se puedan rehacer. En un mediano de 169 puntos de
+    /// alto, con los 16 de margen por arriba y por abajo quedan **137**:
+    ///
+    ///     titular             19
+    ///     + separación         8
+    ///     + n × fila (22)  +  (n−1) × 6
+    ///     + separación         8
+    ///     + pie               14
+    ///
+    /// Con cuatro filas salen 155, dieciocho de más. Con tres, 127, y sobran
+    /// diez. La fila no se puede encoger: sus 20 puntos de alto son el área de
+    /// toque del círculo, y estrecharla es el error que ya se cometió una vez
+    /// —un botón de dos milímetros que con un dedo no acertaba nunca—. Así que
+    /// lo que baja es el número de filas.
     static func caben(_ familia: WidgetFamily) -> Int {
         switch familia {
         case .systemSmall: 3
-        case .systemMedium: 4
+        case .systemMedium: 3
         case .systemLarge: 9
         default: 1
         }
