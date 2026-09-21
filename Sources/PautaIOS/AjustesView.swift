@@ -30,7 +30,6 @@ struct AjustesView: View {
     @State private var cruzando = false
     @State private var avisos: UNAuthorizationStatus = .notDetermined
     @State private var calendario = Agenda.authorization
-    @State private var recordatorios = RemindersInbox.authorization
 
     private static let horasDeRepaso = [7 * 60, 7 * 60 + 30, 8 * 60, 8 * 60 + 30,
                                         9 * 60, 9 * 60 + 30, 10 * 60]
@@ -112,20 +111,13 @@ struct AjustesView: View {
                     _ = await Agenda().requestAccess()
                     calendario = Agenda.authorization
                 }
-                FilaDePermiso(nombre: "Recordatorios",
-                              concedido: recordatorios == .fullAccess,
-                              decidido: recordatorios != .notDetermined) {
-                    _ = try? await RemindersInbox().requestAccess()
-                    recordatorios = RemindersInbox.authorization
-                }
             } header: {
                 Text("PERMISOS")
             } footer: {
                 Text("Los avisos hacen falta para las horas y el repaso; el "
-                     + "calendario, para ver los eventos en Hoy; Recordatorios, "
-                     + "para traer lo que dictas a Siri. Si están denegados, se "
-                     + "cambian en los ajustes del sistema: el diálogo no vuelve "
-                     + "a salir.")
+                     + "calendario, para ver los eventos en Hoy. Si están "
+                     + "denegados, se cambian en los ajustes del sistema: el "
+                     + "diálogo no vuelve a salir.")
             }
 
             Section {
@@ -199,8 +191,7 @@ struct AjustesView: View {
                 Text("TUS DATOS")
             } footer: {
                 Text("En este teléfono, en la carpeta que comparte con el widget. "
-                     + "Con el Mac se cruzan arriba, y lo que dictes a Siri en "
-                     + "Recordatorios llega igual por su cuenta.")
+                     + "Con el Mac se cruzan arriba.")
             }
 
             Section {
@@ -231,7 +222,6 @@ struct AjustesView: View {
         .task {
             avisos = await Avisos.authorization()
             calendario = Agenda.authorization
-            recordatorios = RemindersInbox.authorization
         }
         // La hora del repaso cambia lo que hay programado: esperar al siguiente
         // cambio en las tareas dejaría la hora nueva sin efecto hasta mañana.

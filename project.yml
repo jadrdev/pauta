@@ -75,10 +75,6 @@ targets:
         CFBundleDevelopmentRegion: es
         CFBundleLocalizations: [es]
         UILaunchScreen: {}
-        NSRemindersFullAccessUsageDescription: >-
-          Pauta lee su propia lista de Recordatorios para traer a la bandeja lo que apuntes con Siri o desde otro dispositivo.
-        NSRemindersUsageDescription: >-
-          Pauta lee su propia lista de Recordatorios para traer a la bandeja lo que apuntes con Siri o desde otro dispositivo.
         # Sin estas cadenas, pedir acceso al calendario aborta el proceso.
         NSCalendarsFullAccessUsageDescription: >-
           Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.
@@ -202,11 +198,7 @@ targets:
             CFBundleTypeRole: Editor
             CFBundleURLSchemes: [pauta]
         NSHumanReadableCopyright: © 2026 Joshua A. Díaz Robayna · Todos los derechos reservados
-        # Sin estas cadenas, pedir acceso aborta el proceso.
-        NSRemindersFullAccessUsageDescription: >-
-          Pauta lee su propia lista de Recordatorios para traer a la bandeja lo que apuntes desde el iPhone o con Siri.
-        NSRemindersUsageDescription: >-
-          Pauta lee su propia lista de Recordatorios para traer a la bandeja lo que apuntes desde el iPhone o con Siri.
+        # Sin estas cadenas, pedir acceso al calendario aborta el proceso.
         NSCalendarsFullAccessUsageDescription: >-
           Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.
         NSCalendarsUsageDescription: >-
@@ -295,7 +287,6 @@ targets:
         # el compilador dirá que no está. Eso es lo que se quiere — un error, no
         # una divergencia silenciosa.
         excludes:
-          - RemindersInbox.swift
           - PuestaAPunto.swift
           - Agenda.swift
     settings:

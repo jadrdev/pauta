@@ -4,10 +4,10 @@ import PautaCore
 /// La tarjeta de bienvenida, debajo de la lista vacía.
 ///
 /// Misma idea que en el Mac y por la misma razón: no hay asistente de páginas.
-/// Pedir tres permisos antes de que se haya visto una sola tarea es pedirlos
+/// Pedir los permisos antes de que se haya visto una sola tarea es pedirlos
 /// antes de que exista el motivo, y aquí un «no» es **para siempre** porque iOS
 /// no vuelve a preguntar. Va donde ya hay hueco, se puede ignorar, y se va
-/// cuando los tres están contestados.
+/// cuando están todos contestados.
 struct PuestaAPuntoView: View {
     let alConceder: (Permiso) -> Void
     /// Qué hacer cuando se elige la carpeta del Mac. Lo pone quien tenga el
@@ -174,7 +174,7 @@ struct PuestaAPuntoView: View {
                     .contentShape(Capsule())
             }
             .buttonStyle(.plain)
-            // Solo se apaga el que está preguntando. Apagarlos los tres mientras
+            // Solo se apaga el que está preguntando. Apagarlos todos mientras
             // uno espera convierte un permiso atascado en una tarjeta muerta: no
             // podías ni intentar los otros dos.
             .disabled(pidiendo == permiso)

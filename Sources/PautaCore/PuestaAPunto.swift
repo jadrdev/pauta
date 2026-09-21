@@ -4,13 +4,12 @@ import UserNotifications
 
 /// Los permisos que Pauta necesita del sistema.
 public enum Permiso: String, CaseIterable, Sendable {
-    case avisos, calendario, recordatorios
+    case avisos, calendario
 
     public var titulo: String {
         switch self {
         case .avisos: "Avisos"
         case .calendario: "Calendario"
-        case .recordatorios: "Recordatorios"
         }
     }
 
@@ -22,7 +21,6 @@ public enum Permiso: String, CaseIterable, Sendable {
         switch self {
         case .avisos: "Sin ellos, una hora es solo una etiqueta."
         case .calendario: "Para que Hoy sea el día entero y no solo tus tareas."
-        case .recordatorios: "Lo que le dictas a Siri entra en la bandeja."
         }
     }
 
@@ -30,7 +28,6 @@ public enum Permiso: String, CaseIterable, Sendable {
         switch self {
         case .avisos: "bell.badge"
         case .calendario: "calendar"
-        case .recordatorios: "checklist"
         }
     }
 }
@@ -42,7 +39,7 @@ public enum EstadoDePermiso: Sendable, Equatable {
 /// Qué hay que ofrecer al usuario nuevo, y qué no.
 ///
 /// La bienvenida de Pauta es la lista vacía: no hay asistente de páginas. Pedir
-/// tres permisos antes de que se haya visto una sola tarea es pedir permiso
+/// los permisos antes de que se haya visto una sola tarea es pedir permiso
 /// antes de que exista el motivo —y aquí un «no» es **para siempre**, porque ni
 /// macOS ni iOS vuelven a preguntar—. Así que la tarjeta va debajo del vacío,
 /// se puede ignorar, y no bloquea nada.
@@ -61,8 +58,7 @@ public enum PuestaAPunto {
     @MainActor
     public static func estados() async -> [Permiso: EstadoDePermiso] {
         [.avisos: deAvisos(await Avisos.authorization()),
-         .calendario: deEventKit(EKEventStore.authorizationStatus(for: .event)),
-         .recordatorios: deEventKit(EKEventStore.authorizationStatus(for: .reminder))]
+         .calendario: deEventKit(EKEventStore.authorizationStatus(for: .event))]
     }
 
     @MainActor
@@ -73,7 +69,7 @@ public enum PuestaAPunto {
     /// Pide uno. Devuelve si quedó concedido.
     ///
     /// Por el mismo camino que la pantalla de ajustes, y no por uno propio:
-    /// `Agenda` y `RemindersInbox` **guardan su `EKEventStore`**, y eso no es
+    /// `Agenda` **guarda su `EKEventStore`**, y eso no es
     /// decoración. Un `EKEventStore()` creado al vuelo se suelta al terminar la
     /// expresión, mientras el diálogo del sistema sigue abierto esperando tu
     /// respuesta; cuando contestas ya no hay a quién avisar y la espera no vuelve
@@ -94,11 +90,6 @@ public enum PuestaAPunto {
             let concedido = await agenda.requestAccess()
             withExtendedLifetime(agenda) {}
             return concedido
-        case .recordatorios:
-            let bandeja = RemindersInbox()
-            let concedido = (try? await bandeja.requestAccess()) ?? false
-            withExtendedLifetime(bandeja) {}
-            return concedido
         }
     }
 
@@ -111,7 +102,7 @@ public enum PuestaAPunto {
     }
 
     /// «Solo añadir» cuenta como denegado: con eso Pauta no puede **leer** ni un
-    /// evento ni un recordatorio, que es lo único que hace con ellos.
+    /// evento del calendario, que es lo único que hace con ellos.
     private static func deEventKit(_ estado: EKAuthorizationStatus) -> EstadoDePermiso {
         switch estado {
         case .notDetermined: .sinPreguntar

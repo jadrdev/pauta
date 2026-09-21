@@ -93,7 +93,6 @@ sería contradictorio.
 | `⌘⌥N` | Nueva área |
 | `↩` | Guardar y seguir escribiendo otra tarea |
 | `esc` | Cancelar la tarea nueva |
-| `⌘⇧R` | Importar de Recordatorios |
 | `⌘1` … `⌘6` | Bandeja / Hoy / Próximamente / Cualquier momento / Algún día / Completadas |
 | `⌘0` | Volver a la ventana principal si se cerró |
 | `⌘?` | Ayuda: los atajos y el estado de los permisos |
@@ -631,60 +630,6 @@ marca se convierta en parte del paisaje.
 No se reordena la lista por esto. La prioridad manual es la que pusiste tú; una
 marca informa, y reordenar sería decidir por ti.
 
-## Captura desde Recordatorios
-
-Recordatorios de Apple sincroniza por iCloud y funciona con Siri, así que hace
-de bandeja de entrada remota: lo que apuntes en el iPhone aparece en Pauta sin
-necesidad de una app de iOS.
-
-> Ya no es la puerta de la voz. El teléfono tiene su atajo —*«Oye Siri, apuntar
-> en Pauta»*, en [Apuntar con la voz](docs/ios.md#apuntar-con-la-voz)— y el reloj
-> [el suyo](docs/ios.md#apuntar-desde-la-muñeca), y los dos entran derechos sin
-> lista intermedia. Esto sigue por dos cosas: porque hay quien ya tiene el hábito
-> de dictarle a Recordatorios, y porque entra desde aparatos que no tienen Pauta
-> instalada — un HomePod, el coche, un iPad.
-
-La app usa **una lista propia llamada «Pauta»**, que crea al arrancar si no
-existe, y nunca toca tus otras listas. Al importar, cada recordatorio entra en la
-bandeja y **se marca completado en Recordatorios**, para que fluya en vez de
-acumularse. Cada tarea guarda el identificador de origen, así que si el marcado
-fallara no se duplicaría en la siguiente importación.
-
-Se importa **en cuanto cambia algo en Recordatorios**, al arrancar la app, y a
-mano con `⌘⇧R`. Lo del cambio hizo falta arreglarlo: al principio solo se
-importaba al arrancar, así que dictabas algo a Siri, no aparecía, y no había
-manera de saber que la app tenía que reiniciarse. Un puente que solo cruza una
-vez al día no es un puente.
-
-El vigilante se monta con `.EKEventStoreChanged` sobre el propio almacén, y vive
-en la app y no en la ventana: lo que dictes tiene que llegar también con Pauta
-viviendo en la barra de menús y nada abierto. El aviso llega también cuando la
-importación marca el recordatorio como completado, así que hay una segunda pasada
-que no encuentra nada y para — más barata que razonar sobre quién tocó qué.
-
-**También funciona en el [teléfono](docs/ios.md)**, que es donde de verdad se le
-dicta a Siri: importa al abrir, al volver del fondo y al cambiar la lista. Ahí no
-cambia de pestaña cuando entra algo —mover la pantalla debajo del dedo es peor
-que no avisar—; la cuenta de la bandeja ya lo dice.
-
-El permiso se pide la primera vez; si lo deniegas, la app funciona igual sin la
-captura remota. Ojo: **una vez denegado, macOS no vuelve a preguntar** y hay que
-activarlo a mano en Ajustes → Privacidad y seguridad → Recordatorios.
-
-```bash
-./build/Pauta.app/Contents/MacOS/Pauta --reminders-status
-./build/Pauta.app/Contents/MacOS/Pauta --import-reminders
-./build/Pauta.app/Contents/MacOS/Pauta --seed-reminder "Título"
-```
-
-Diagnóstico, importación manual y siembra de un recordatorio para probar la
-integración sin tocar el iPhone. Requieren que el permiso ya esté concedido: TCC
-no puede presentar su diálogo en un proceso lanzado desde el terminal, porque
-atribuye la petición al proceso responsable, que es la consola.
-
-Escribir tareas de Pauta como recordatorios, en cambio, no está previsto: duplica
-y obliga a resolver conflictos en los dos lados.
-
 ## La papelera
 
 **Borrar nunca borró.** Desde siempre pone una lápida y la carpeta la guarda
@@ -1028,10 +973,9 @@ PARA QUE SIRVA DE ALGO
 🔔 Avisos          Sin ellos, una hora es solo una etiqueta.        [Activar]
 📅 Calendario      Para que Hoy sea el día entero y no solo tus     [Activar]
                    tareas.
-✓  Recordatorios   Lo que le dictas a Siri entra en la bandeja.     [Activar]
 ```
 
-**No hay asistente de páginas**, y no por pereza: pedir tres permisos antes de
+**No hay asistente de páginas**, y no por pereza: pedir los permisos antes de
 que se haya visto una sola tarea es pedirlos antes de que exista el motivo, y
 aquí un «no» es **para siempre** porque ni macOS ni iOS vuelven a preguntar. La
 tarjeta va donde ya hay hueco, se puede ignorar, y la app es usable desde el
@@ -1043,13 +987,12 @@ El motivo de cada permiso dice **qué se pierde sin él**, no qué se concede.
 Solo lista lo que está **sin contestar**. Un permiso denegado no vuelve aquí a
 insistir: eso ya lo dicen la franja de su sitio y la pantalla de permisos. Una
 tarjeta que no se va nunca deja de ser una bienvenida y pasa a ser una regañina.
-Cuando los tres están decididos, desaparece.
+Cuando están todos decididos, desaparece.
 
-Y nada pide permiso por su cuenta al arrancar. Eso hubo que arreglarlo dos veces:
-la importación de Recordatorios lo pedía al abrir la app, y **registrarse a los
-cambios de un `EKEventStore` también lo pide** —conectar con el demonio de
-Recordatorios dispara el diálogo—, así que el vigilante no se monta hasta que hay
-permiso. Sin eso, la tarjeta llegaba tarde a su propia fiesta.
+Y nada pide permiso por su cuenta al arrancar. **Registrarse a los cambios de un
+`EKEventStore` también lo pide** —conectar con el demonio dispara el diálogo—,
+así que el vigilante no se monta hasta que hay permiso. Sin eso, la tarjeta
+llegaba tarde a su propia fiesta.
 
 ## Versiones nuevas
 
@@ -1111,11 +1054,11 @@ ningún otro sitio:
 - **Los atajos**, empezando por el global — que si no se conoce, no existe. Y se
   enseña el que quedó **registrado**, no el que se pidió: si ⌃Espacio estaba
   cogido, la app cayó a otro, y decir el primero sería mentir.
-- **Los permisos** —avisos, calendario, recordatorios— con su estado leído en
-  vivo. Sin preguntar, se piden desde ahí; denegados, se enlaza a los ajustes del
-  sistema, que es el único sitio donde esa decisión se cambia: el diálogo no
-  vuelve a salir. Tres funciones de la app las da el sistema, y cuando dice no,
-  esa parte se queda muda; una app que no lo explica parece rota.
+- **Los permisos** —avisos y calendario— con su estado leído en vivo. Sin
+  preguntar, se piden desde ahí; denegados, se enlaza a los ajustes del sistema,
+  que es el único sitio donde esa decisión se cambia: el diálogo no vuelve a
+  salir. Dos funciones de la app las da el sistema, y cuando dice no, esa parte
+  se queda muda; una app que no lo explica parece rota.
 
 No es un **libro de ayuda de Apple**. Un help book exige empaquetar un bundle de
 HTML con su índice hecho con `hiutil` y confiar en el visor del sistema, para un

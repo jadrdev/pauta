@@ -13,12 +13,6 @@ import PautaCore
 struct PautaIOSApp: App {
     @State private var store = Store()
     @State private var agenda = Agenda()
-    /// La bandeja de Recordatorios: **captura por voz**, que es la única forma
-    /// que hay de apuntar algo sin tener la app delante. Fue además el primer
-    /// puente con el Mac, y eso ya no lo es — lo hace la carpeta compartida, que
-    /// cruza fechas, proyectos y borrados en los dos sentidos, mientras que esto
-    /// solo trae títulos y solo hacia dentro.
-    @State private var recordatorios = RemindersInbox()
 
     init() {
         // Antes de la interfaz: un aviso pulsado con la app cerrada se entrega
@@ -31,7 +25,7 @@ struct PautaIOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RaizView(recordatorios: recordatorios)
+            RaizView()
                 .environment(store)
                 .environment(agenda)
                 .tint(Papel.accentInk)
@@ -50,8 +44,6 @@ struct PautaIOSApp: App {
 /// resto —las listas de fondo, los proyectos, las áreas, las etiquetas— vive en
 /// «Más», porque una barra de siete iconos no se lee: se adivina.
 struct RaizView: View {
-    let recordatorios: RemindersInbox
-
     @Environment(Store.self) private var store
     @Environment(Agenda.self) private var agenda
     @Environment(\.scenePhase) private var fase
@@ -123,9 +115,6 @@ struct RaizView: View {
             Task {
                 await Avisos.reschedule(store.items)
                 await agenda.load(force: true)
-                // Al volver del fondo, porque en un teléfono es lo que pasa
-                // entre dictarle algo a Siri y abrir la app.
-                await importar()
             }
         }
         .task(id: store.items) {
@@ -142,14 +131,12 @@ struct RaizView: View {
             // «inactiva» antes de «activa». Cruzar dos veces no hace nada, así
             // que sobra pedirlo dos veces y falta no pedirlo ninguna.
             await Sincronizar.conElMac(store)
-            await importar()
-            // Y se avisa a fuera **aquí también**, no solo en el bloque de
+            // Se avisa a fuera **aquí también**, no solo en el bloque de
             // arriba.
             //
             // Ese bloque espera un segundo y se reinicia con cada cambio del
-            // almacén; al arrancar hay una ráfaga —recargar, cruzar con el Mac,
-            // importar de Recordatorios— y entre cancelación y cancelación no
-            // llegaba a ejecutarse nunca. Comprobado en el registro del
+            // almacén; al arrancar hay una ráfaga —recargar, cruzar con el Mac—
+            // y entre cancelación y cancelación no Comprobado en el registro del
             // simulador: cero recargas del widget en un arranque entero, y el
             // reloj esperando un vistazo que no salía.
             avisarAFuera()
@@ -185,10 +172,7 @@ struct RaizView: View {
                                    limite: Vistazo.limitePublicado))
                 }
             }
-            // Y a partir de aquí, cada vez que cambie algo en Recordatorios:
-            // con la app abierta, lo dictado aparece sin tocar nada.
-            recordatorios.observar { Task { await importar() } }
-            // Lo mismo para el atajo de Siri, que escribe en la carpeta por su
+            // El atajo de Siri, que escribe en la carpeta por su
             // cuenta: sin esto, apuntar con la app delante no cambiaría nada en
             // pantalla hasta salir y volver, que es justo cuando parece que se
             // perdió. Este bucle no termina, y va el último a propósito.
@@ -220,13 +204,4 @@ struct RaizView: View {
                        limite: Vistazo.limitePublicado))
     }
 
-    /// Trae lo pendiente de la lista de Recordatorios a la bandeja.
-    ///
-    /// Silencioso: si no hay permiso todavía, o la lista está vacía, no
-    /// interrumpe. Y **no cambia de pestaña** aunque entre algo: mover la
-    /// pantalla debajo del dedo es peor que no avisar; la cuenta de la bandeja
-    /// ya lo dice.
-    private func importar() async {
-        await recordatorios.importar(en: store)
-    }
 }

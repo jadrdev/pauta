@@ -55,12 +55,12 @@ com.apple.security.application-groups = [ 26W4G92PSS.dev.jadrdev.pauta ]
 
 El cambio de equipo se paga una vez: el requisito designado fija el certificado
 por su nombre, así que para el sistema la app pasó a ser otra y volvió a pedir
-los permisos —calendario, recordatorios, avisos y el arranque al iniciar sesión—.
+los permisos —calendario, avisos y el arranque al iniciar sesión—.
 
 No es un detalle cosmético. Con firma ad-hoc el hash del binario cambia con cada
 cambio de código, y TCC —el sistema de permisos— identifica las apps por su
 firma: cada build sería una app nueva para el sistema, así que los permisos de
-calendario, recordatorios o accesibilidad se pedirían otra vez en cada
+calendario o accesibilidad se pedirían otra vez en cada
 compilación, dejando entradas basura en Ajustes de Privacidad.
 
 Con una identidad de desarrollador el requisito designado pasa a basarse en el
@@ -73,7 +73,7 @@ designated => identifier "dev.jadrdev.pauta" and anchor apple generic
 
 Comprobado: tras un cambio real de código el `cdhash` cambia y ese requisito no,
 así que los permisos concedidos sobreviven a las recompilaciones. Esto es lo que
-desbloquea las integraciones con Calendario y Recordatorios.
+desbloquea la integración con Calendario.
 
 La letra pequeña: los certificados «Apple Development» caducan. Cuando caduque
 habrá que renovarlo y volver a conceder permisos.

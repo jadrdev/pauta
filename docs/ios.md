@@ -75,22 +75,21 @@ rompería `swift build` en el Mac. Quien las compila es el proyecto.
 
 ## Lo que dicta Siri llega aquí
 
-La [captura desde Recordatorios](../README.md#captura-desde-recordatorios)
-funciona igual que en el Mac, y en un teléfono es donde tiene sentido de verdad:
-importa al abrir la app, al volver del fondo y **en cuanto cambia la lista**, así
-que lo que le dictes a Siri aparece en la bandeja sin tocar nada.
+Pauta tiene **su propio atajo de Siri**: «Oye Siri, apuntar en Pauta». Entra
+derecho en la bandeja, sin pasar por ninguna otra app y sin pedir más permisos.
+
+Durante un tiempo esto entraba por la lista de Recordatorios, que hacía de
+bandeja remota. Ya no: el teléfono tiene su atajo y
+[el reloj el suyo](#apuntar-desde-la-muñeca), así que aquella pasarela dejó de
+tener razón de ser y **se quitó en la 0.3.6** — con su permiso, su importación y
+su fila en la tarjeta de bienvenida. La app pide un permiso menos al estrenarla.
 
 No cambia de pestaña cuando entra algo. Mover la pantalla debajo del dedo es peor
 que no avisar; la cuenta de la bandeja ya lo dice.
 
-Esto **no es el puente con el Mac**, aunque naciera para serlo. De eso se encarga
-ahora [la carpeta compartida](#el-puente-con-el-mac), que cruza fechas,
-proyectos y borrados en los dos sentidos; Recordatorios solo trae títulos y solo
-hacia dentro.
-
-Lo que sigue siendo, y hoy no sustituye nada, es **la captura por voz**: Pauta no
-tiene atajo propio de Siri, así que todo lo que le dictas —desde la muñeca, en el
-coche, con el teléfono bloqueado— entra por aquí o no entra.
+El puente con el Mac no era esto y sigue sin serlo: de eso se encarga
+[la carpeta compartida](#el-puente-con-el-mac), que cruza fechas, proyectos y
+borrados en los dos sentidos.
 
 ## Hoy se agrupa por proyecto
 
@@ -158,9 +157,7 @@ lo que hay es la lista.
   Era una deducción, y era falsa: los grupos sí, iCloud no.
 
   Así que `Store.iCloudRoot` sigue siendo `nil` en iOS y el teléfono guarda en la
-  carpeta del grupo: funciona, pero solo. El puente real entre los dos sigue
-  siendo [Recordatorios](../README.md#captura-desde-recordatorios), que sincroniza
-  gratis.
+  carpeta del grupo: funciona, pero solo.
 
   Lo que sí hay, sin pagar nada, es **el puente**: elegir la carpeta del Mac una
   vez en el selector del sistema. Está contado abajo.
@@ -465,22 +462,23 @@ carpeta por su cuenta, así que avisa, y la app recarga. Sin eso, dictar con Pau
 abierta no cambiaría nada en pantalla hasta salir y volver — justo cuando parece
 que se perdió.
 
-### Qué queda de Recordatorios
+### Lo que se llevó por delante
 
-La captura por [Recordatorios](../README.md#captura-desde-recordatorios) sigue,
-y ya no es puerta de nadie: el teléfono tiene su atajo y
-[el reloj el suyo](#apuntar-desde-la-muñeca). Se queda porque hay quien ya tiene
-el hábito de dictarle a Recordatorios, y porque entra desde cualquier aparato que
-no tenga Pauta instalada — un HomePod, el coche, un iPad. Eso es lo que aporta
-hoy, y no es lo que la trajo aquí.
+Con el atajo propio en el teléfono y [en el reloj](#apuntar-desde-la-muñeca),
+Recordatorios se quedó sin la única razón que le quedaba para estar aquí, y se
+quitó entero: el permiso, la importación, la deduplicación por identidad de
+origen, el vigilante de la lista y una fila de la tarjeta de bienvenida.
+
+El precio, dicho: ya **no entra nada desde un aparato sin Pauta instalada** —un
+HomePod, el coche, un iPad sin la app—. A cambio, la app pide un permiso menos al
+estrenarla y hay una pasarela menos que pueda fallar en silencio.
 
 ## El reloj
 
 De **solo lectura**, y a propósito. Las dos cosas que una muñeca hace mejor que
 un teléfono ya funcionaban sin app: los avisos que programa Pauta en el iPhone
 los reenvía el sistema al reloj —con su botón de completar y su aplazar—, y a
-Siri se le puede dictar una tarea desde ahí, que entra por
-[Recordatorios](../README.md#captura-desde-recordatorios). Lo que faltaba era el
+Siri se le podía dictar una tarea desde ahí. Lo que faltaba era el
 vistazo: levantar la muñeca y saber cuántas quedan.
 
 Así que el reloj **no tiene datos**. Recibe del teléfono el mismo
@@ -641,15 +639,15 @@ esfera.
 
 ### Del núcleo, lo que en un reloj puede existir
 
-`PautaCoreWatch` compila las mismas fuentes menos tres:
-[`RemindersInbox`](../Sources/PautaCore/RemindersInbox.swift),
-`PuestaAPunto` y `Agenda`. watchOS **prohíbe** escribir recordatorios —el
-compilador lo dice con `__WATCHOS_PROHIBITED`— y allí no hay pantalla de permisos
-ni eventos de calendario que enseñar. Se excluyen los archivos en vez de repartir
-`#if` por el núcleo: si algún día el reloj necesita una de esas piezas, el
-compilador dirá que no está, que es lo que se quiere — un error, no una
-divergencia silenciosa. `Captured` se mudó a `Models` justo por esto: es un
-modelo del almacén, no parte de Recordatorios.
+`PautaCoreWatch` compila las mismas fuentes menos dos: `PuestaAPunto` y
+`Agenda`. Allí no hay pantalla de permisos ni eventos de calendario que enseñar.
+Se excluyen los archivos en vez de repartir `#if` por el núcleo: si algún día el
+reloj necesita una de esas piezas, el compilador dirá que no está, que es lo que
+se quiere — un error, no una divergencia silenciosa.
+
+Eran tres hasta la 0.3.6: `RemindersInbox` se excluía porque watchOS **prohíbe**
+escribir recordatorios, con `__WATCHOS_PROHIBITED` y todo. Ese archivo ya no
+existe.
 
 ### Lo que costó, para que no se repita
 

@@ -5,7 +5,7 @@ import PautaCore
 /// Apuntar algo en la bandeja sin abrir la app.
 ///
 /// Es lo que faltaba para que Pauta se pueda usar con la voz por su cuenta.
-/// Hasta ahora lo que le dictabas a Siri entraba por la lista de Recordatorios:
+/// Antes lo que le dictabas a Siri entraba por la lista de Recordatorios:
 /// funcionaba, pero obligaba a un permiso, a una lista intermedia y a marcar
 /// como completado un recordatorio que nunca fue tuyo. Esto entra derecho.
 ///

@@ -98,8 +98,6 @@ struct ListaView: View {
                             switch permiso {
                             case .avisos: await Avisos.reschedule(store.items)
                             case .calendario: await agenda.load(force: true)
-                            case .recordatorios:
-                                await RemindersInbox().importar(en: store)
                             }
                         }
                     }, alElegirCarpeta: {

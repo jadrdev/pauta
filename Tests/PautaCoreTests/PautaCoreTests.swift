@@ -647,20 +647,6 @@ struct PersistenceTests {
         #expect(reloaded.items.map(\.title) == ["se queda"])
     }
 
-    /// Una tarea capturada y luego borrada no debe volver a importarse.
-    @Test func buriedCaptureIsNotReimported() throws {
-        let root = tempRoot()
-        let capture = Captured(sourceID: "recordatorio-1", title: "Comprar pilas", notes: "")
-        do {
-            let store = Store(root: root)
-            #expect(store.addCaptured([capture]) == 1)
-            store.delete(store.items[0])
-        }
-        let reloaded = Store(root: root)
-        #expect(reloaded.addCaptured([capture]) == 0)
-        #expect(reloaded.items.isEmpty)
-    }
-
     /// El decodificador tolerante: un archivo sin los campos nuevos se lee.
     @Test func readsFilesMissingNewerFields() throws {
         let root = tempRoot()
@@ -2517,7 +2503,6 @@ struct PuestaAPuntoTests {
         let estados: [Permiso: EstadoDePermiso] = [
             .avisos: .sinPreguntar,
             .calendario: .concedido,
-            .recordatorios: .denegado,
         ]
         #expect(PuestaAPunto.pendientes(estados) == [.avisos])
     }
@@ -2528,7 +2513,6 @@ struct PuestaAPuntoTests {
         let estados: [Permiso: EstadoDePermiso] = [
             .avisos: .denegado,
             .calendario: .concedido,
-            .recordatorios: .concedido,
         ]
         #expect(PuestaAPunto.pendientes(estados).isEmpty)
     }
@@ -2539,7 +2523,7 @@ struct PuestaAPuntoTests {
         let todos = Permiso.allCases.reduce(into: [Permiso: EstadoDePermiso]()) {
             $0[$1] = .sinPreguntar
         }
-        #expect(PuestaAPunto.pendientes(todos) == [.avisos, .calendario, .recordatorios])
+        #expect(PuestaAPunto.pendientes(todos) == [.avisos, .calendario])
     }
 
     /// Un permiso sin estado conocido no se ofrece: es lo que pasa si algún día
@@ -4299,16 +4283,6 @@ struct OrdenDesdeElRelojTests {
         #expect(s.projects.first { $0.id == p.id }?.areaID == casa.id)
     }
 
-    /// Una tarea que vino de Recordatorios y vuelve de la papelera no se importa
-    /// otra vez: sería un duplicado de sí misma.
-    @Test func aRestoredCaptureIsNotImportedAgain() {
-        let s = Store(inMemory: true)
-        #expect(s.addCaptured([Captured(sourceID: "x", title: "Comprar pan", notes: "")]) == 1)
-        let a = s.items.first { $0.sourceID == "x" }!
-        s.delete(a)
-        #expect(s.restaurar(a.id))
-        #expect(s.addCaptured([Captured(sourceID: "x", title: "Comprar pan", notes: "")]) == 0)
-    }
 
     /// Vaciar la papelera es lo único que borra de verdad, y por eso se pide a
     /// mano: lo demás se va solo a los treinta días.

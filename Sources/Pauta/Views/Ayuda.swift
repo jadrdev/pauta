@@ -23,7 +23,6 @@ struct AyudaView: View {
     /// preguntar» después de haberlo concedido.
     @State private var avisos: UNAuthorizationStatus = .notDetermined
     @State private var calendario = Agenda.authorization
-    @State private var recordatorios = RemindersInbox.authorization
     /// Observable, para que cambiar el atajo en los ajustes se vea aquí.
     @State private var alta = AltaRapida.shared
 
@@ -73,16 +72,6 @@ struct AyudaView: View {
                     // hasta el siguiente cambio de día.
                     await agenda.load(force: true)
                 }
-                FilaDePermiso(
-                    nombre: "Recordatorios",
-                    para: "traer lo que dictas a Siri",
-                    concedido: recordatorios == .fullAccess,
-                    decidido: recordatorios != .notDetermined,
-                    ajustes: "x-apple.systempreferences:com.apple.preference.security?Privacy_Reminders"
-                ) {
-                    _ = try? await RemindersInbox().requestAccess()
-                    recordatorios = RemindersInbox.authorization
-                }
             }
             .padding(.top, 8)
 
@@ -105,7 +94,6 @@ struct AyudaView: View {
         .task {
             avisos = await Avisos.authorization()
             calendario = Agenda.authorization
-            recordatorios = RemindersInbox.authorization
         }
     }
 
@@ -121,7 +109,6 @@ struct AyudaView: View {
          ("↩", "Guardar y seguir con otra tarea"),
          ("esc", "Dejarlo estar"),
          ("⌘1 … ⌘6", "Saltar de lista, en el orden de la barra lateral"),
-         ("⌘⇧R", "Traer lo apuntado en Recordatorios"),
          ("⌘0", "Volver a la ventana principal")]
     }
 }

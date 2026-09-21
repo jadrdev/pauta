@@ -233,9 +233,6 @@ struct ItemListView: View {
                         switch permiso {
                         case .avisos: await Avisos.reschedule(store.items)
                         case .calendario: await agenda.load(force: true)
-                        case .recordatorios:
-                            await importFromReminders(RemindersInbox(), into: store,
-                                                      nav: nav)
                         }
                     }
                 }

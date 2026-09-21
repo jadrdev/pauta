@@ -92,9 +92,6 @@ public final class Store {
     /// En modo memoria no se lee ni se escribe en disco: sirve para maquetar.
     private let inMemory: Bool
 
-    /// Identificadores de origen de tareas ya borradas, para que una captura
-    /// repetida no las resucite.
-    private var buriedSourceIDs: Set<String> = []
 
     /// Vueltas de repetitivas que **borraste tú**, para no volver a parirlas.
     ///
@@ -159,7 +156,8 @@ public final class Store {
     /// se dedujo y era falso.
     ///
     /// Así que el teléfono guarda en la carpeta del grupo, que es local pero
-    /// funciona, y el puente entre los dos aparatos sigue siendo Recordatorios.
+    /// funciona, y el puente entre los dos aparatos es la carpeta del Mac que se
+    /// elige una vez en el selector del sistema.
     public nonisolated static var iCloudRoot: URL? {
         #if os(macOS)
         let drive = FileManager.default.homeDirectoryForCurrentUser
@@ -446,7 +444,6 @@ public final class Store {
             } else {
                 enterradas.insert(item.id)
                 enterrado.append(item)
-                if let source = item.sourceID { buriedSourceIDs.insert(source) }
             }
         }
         let freshItems = live.sorted(by: Item.byCreation)
@@ -777,24 +774,6 @@ public final class Store {
         return item
     }
 
-    /// Da de alta lo capturado en una fuente externa, en la bandeja. Devuelve
-    /// cuántas entraron: las que ya se habían importado antes se ignoran.
-    @discardableResult
-    public func addCaptured(_ incoming: [Captured]) -> Int {
-        // Se descartan las ya importadas, incluidas las que se borraron después:
-        // volver a capturarlas las resucitaría.
-        let known = Set(items.compactMap(\.sourceID)).union(buriedSourceIDs)
-        let fresh = incoming.filter { !known.contains($0.sourceID) }
-        for capture in fresh {
-            var item = Item(title: capture.title)
-            item.notes = capture.notes
-            item.sourceID = capture.sourceID
-            stampCreation(&item)
-            items.append(item)
-            persist(item)
-        }
-        return fresh.count
-    }
 
     public func update(_ item: Item) {
         mutateItem(item.id) { $0 = item }
@@ -939,7 +918,6 @@ public final class Store {
         var buried = items.remove(at: idx)
         buried.deletedAt = Store.stamped()
         buried.updatedAt = buried.deletedAt!
-        if let source = buried.sourceID { buriedSourceIDs.insert(source) }
         enterradas.insert(buried.id)
         borradas.insert(buried, at: 0)
         pilaDeBorrados.append(.tarea(buried.id))
@@ -1501,7 +1479,6 @@ public final class Store {
             vuelta.projectID = nil
         }
         enterradas.remove(vuelta.id)
-        if let source = vuelta.sourceID { buriedSourceIDs.remove(source) }
         items.append(vuelta)
         items.sort(by: Item.byCreation)
         persist(vuelta)

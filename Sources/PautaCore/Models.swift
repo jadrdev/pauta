@@ -99,9 +99,6 @@ public struct Item: Identifiable, Codable, Hashable {
     /// Sirve para deshacer: si descompletas la original, la sucesora que generó
     /// se retira, en vez de quedarse ahí duplicando el trabajo.
     public var spawnedFrom: UUID?
-    /// Identificador en la fuente externa de la que se capturó, si vino de una.
-    /// Evita reimportarla si el marcado en el origen falló.
-    public var sourceID: String?
     /// Hora del día, en minutos desde medianoche. `nil` = sin hora.
     ///
     /// Va aparte de `when` y no dentro. `when` es **un día**: hay quince sitios
@@ -166,7 +163,6 @@ public struct Item: Identifiable, Codable, Hashable {
         isSomeday   = try c.decodeIfPresent(Bool.self,   forKey: .isSomeday) ?? false
         projectID   = try c.decodeIfPresent(UUID.self,   forKey: .projectID)
         createdAt   = try c.decodeIfPresent(Date.self,   forKey: .createdAt) ?? Date()
-        sourceID    = try c.decodeIfPresent(String.self, forKey: .sourceID)
         timeOfDay   = try c.decodeIfPresent(Int.self,    forKey: .timeOfDay)
         checklist   = try c.decodeIfPresent([ChecklistStep].self, forKey: .checklist) ?? []
         tags        = try c.decodeIfPresent([String].self, forKey: .tags) ?? []
@@ -489,23 +485,6 @@ extension UUID {
         b[8] = (b[8] & 0x3F) | 0x80   // variante RFC 4122
         return UUID(uuid: (b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7],
                            b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]))
-    }
-}
-
-/// Una tarea capturada en una fuente externa.
-///
-/// Vive aquí y no junto a la captura de Recordatorios porque de ahí no es: es
-/// lo que el almacén sabe recibir, venga de donde venga. Y de paso, es lo que
-/// permite que el núcleo compile en un reloj, donde Recordatorios no existe.
-public struct Captured: Sendable {
-    public let sourceID: String
-    public let title: String
-    public let notes: String
-
-    public init(sourceID: String, title: String, notes: String) {
-        self.sourceID = sourceID
-        self.title = title
-        self.notes = notes
     }
 }
 

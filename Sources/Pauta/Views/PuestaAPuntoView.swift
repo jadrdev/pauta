@@ -4,14 +4,14 @@ import PautaCore
 
 /// La tarjeta de bienvenida, debajo de la lista vacía.
 ///
-/// No es un asistente de páginas a propósito: pedir tres permisos antes de que
+/// No es un asistente de páginas a propósito: pedir los permisos antes de que
 /// se haya visto una sola tarea es pedirlos antes de que exista el motivo, y
 /// aquí un «no» es **para siempre** porque el sistema no vuelve a preguntar. Va
 /// donde ya hay hueco —el vacío de Hoy—, se puede ignorar, y desaparece cuando
-/// los tres están contestados.
+/// están todos contestados.
 struct PuestaAPuntoView: View {
     /// Qué hacer después de conceder cada uno: recargar el calendario, traer
-    /// los recordatorios, reprogramar los avisos. La tarjeta pide; lo que va
+    /// reprogramar los avisos. La tarjeta pide; lo que va
     /// detrás lo sabe la app.
     let alConceder: (Permiso) -> Void
 

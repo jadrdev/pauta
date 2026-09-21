@@ -114,10 +114,6 @@ struct Entry {
                 Launch.view = .papelera
             }
         }
-        // Importación y siembra desde la línea de comandos: permiten probar la
-        // integración con Recordatorios sin abrir la interfaz. El bucle de
-        // eventos tiene que seguir vivo, porque la concesión de permisos de TCC
-        // vuelve por él.
         // Antes de lanzar la interfaz: si se pusiera después, un aviso pulsado
         // con la app cerrada se entregaría sin nadie que lo atendiera.
         Avisos.hookUp()
@@ -140,8 +136,7 @@ struct Entry {
             return
         }
         if CommandLine.arguments.contains("--avisos") {
-            // Por el bucle principal, como los de Recordatorios: el centro de
-            // notificaciones responde por él, y esperando con un semáforo en el
+            // Por el bucle principal: el centro de notificaciones responde por él, y esperando con un semáforo en el
             // hilo principal la respuesta no llegaría nunca.
             runOnMainLoop {
                 // Qué copia contesta. Sin esta línea, dos paquetes con el mismo
@@ -173,46 +168,6 @@ struct Entry {
                           + "  \(a.titulo)"
                           + (a.subtitulo.isEmpty ? "" : "  —  \(a.subtitulo)"))
                 }
-            }
-            return
-        }
-        if CommandLine.arguments.contains("--reminders-status") {
-            let estado: String
-            switch RemindersInbox.authorization {
-            case .notDetermined: estado = "notDetermined (aún no se ha preguntado)"
-            case .restricted:    estado = "restricted (bloqueado por perfil o control parental)"
-            case .denied:        estado = "denied (hay que activarlo a mano en Ajustes)"
-            case .fullAccess:    estado = "fullAccess (listo)"
-            case .writeOnly:     estado = "writeOnly (insuficiente: hace falta leer)"
-            @unknown default:    estado = "desconocido"
-            }
-            print("Recordatorios: \(estado)")
-            print("lista dedicada: «\(RemindersInbox.listName)»")
-            print(avisoDeTCC)
-            return
-        }
-        if CommandLine.arguments.contains("--import-reminders") {
-            runOnMainLoop {
-                let inbox = RemindersInbox()
-                guard try await inbox.requestAccess() else {
-                    print("permiso de Recordatorios denegado"); return
-                }
-                let captured = try await inbox.drain()
-                let store = Store()
-                let added = store.addCaptured(captured)
-                print("recordatorios pendientes: \(captured.count)  importados: \(added)")
-            }
-            return
-        }
-        if let i = CommandLine.arguments.firstIndex(of: "--seed-reminder"),
-           let title = CommandLine.arguments.dropFirst(i + 1).first {
-            runOnMainLoop {
-                let inbox = RemindersInbox()
-                guard try await inbox.requestAccess() else {
-                    print("permiso de Recordatorios denegado"); return
-                }
-                try inbox.seedForTesting(title: title)
-                print("recordatorio creado en la lista «\(RemindersInbox.listName)»: \(title)")
             }
             return
         }
@@ -348,9 +303,6 @@ struct PautaApp: App {
     @State private var watcher: FolderWatcher?
     @State private var agenda = Agenda()
     @State private var reloj = Reloj()
-    /// La bandeja de Recordatorios vive aquí y no se crea en cada importación:
-    /// tiene que sobrevivir para poder vigilar los cambios.
-    @State private var recordatorios = RemindersInbox()
     @State private var ajustes = Ajustes.shared
     /// De qué día es la última instantánea que se le dejó al widget. Sirve para
     /// republicarla cuando cambia el día sin que cambie ninguna tarea: a las
@@ -404,18 +356,6 @@ struct PautaApp: App {
                 // Da igual qué cambió —hora, día, completada, borrada, llegada
                 // de otro dispositivo—: reconstruir es más barato que razonar
                 // sobre qué aviso quedó suelto.
-                // La captura remota se monta aquí y no en `RootView`: esa
-                // vista muere al cerrar la ventana, y con ella moriría el
-                // vigilante. Lo que dictas a Siri tiene que llegar también con
-                // la app viviendo en la barra de menús.
-                .task {
-                    guard !Launch.demo else { return }
-                    await importFromReminders(recordatorios, into: store, nav: nav)
-                    recordatorios.observar {
-                        Task { await importFromReminders(recordatorios, into: store,
-                                                         nav: nav) }
-                    }
-                }
                 .task {
                     // macOS restaura las ventanas que estaban abiertas al
                     // salir. Para la principal está bien —es donde estabas—,
@@ -581,19 +521,6 @@ struct PautaApp: App {
                 Button("Ventana principal") { openWindow(id: "main") }
                     .keyboardShortcut("0", modifiers: .command)
             }
-            // Archivo se queda con lo que crea cosas y con la importación, que
-            // es lo que un menú de archivo hace. Los permisos del calendario
-            // estaban aquí por no tener otro sitio: ahora lo tienen en la
-            // ayuda, junto a los otros dos, y en Hoy sigue la invitación.
-            CommandGroup(after: .newItem) {
-                Button("Importar de Recordatorios") {
-                    Task {
-                        await importFromReminders(recordatorios, into: store, nav: nav,
-                                                  pidiendoPermiso: true)
-                    }
-                }
-                .keyboardShortcut("r", modifiers: [.command, .shift])
-            }
             CommandGroup(after: .toolbar) {
                 // ⌘1…⌘6 en el mismo orden en que aparecen en la barra lateral.
                 ForEach(Array(Perspective.allCases.enumerated()), id: \.element) { index, perspective in
@@ -675,11 +602,6 @@ struct RootView: View {
     }
 }
 
-/// Trae lo pendiente de la lista de Recordatorios a la bandeja.
-///
-/// Silencioso a propósito: si no hay permiso todavía, o la lista está vacía, no
-/// interrumpe. El permiso se pide la primera vez que se ejecuta, y si se deniega
-/// la app sigue funcionando igual sin la captura remota.
 /// Lleva la vista hasta una tarea y la deja abierta.
 ///
 /// La lista se elige por la tarea y no se deja la que hubiera: si el aviso te
@@ -694,12 +616,4 @@ func mostrar(_ id: UUID, in store: Store, nav: Navigation) {
     else if let projectID = item.projectID { nav.go(to: .project(projectID)) }
     else { nav.go(to: .inbox) }
     nav.selectedItemID = id
-}
-
-@MainActor
-func importFromReminders(_ inbox: RemindersInbox, into store: Store,
-                         nav: Navigation, pidiendoPermiso: Bool = false) async {
-    let entraron = await inbox.importar(en: store, pidiendoPermiso: pidiendoPermiso)
-    // Llevar a la bandeja solo si algo entró y no estabas en otra lista.
-    if entraron > 0, case .today = nav.perspective { nav.go(to: .inbox) }
 }
