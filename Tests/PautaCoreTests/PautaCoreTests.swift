@@ -4083,3 +4083,117 @@ struct OrdenDesdeElRelojTests {
         #expect(Pliegue(defaults: d).estaCerrado(p, ahora: ayer) == false)
     }
 }
+
+
+/// Arrastrar dentro y fuera de un bloque de proyecto en Hoy.
+@MainActor
+@Suite struct ArrastreEnLosBloquesTests {
+
+    private func montaje() -> (Store, Project) {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        return (s, p)
+    }
+
+    private func enProyecto(_ titulo: String, _ p: Project, _ s: Store) -> Item {
+        let i = s.addItem(title: titulo, in: .project(p.id))
+        s.schedule(i, to: .now)
+        return s.items.first { $0.id == i.id }!
+    }
+
+    private func visto(_ s: Store) -> [String] {
+        Hoy.bloques(sinHora: s.items(for: .today), hechasHoy: s.hechasHoy).map {
+            switch $0 {
+            case .suelta(let i): i.title
+            case .proyecto(let g): "[" + g.tareas.map(\.title).joined(separator: " ") + "]"
+            }
+        }
+    }
+
+    private func tarea(_ titulo: String, _ s: Store) -> Item {
+        s.items.first { $0.title == titulo }!
+    }
+
+    /// **El fallo que esto arregla.** La fila sobre la que sueltas dice dos
+    /// cosas: la prioridad y, si está dentro de un bloque, el proyecto. Con solo
+    /// la primera, sueltas «tinta» entre dos tareas de Mudanza y aparece debajo
+    /// del bloque entero —porque el bloque se dibuja de una pieza—, que no es
+    /// donde la soltaste. Es el mismo caso que «Próximamente» con el día.
+    @Test func droppingIntoABlockLandsWhereYouDroppedIt() {
+        let (s, p) = montaje()
+        _ = s.addItem(title: "gestoría", in: .today)
+        _ = enProyecto("furgoneta", p, s)
+        _ = enProyecto("llaves", p, s)
+        let tinta = s.addItem(title: "tinta", in: .today)
+
+        s.soltar(tinta, sobre: tarea("llaves", s), enBloque: true)
+        #expect(visto(s) == ["gestoría", "[furgoneta tinta llaves]"])
+    }
+
+    /// Y para poder caer ahí, la tarea entra en el proyecto: el bloque no es un
+    /// hueco en la lista, es el proyecto.
+    @Test func droppingIntoABlockJoinsTheProject() {
+        let (s, p) = montaje()
+        _ = enProyecto("furgoneta", p, s)
+        _ = enProyecto("llaves", p, s)
+        let tinta = s.addItem(title: "tinta", in: .today)
+        #expect(tarea("tinta", s).projectID == nil)
+
+        s.soltar(tinta, sobre: tarea("llaves", s), enBloque: true)
+        #expect(tarea("tinta", s).projectID == p.id)
+    }
+
+    /// Reordenar dentro del bloque es solo eso: no toca el proyecto y el bloque
+    /// no se va a ninguna parte.
+    @Test func reorderingInsideABlockChangesNothingElse() {
+        let (s, p) = montaje()
+        _ = s.addItem(title: "gestoría", in: .today)
+        _ = enProyecto("furgoneta", p, s)
+        _ = enProyecto("banco", p, s)
+        _ = enProyecto("llaves", p, s)
+
+        s.soltar(tarea("llaves", s), sobre: tarea("banco", s), enBloque: true)
+        #expect(visto(s) == ["gestoría", "[furgoneta llaves banco]"])
+        #expect(tarea("llaves", s).projectID == p.id)
+    }
+
+    /// **Fuera del bloque no se saca a nadie del proyecto.** Soltar sobre una
+    /// fila suelta cambia la prioridad y nada más: quitarle el proyecto a una
+    /// tarea por arrastrarla dos filas sería destruir la organización con el
+    /// gesto que sirve para ordenar el día. Para eso está «Mover a».
+    @Test func droppingOutsideABlockNeverStripsTheProject() {
+        let (s, p) = montaje()
+        _ = s.addItem(title: "gestoría", in: .today)
+        _ = enProyecto("furgoneta", p, s)
+        _ = enProyecto("llaves", p, s)
+
+        s.soltar(tarea("llaves", s), sobre: tarea("gestoría", s), enBloque: false)
+        #expect(tarea("llaves", s).projectID == p.id)
+    }
+
+    /// Y como sigue en el proyecto, vuelve a su bloque — arrastrando el bloque
+    /// con ella, que ahora empieza más arriba. No es lo que quisieras hacer con
+    /// ese gesto, pero es coherente: el bloque va donde su primera tarea.
+    @Test func aTaskDraggedOutReturnsAndTakesItsBlockAlong() {
+        let (s, p) = montaje()
+        _ = s.addItem(title: "gestoría", in: .today)
+        _ = enProyecto("furgoneta", p, s)
+        _ = enProyecto("llaves", p, s)
+
+        s.soltar(tarea("llaves", s), sobre: tarea("gestoría", s), enBloque: false)
+        #expect(visto(s) == ["[llaves furgoneta]", "gestoría"])
+    }
+
+    /// Soltar sobre una fila del mismo proyecto que ya estaba suelta —porque era
+    /// la única de ese proyecto hoy— también une: ahí ya hay bloque después.
+    @Test func droppingOntoALoneProjectTaskIsStillJustAReorder() {
+        let (s, p) = montaje()
+        _ = s.addItem(title: "gestoría", in: .today)
+        _ = enProyecto("furgoneta", p, s)
+
+        let tinta = s.addItem(title: "tinta", in: .today)
+        s.soltar(tinta, sobre: tarea("furgoneta", s), enBloque: false)
+        #expect(tarea("tinta", s).projectID == nil)
+        #expect(visto(s) == ["gestoría", "tinta", "furgoneta"])
+    }
+}

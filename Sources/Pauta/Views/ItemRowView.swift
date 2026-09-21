@@ -125,7 +125,14 @@ struct ItemRowView: View {
                 .compactMap { id in store.items.first { $0.id == id } }
                 .filter { $0.id != item.id }
             for dragged in arrastradas {
-                store.place(dragged, before: item, in: nav.perspective)
+                // En Hoy la fila de destino dice también el proyecto cuando está
+                // dentro de un bloque, y el almacén es quien sabe qué hacer con
+                // eso. Fuera de Hoy no hay bloques y el gesto es el de siempre.
+                if case .today = nav.perspective {
+                    store.soltar(dragged, sobre: item, enBloque: enGrupo)
+                } else {
+                    store.place(dragged, before: item, in: nav.perspective)
+                }
             }
             return !arrastradas.isEmpty
         } isTargeted: { isDropTarget = $0 }

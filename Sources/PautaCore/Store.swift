@@ -1016,6 +1016,31 @@ public final class Store {
     /// lista sería más simple de leer, pero reescribiría decenas de archivos por
     /// cada arrastre, y con la carpeta sincronizada eso es tráfico y ocasiones de
     /// conflicto por nada.
+    /// Soltar una tarea sobre otra en `Hoy`.
+    ///
+    /// La fila sobre la que sueltas dice **dos cosas y no una**: la prioridad y,
+    /// si está dentro de un bloque de proyecto, el proyecto. Aplicar solo la
+    /// primera es lo que hacía que el gesto mintiera: soltabas una tarea entre
+    /// dos de Mudanza y aparecía debajo del bloque entero, porque el bloque se
+    /// dibuja de una pieza y ella no era de Mudanza. Es el mismo caso que
+    /// «Próximamente» con el día, y se arregla igual.
+    ///
+    /// Al revés no: soltar **fuera** de un bloque no le quita el proyecto a
+    /// nadie. Una fila suelta no es un sitio —puede ser la única tarea de otro
+    /// proyecto hoy— y desorganizar una tarea por arrastrarla dos filas sería
+    /// destruir con el gesto que sirve para ordenar el día. Para sacarla está
+    /// «Mover a», que lo dice en voz alta.
+    ///
+    /// Vive aquí y no en la vista para que la semántica sea una sola y se pueda
+    /// probar: el arrastre es lo único de esta lista que no se puede comprobar
+    /// mirándola.
+    public func soltar(_ item: Item, sobre destino: Item, enBloque: Bool) {
+        if enBloque, let proyecto = destino.projectID, item.projectID != proyecto {
+            move(item, to: .project(proyecto))
+        }
+        place(item, before: destino, in: .today)
+    }
+
     public func place(_ item: Item, before other: Item?, in perspective: Perspective) {
         // «Próximamente» está agrupada por día, así que la fila sobre la que
         // sueltas dice dos cosas y no una: la prioridad **y** el día. Aplicar

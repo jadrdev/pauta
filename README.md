@@ -279,6 +279,23 @@ tacha, el filete iría de «0 de 3» a «0 de 2» a «0 de 1» y no avanzaría n
 Terminado lo de hoy de ese proyecto, el bloque baja al final con el filete entero
 y el rótulo en «HECHO»: ahí ya no hay nada que hacer.
 
+#### Arrastrar dentro y fuera
+
+Soltar una tarea **dentro de un bloque la mete en ese proyecto**. La fila sobre
+la que sueltas dice dos cosas y no una —la prioridad y, ahí dentro, el
+proyecto—, y aplicar solo la primera hacía que el gesto mintiera: soltabas algo
+entre dos tareas de Mudanza y aparecía debajo del bloque entero, porque el bloque
+se dibuja de una pieza y aquello no era de Mudanza. Es el mismo caso que
+«Próximamente» con el día, y se arregla igual.
+
+Al revés no. Soltar **fuera** de un bloque no le quita el proyecto a nadie: una
+fila suelta no es un sitio —puede ser la única tarea de otro proyecto hoy— y
+desorganizar una tarea por arrastrarla dos filas sería destruir con el gesto que
+sirve para ordenar el día. Para sacarla está *Mover a*, que lo dice en voz alta.
+La consecuencia es que una tarea arrastrada fuera de su bloque vuelve a él, y se
+lleva el bloque con ella si ha quedado por encima: el bloque va donde su primera
+tarea. Es coherente, aunque no sea lo que se quería hacer con ese gesto.
+
 #### Cerrarlo como un acordeón
 
 Un proyecto con diez tareas se come la lista, así que **la cabecera se pliega**:
