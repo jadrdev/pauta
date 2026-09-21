@@ -5,6 +5,7 @@ struct ItemListView: View {
     @Environment(Store.self) private var store
     @Environment(Navigation.self) private var nav
     @Environment(Agenda.self) private var agenda
+    private var pliegue: Pliegue { Pliegue.shared }
 
     @State private var draftTitle = ""
     @State private var pegado: String?
@@ -59,10 +60,17 @@ struct ItemListView: View {
                             case .suelta(let item):
                                 ItemRowView(item: item)
                             case .proyecto(let grupo):
-                                GrupoRow(grupo: grupo)
-                                ForEach(grupo.tareas) { tarea in
-                                    ItemRowView(item: tarea, enGrupo: true)
-                                        .padding(.leading, 18)
+                                GrupoRow(grupo: grupo,
+                                         cerrado: pliegue.estaCerrado(grupo.proyecto)) {
+                                    withAnimation(.easeOut(duration: 0.18)) {
+                                        pliegue.alternar(grupo.proyecto)
+                                    }
+                                }
+                                if !pliegue.estaCerrado(grupo.proyecto) {
+                                    ForEach(grupo.tareas) { tarea in
+                                        ItemRowView(item: tarea, enGrupo: true)
+                                            .padding(.leading, 18)
+                                    }
                                 }
                             }
                         }

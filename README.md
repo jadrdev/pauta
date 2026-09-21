@@ -279,6 +279,27 @@ tacha, el filete iría de «0 de 3» a «0 de 2» a «0 de 1» y no avanzaría n
 Terminado lo de hoy de ese proyecto, el bloque baja al final con el filete entero
 y el rótulo en «HECHO»: ahí ya no hay nada que hacer.
 
+#### Cerrarlo como un acordeón
+
+Un proyecto con diez tareas se come la lista, así que **la cabecera se pliega**:
+un clic y el bloque se cierra, dejando solo su línea. No se pierde nada, y aquí
+se cobra lo de medir lo que queda en vez de lo hecho — cerrado, el rótulo sigue
+diciendo «QUEDAN 2 · 45 MIN», que es lo que hacía falta saber. «3 de 5» plegado
+no diría nada.
+
+La cabecera **pliega, no navega**: cerrar se hace muchas veces al día e ir al
+proyecto de vez en cuando, y para eso está la barra lateral ahí al lado y el menú
+secundario en la propia cabecera. El galón de la izquierda está siempre a la
+vista, y no solo al pasar el ratón: si lo único que avisara de que aquello se
+pliega apareciera con el cursor encima, nadie sabría que se pliega.
+
+**Se olvida al cambiar el día.** Lo que cerraste ayer hablaba de las tareas de
+ayer; `Hoy` se rehace cada mañana, y dejarlo cerrado escondería trabajo nuevo
+detrás de una decisión que ya no iba de esto. Dentro del mismo día sí aguanta,
+aunque cierres la app: el pliegue es una decisión tuya, no un estado de la
+ventana. Se guarda en `UserDefaults` y no en la carpeta, porque es cómo tienes
+puesta la ventana en **este** Mac.
+
 El filete cuenta **tareas** y no minutos, a propósito: es la ojeada, y tiene que
 estar definida también cuando no has estimado nada. El coste es conocido —cuatro
 cortas hechas y una larga pendiente lo pintan casi entero— y por eso la raya no
@@ -1332,6 +1353,7 @@ Sources/PautaCore/        librería sin UI: la comparten macOS, iOS y el widget
   Avisos.swift            avisos del sistema para las tareas con hora
   Agenda.swift            eventos del calendario, solo de lectura
   Hoy.swift               agrupar Hoy por proyecto, y cuánto queda de cada uno
+  Pliegue.swift           qué grupos cerraste hoy, y que mañana se abren solos
   Cuenta.swift            cuánto falta para lo siguiente
   Duracion.swift          cuánto dura cada cosa y cuánto suma el día
   Ajustes.swift           las preferencias, en UserDefaults

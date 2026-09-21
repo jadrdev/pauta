@@ -98,7 +98,10 @@ struct Entry {
         Launch.altaRapida = CommandLine.arguments.contains("--alta-rapida")
         // Antes de que nada las lea: en maqueta las preferencias también son de
         // mentira, o mirar el diseño acabaría cambiando los ajustes de verdad.
-        if Launch.demo { Ajustes.shared = Ajustes.paraMaqueta() }
+        if Launch.demo {
+            Ajustes.shared = Ajustes.paraMaqueta()
+            Pliegue.shared = Pliegue.paraMaqueta()
+        }
         if CommandLine.arguments.contains("--light") { Launch.appearance = .aqua }
         if CommandLine.arguments.contains("--dark")  { Launch.appearance = .darkAqua }
         if let i = CommandLine.arguments.firstIndex(of: "--view"),

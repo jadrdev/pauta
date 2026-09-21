@@ -4015,3 +4015,71 @@ struct OrdenDesdeElRelojTests {
                 == ["[furgoneta comunidad]"])
     }
 }
+
+
+/// Cerrar un grupo de Hoy como un acordeón, y hasta cuándo se recuerda.
+@MainActor
+@Suite(.serialized) struct PliegueTests {
+
+    private func limpias() -> UserDefaults {
+        let nombre = "dev.jadrdev.pauta.pruebas.pliegue"
+        let d = UserDefaults(suiteName: nombre)!
+        d.removePersistentDomain(forName: nombre)
+        return d
+    }
+
+    @Test func closingAndOpeningAgain() {
+        let d = limpias()
+        let pliegue = Pliegue(defaults: d)
+        let p = UUID()
+        #expect(pliegue.estaCerrado(p) == false)
+        pliegue.alternar(p)
+        #expect(pliegue.estaCerrado(p))
+        pliegue.alternar(p)
+        #expect(pliegue.estaCerrado(p) == false)
+    }
+
+    /// Cerrar uno no cierra los demás.
+    @Test func closingOneLeavesTheOthersOpen() {
+        let d = limpias()
+        let pliegue = Pliegue(defaults: d)
+        let a = UUID(), b = UUID()
+        pliegue.alternar(a)
+        #expect(pliegue.estaCerrado(a))
+        #expect(pliegue.estaCerrado(b) == false)
+    }
+
+    /// Cerrado sigue cerrado si cierras la app y la abres el mismo día: el
+    /// pliegue es una decisión tuya, no un estado de la ventana.
+    @Test func itSurvivesARelaunchTheSameDay() {
+        let d = limpias()
+        let p = UUID()
+        Pliegue(defaults: d).alternar(p)
+        #expect(Pliegue(defaults: d).estaCerrado(p))
+    }
+
+    /// **Pero solo hasta mañana.** Hoy se rehace cada día: lo que cerraste ayer
+    /// hablaba de las tareas de ayer, y dejarlo cerrado escondería trabajo nuevo
+    /// detrás de una decisión que ya no era sobre esto.
+    @Test func tomorrowEverythingIsOpenAgain() {
+        let d = limpias()
+        let p = UUID()
+        let ayer = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
+        let pliegue = Pliegue(defaults: d, ahora: ayer)
+        pliegue.alternar(p, ahora: ayer)
+        #expect(pliegue.estaCerrado(p, ahora: ayer))
+        #expect(pliegue.estaCerrado(p) == false)
+    }
+
+    /// Y al pasar el día se olvida de verdad, no se queda esperando debajo:
+    /// volver a abrir mañana y encontrárselo cerrado sería peor que no recordar.
+    @Test func theOldFoldIsForgottenNotJustHidden() {
+        let d = limpias()
+        let p = UUID()
+        let ayer = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
+        let pliegue = Pliegue(defaults: d, ahora: ayer)
+        pliegue.alternar(p, ahora: ayer)
+        _ = pliegue.estaCerrado(p)
+        #expect(Pliegue(defaults: d).estaCerrado(p, ahora: ayer) == false)
+    }
+}

@@ -10,11 +10,20 @@ import PautaCore
 ///
 /// Al lado, lo que queda. No lo que llevas hecho: «3 de 5» es información sobre
 /// la mañana que ya pasó, y con lo que se decide si te pones ahora es con
-/// «quedan 2 · 45 min».
+/// «quedan 2 · 45 min». Y es lo que permite cerrar el grupo sin perder nada:
+/// plegado, el rótulo sigue diciendo lo que hay dentro — «3 de 5» plegado no
+/// diría nada.
+///
+/// **La cabecera pliega, no navega.** Cerrar es lo que se hace muchas veces al
+/// día; ir al proyecto, de vez en cuando, y para eso está la barra lateral ahí
+/// al lado y el menú secundario aquí mismo. Darle el clic a lo raro y esconder
+/// lo frecuente detrás de un gesto sería al revés.
 struct GrupoRow: View {
     @Environment(Store.self) private var store
     @Environment(Navigation.self) private var nav
     let grupo: GrupoDeProyecto
+    let cerrado: Bool
+    let alternar: () -> Void
 
     @State private var hovering = false
 
@@ -23,6 +32,14 @@ struct GrupoRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .firstTextBaseline, spacing: 7) {
+                // Siempre visible, y no solo al pasar por encima: si el único
+                // aviso de que esto se pliega apareciera con el ratón encima,
+                // nadie sabría que se pliega.
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8.5, weight: .bold))
+                    .foregroundStyle(hovering ? Paper.accentInk : Paper.inkFaint)
+                    .rotationEffect(.degrees(cerrado ? -90 : 0))
+                    .frame(width: 9)
                 if let icon = proyecto?.icon, !icon.isEmpty {
                     Text(icon).font(.system(size: 12))
                 }
@@ -34,9 +51,17 @@ struct GrupoRow: View {
                     .rubricStyle(grupo.entero ? Paper.accentInk : Paper.inkFaint)
             }
             .contentShape(Rectangle())
-            .onTapGesture { nav.perspective = .project(grupo.proyecto) }
+            .onTapGesture(perform: alternar)
             .onHover { hovering = $0 }
             .help(detalle)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint(cerrado ? "Abrir el grupo" : "Cerrar el grupo")
+            .contextMenu {
+                Button(cerrado ? "Abrir" : "Cerrar", action: alternar)
+                Divider()
+                Button("Ir al proyecto") { nav.perspective = .project(grupo.proyecto) }
+            }
 
             filete
         }
@@ -86,6 +111,7 @@ struct GrupoRow: View {
         if grupo.sinEstimar > 0, grupo.minutosRestantes != nil {
             partes.append("\(grupo.sinEstimar) sin estimar")
         }
-        return partes.joined(separator: " · ") + " — ir al proyecto"
+        return partes.joined(separator: " · ")
+             + (cerrado ? " — clic para abrir" : " — clic para cerrar")
     }
 }
