@@ -1040,6 +1040,28 @@ La cuenta es la misma que el apunte del widget y que la marca de cada fila
 —planificada para un día que ya pasó—, y sale del mismo `Vistazo`. Cuatro sitios
 diciendo lo mismo con números distintos es cuatro veces peor que no decirlo.
 
+### El globo no salía, y no era culpa del globo
+
+La primera versión no pintaba nada. La tentación era tocar AppKit; medirlo dijo
+otra cosa. Desde fuera no se le puede preguntar al Dock qué tiene puesto, así que
+se midió desde dentro, y contestó:
+
+```
+globo=2  app=ok  politica=0  releido=2  hilo=principal
+```
+
+AppKit lo aceptaba y lo devolvía al releerlo. **No fallaba pintar: nadie llamaba
+a la función.** `publicarVistazo` vivía solo en un bloque que espera un segundo y
+se reinicia con cada cambio del almacén, y al arrancar hay una ráfaga —cargar la
+carpeta, lo que baje de iCloud, el vigilante— entre cuyas cancelaciones tardaba
+minutos en ejecutarse, o no se ejecutaba. Doce segundos después de abrir la app:
+cero publicaciones.
+
+Así que el fallo era más gordo que el globo. Ese mismo bloque es quien refresca el
+widget y manda el vistazo al reloj: **al arrancar, el Mac no publicaba nada**. El
+teléfono ya tenía este arreglo —está comentado en su código desde que se descubrió
+allí— y el Mac se había quedado sin él. Ahora publica también al arrancar.
+
 **En el Mac lo pinta el propio proceso** (`NSApp.dockTile.badgeLabel`), así que no
 hace falta permiso — pero por eso mismo solo existe mientras la app corre. Si la
 cierras del todo no hay globo; vivir en la barra de menús es lo que hace que eso

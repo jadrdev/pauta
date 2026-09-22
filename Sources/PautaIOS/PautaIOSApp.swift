@@ -137,9 +137,10 @@ struct RaizView: View {
             //
             // Ese bloque espera un segundo y se reinicia con cada cambio del
             // almacén; al arrancar hay una ráfaga —recargar, cruzar con el Mac—
-            // y entre cancelación y cancelación no Comprobado en el registro del
-            // simulador: cero recargas del widget en un arranque entero, y el
-            // reloj esperando un vistazo que no salía.
+            // y entre cancelación y cancelación no llegaba a ejecutarse nunca.
+            // Comprobado en el registro del simulador: cero recargas del widget
+            // en un arranque entero, y el reloj esperando un vistazo que no
+            // salía.
             avisarAFuera()
             // Y quién atiende lo que pida el reloj, que hasta ahora solo
             // recibía. Se instala aquí porque el almacén vive en la vista: el

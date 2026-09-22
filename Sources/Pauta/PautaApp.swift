@@ -328,11 +328,20 @@ struct PautaApp: App {
         Vistazo.publicar(vistazo)
         vistazoDelDia = vistazo.dia
         WidgetCenter.shared.reloadAllTimelines()
-        // El globo del Dock, del mismo vistazo que el widget: así no pueden
-        // discrepar. En el Mac no hace falta permiso —lo pinta el propio
-        // proceso— pero por eso mismo **solo existe mientras la app corre**: si
-        // la cierras del todo, no hay globo. Vivir en la barra de menús es lo
-        // que hace que eso no importe casi nunca.
+        pintarGlobo(vistazo)
+    }
+
+    /// El globo del Dock, del mismo vistazo que el widget: así no pueden
+    /// discrepar. En el Mac no hace falta permiso —lo pinta el propio proceso—
+    /// pero por eso mismo **solo existe mientras la app corre**: si la cierras
+    /// del todo, no hay globo.
+    ///
+    /// Desde fuera no hay forma de preguntarle al Dock qué tiene puesto, así
+    /// que cuando esto no pintaba nada hubo que medirlo desde dentro. Contestó
+    /// `releido=2`: AppKit lo aceptaba y lo guardaba. No fallaba pintar — es que
+    /// nadie llamaba aquí, porque `publicarVistazo` se moría de hambre en el
+    /// bloque de un segundo.
+    private func pintarGlobo(_ vistazo: Vistazo) {
         NSApp.dockTile.badgeLabel = vistazo.globo
     }
 
@@ -384,6 +393,21 @@ struct PautaApp: App {
                     // barra de menús y nada abierto.
                     AltaRapida.shared.instalar(store: store)
                     if Launch.altaRapida { AltaRapida.shared.alternar() }
+                    // Publicar **aquí también**, no solo en el bloque de abajo.
+                    //
+                    // Ese bloque espera un segundo y se reinicia con cada cambio
+                    // del almacén; al arrancar hay una ráfaga —cargar la
+                    // carpeta, lo que baje de iCloud, el vigilante— y entre
+                    // cancelación y cancelación tarda minutos en ejecutarse, o
+                    // no se ejecuta. Medido con el registro: doce segundos
+                    // después de abrir la app, cero publicaciones — el widget
+                    // con lo de ayer, el reloj esperando y el globo del Dock sin
+                    // pintar. El teléfono ya tenía este mismo arreglo; el Mac se
+                    // quedó sin él.
+                    // Con `if` y no con `guard`: un `return` aquí se llevaría
+                    // por delante el resto de la tarea, que es quien instala lo
+                    // que hacen los botones de los avisos.
+                    if !Launch.demo { publicarVistazo() }
 
                     AvisoAcciones.alAbrir = { id in
                         openWindow(id: "main")
