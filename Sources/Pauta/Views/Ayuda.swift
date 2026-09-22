@@ -23,6 +23,11 @@ struct AyudaView: View {
     /// preguntar» después de haberlo concedido.
     @State private var avisos: UNAuthorizationStatus = .notDetermined
     @State private var calendario = Agenda.authorization
+    /// Los globos del icono son un permiso aparte del de avisar, y en este Mac
+    /// se comprobó que pueden estar apagados con los avisos concedidos: AppKit
+    /// acepta el `badgeLabel` y lo devuelve al releerlo, pero el Dock no lo
+    /// dibuja. Como no se puede saber desde fuera, se lee y se dice.
+    @State private var globo = true
     /// Observable, para que cambiar el atajo en los ajustes se vea aquí.
     @State private var alta = AltaRapida.shared
 
@@ -58,6 +63,27 @@ struct AyudaView: View {
                 ) {
                     await Avisos.request()
                     avisos = await Avisos.authorization()
+                    globo = await Avisos.puedeGlobo()
+                }
+                // Solo cuando está apagado: es cuando hay algo que hacer. Con los
+                // avisos concedidos y el globo denegado, el Dock se queda sin el
+                // número de atrasadas y desde la app no se nota — AppKit acepta
+                // el valor igual, así que sin esta línea parecería que la app no
+                // sabe contar.
+                if avisos == .authorized, !globo {
+                    Button {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } label: {
+                        Text("Los globos del icono están apagados: el Dock no "
+                             + "puede enseñar las atrasadas. Encenderlos…")
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(Paper.warning)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 2)
                 }
                 FilaDePermiso(
                     nombre: "Calendario",
@@ -68,6 +94,7 @@ struct AyudaView: View {
                 ) {
                     await agenda.requestAccess()
                     calendario = Agenda.authorization
+            globo = await Avisos.puedeGlobo()
                     // Recargar aquí: si no, los eventos no aparecerían en Hoy
                     // hasta el siguiente cambio de día.
                     await agenda.load(force: true)

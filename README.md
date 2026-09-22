@@ -1062,10 +1062,16 @@ widget y manda el vistazo al reloj: **al arrancar, el Mac no publicaba nada**. E
 teléfono ya tenía este arreglo —está comentado en su código desde que se descubrió
 allí— y el Mac se había quedado sin él. Ahora publica también al arrancar.
 
-**En el Mac lo pinta el propio proceso** (`NSApp.dockTile.badgeLabel`), así que no
-hace falta permiso — pero por eso mismo solo existe mientras la app corre. Si la
-cierras del todo no hay globo; vivir en la barra de menús es lo que hace que eso
-no importe casi nunca.
+**En el Mac lo pinta el propio proceso** (`NSApp.dockTile.badgeLabel`), así que
+solo existe mientras la app corre: si la cierras del todo no hay globo, y vivir en
+la barra de menús es lo que hace que eso no importe casi nunca.
+
+Lo que sí hace falta es **permiso**, y esto costó averiguarlo porque el fallo es
+mudo: AppKit acepta el valor y lo devuelve al releerlo —`releido=2`— pero **quien
+decide si se dibuja es el sistema**. Con los globos apagados en Ajustes del
+Sistema ▸ Notificaciones ▸ Pauta, el Dock no enseña nada y desde dentro de la app
+todo parece correcto. Por eso la pantalla de ayuda lee `Avisos.puedeGlobo()` y lo
+dice cuando está apagado, en vez de pintar en silencio algo que nadie puede ver.
 
 **En el teléfono lo pone el sistema** y sobrevive a cerrar la app, que es justo
 cuando sirve. El precio es que `.badge` es un permiso aparte, y Pauta pedía solo

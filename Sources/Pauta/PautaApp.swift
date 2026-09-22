@@ -343,6 +343,7 @@ struct PautaApp: App {
     /// bloque de un segundo.
     private func pintarGlobo(_ vistazo: Vistazo) {
         NSApp.dockTile.badgeLabel = vistazo.globo
+        NSApp.dockTile.display()
     }
 
     var body: some Scene {
