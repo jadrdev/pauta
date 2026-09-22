@@ -1080,9 +1080,19 @@ antes=false  request=true  despues=false
 
 El sistema contesta que sí a la petición —ya estaba autorizada— y deja el globo
 denegado. Ajustes del Sistema ni siquiera enseña el interruptor, porque la app no
-lo pidió el día que importaba. Borrar y reinstalar tampoco: en macOS esa decisión
-va por identificador de paquete y sobrevive —comprobado borrando el paquete ocho
-veces seguidas, `authorized` en todas—.
+lo pidió el día que importaba.
+
+**Y aquí los dos sistemas no se comportan igual**, que es lo que costó ver. En
+macOS borrar y reinstalar no sirve: esa decisión va por identificador de paquete y
+sobrevive —comprobado borrando el paquete ocho veces seguidas, `authorized` en
+todas—. **En iOS sí**: desinstalar la app se lleva su permiso de notificaciones,
+así que al volver a instalarla pregunta de cero y esta vez con el globo dentro.
+Comprobado también: en el teléfono el número apareció después de borrarla y
+reinstalarla, y no había ninguna otra forma de conseguirlo.
+
+El precio en iOS es real y hay que decirlo: al borrar la app se va su copia local
+de las tareas y el marcador de la carpeta del Mac. Lo primero se recupera del
+Mac; lo segundo hay que volver a elegirlo.
 
 Así que Pauta pinta su propia baldosa: el icono y encima una cápsula roja con el
 número. `NSDockTile.contentView` no pide permiso a nadie. El precio es dibujar
