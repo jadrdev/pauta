@@ -336,14 +336,18 @@ struct PautaApp: App {
     /// pero por eso mismo **solo existe mientras la app corre**: si la cierras
     /// del todo, no hay globo.
     ///
-    /// Desde fuera no hay forma de preguntarle al Dock qué tiene puesto, así
-    /// que cuando esto no pintaba nada hubo que medirlo desde dentro. Contestó
-    /// `releido=2`: AppKit lo aceptaba y lo guardaba. No fallaba pintar — es que
-    /// nadie llamaba aquí, porque `publicarVistazo` se moría de hambre en el
-    /// bloque de un segundo.
+    /// Se dibuja a mano y no con `badgeLabel`, que es lo que parecía obvio.
+    /// `badgeLabel` acepta el valor y lo devuelve al releerlo, pero **el sistema
+    /// solo lo dibuja si la app tiene concedido el globo** — y ese permiso se
+    /// concede o no al aceptar los avisos, de una vez y para siempre. Pauta
+    /// pedía `.alert` y `.sound`; añadir `.badge` después no sirve de nada:
+    /// medido, `request()` devuelve `true` y el globo sigue denegado, y Ajustes
+    /// del Sistema ni siquiera enseña el interruptor. Para quien ya la tenía
+    /// instalada, por esa vía era inalcanzable.
+    ///
+    /// Dibujarlo nosotros no pide permiso a nadie.
     private func pintarGlobo(_ vistazo: Vistazo) {
-        NSApp.dockTile.badgeLabel = vistazo.globo
-        NSApp.dockTile.display()
+        GloboDelDock.compartido.poner(vistazo.globo)
     }
 
     var body: some Scene {

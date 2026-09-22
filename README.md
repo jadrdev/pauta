@@ -1066,12 +1066,29 @@ allí— y el Mac se había quedado sin él. Ahora publica también al arrancar.
 solo existe mientras la app corre: si la cierras del todo no hay globo, y vivir en
 la barra de menús es lo que hace que eso no importe casi nunca.
 
-Lo que sí hace falta es **permiso**, y esto costó averiguarlo porque el fallo es
-mudo: AppKit acepta el valor y lo devuelve al releerlo —`releido=2`— pero **quien
-decide si se dibuja es el sistema**. Con los globos apagados en Ajustes del
-Sistema ▸ Notificaciones ▸ Pauta, el Dock no enseña nada y desde dentro de la app
-todo parece correcto. Por eso la pantalla de ayuda lee `Avisos.puedeGlobo()` y lo
-dice cuando está apagado, en vez de pintar en silencio algo que nadie puede ver.
+Y **se dibuja a mano**, que no era el plan. Lo obvio es `badgeLabel`, y no vale
+para quien ya tenía la app instalada: AppKit acepta el valor y lo devuelve al
+releerlo —`releido=2`—, pero quien decide si se dibuja es el sistema, y el globo
+es un permiso que se concede **al aceptar los avisos, de una vez**. Pauta pedía
+`.alert` y `.sound`, así que nunca lo tuvo.
+
+Añadir `.badge` a la petición no lo arregla, y eso también se midió:
+
+```
+antes=false  request=true  despues=false
+```
+
+El sistema contesta que sí a la petición —ya estaba autorizada— y deja el globo
+denegado. Ajustes del Sistema ni siquiera enseña el interruptor, porque la app no
+lo pidió el día que importaba. Borrar y reinstalar tampoco: en macOS esa decisión
+va por identificador de paquete y sobrevive —comprobado borrando el paquete ocho
+veces seguidas, `authorized` en todas—.
+
+Así que Pauta pinta su propia baldosa: el icono y encima una cápsula roja con el
+número. `NSDockTile.contentView` no pide permiso a nadie. El precio es dibujar
+también el icono, porque poner una vista propia sustituye la baldosa entera; y las
+medidas van en proporción al lado, no en puntos, porque el Dock la dibuja al
+tamaño que cada uno tenga puesto.
 
 **En el teléfono lo pone el sistema** y sobrevive a cerrar la app, que es justo
 cuando sirve. El precio es que `.badge` es un permiso aparte, y Pauta pedía solo
