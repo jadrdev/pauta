@@ -1024,6 +1024,41 @@ Y nada pide permiso por su cuenta al arrancar. **Registrarse a los cambios de un
 así que el vigilante no se monta hasta que hay permiso. Sin eso, la tarjeta
 llegaba tarde a su propia fiesta.
 
+## El globo del icono
+
+Cuando tienes tareas **atrasadas**, el icono lleva el número. Cuando no, no lleva
+nada — y nunca lleva un cero.
+
+Esa restricción es lo que lo hace funcionar. Un globo con «lo de hoy» estaría
+encendido todas las mañanas, dejaría de leerse, y el día que hubiera algo raro no
+te enterarías: es el mismo razonamiento por el que la cuenta atrás de la barra de
+menús solo sale cuando falta menos de una hora. Lo atrasado es distinto porque
+**se apaga haciendo el trabajo**. Un globo que puedes quitar trabajando es la
+definición de un globo bueno.
+
+La cuenta es la misma que el apunte del widget y que la marca de cada fila
+—planificada para un día que ya pasó—, y sale del mismo `Vistazo`. Cuatro sitios
+diciendo lo mismo con números distintos es cuatro veces peor que no decirlo.
+
+**En el Mac lo pinta el propio proceso** (`NSApp.dockTile.badgeLabel`), así que no
+hace falta permiso — pero por eso mismo solo existe mientras la app corre. Si la
+cierras del todo no hay globo; vivir en la barra de menús es lo que hace que eso
+no importe casi nunca.
+
+**En el teléfono lo pone el sistema** y sobrevive a cerrar la app, que es justo
+cuando sirve. El precio es que `.badge` es un permiso aparte, y Pauta pedía solo
+`.alert` y `.sound` hasta la 0.3.8. A quien ya había concedido los avisos **el
+sistema no le vuelve a preguntar**: se comprueba con
+
+```bash
+/Applications/Pauta.app/Contents/MacOS/Pauta --avisos
+```
+
+que dice `globo en el icono: no permitido` en ese caso. Por eso la app **lee el
+estado en vez de suponerlo**, y cuando está apagado la pantalla de ajustes del
+teléfono enseña una fila que lleva a encenderlo. Instalando de cero no hace falta:
+el permiso se pide con los avisos.
+
 ## Versiones nuevas
 
 La app **avisa, no instala**.

@@ -1,5 +1,6 @@
 import SwiftUI
 import WidgetKit
+import UserNotifications
 import PautaCore
 
 /// Pauta en el teléfono.
@@ -194,14 +195,23 @@ struct RaizView: View {
     /// reloj. Los dos enseñan el mismo vistazo y ninguno se entera por su
     /// cuenta.
     private func avisarAFuera() {
+        let vistazo = Vistazo.de(store.items, proyectos: store.projects,
+                                 limite: Vistazo.limitePublicado)
         // El widget, que si no se enteraría cuando el sistema quisiera:
         // completar algo y verlo seguir ahí media hora es lo que hace que un
         // widget deje de creerse.
         WidgetCenter.shared.reloadAllTimelines()
         // Y el reloj. Sin reloj emparejado no hace nada.
-        EnlaceConElReloj.shared.publicar(
-            Vistazo.de(store.items, proyectos: store.projects,
-                       limite: Vistazo.limitePublicado))
+        EnlaceConElReloj.shared.publicar(vistazo)
+        // Y el globo del icono, del mismo vistazo: las tres cosas cuentan lo
+        // mismo porque cuentan lo mismo, no porque coincidan.
+        //
+        // A diferencia del Mac, aquí el globo lo pone el sistema y sobrevive a
+        // cerrar la app — que es justo cuando sirve. El precio es que necesita
+        // permiso, y quien concedió los avisos antes de la 0.3.8 lo tiene
+        // apagado hasta que lo encienda: se lo dice la pantalla de ajustes.
+        Task { try? await UNUserNotificationCenter.current()
+            .setBadgeCount(vistazo.atrasadas) }
     }
 
 }

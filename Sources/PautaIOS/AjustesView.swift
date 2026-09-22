@@ -30,6 +30,7 @@ struct AjustesView: View {
     @State private var cruzando = false
     @State private var avisos: UNAuthorizationStatus = .notDetermined
     @State private var calendario = Agenda.authorization
+    @State private var globo = true
 
     private static let horasDeRepaso = [7 * 60, 7 * 60 + 30, 8 * 60, 8 * 60 + 30,
                                         9 * 60, 9 * 60 + 30, 10 * 60]
@@ -104,6 +105,22 @@ struct AjustesView: View {
                               decidido: avisos != .notDetermined) {
                     await Avisos.request()
                     avisos = await Avisos.authorization()
+                    globo = await Avisos.puedeGlobo()
+                }
+                // El globo es un permiso aparte y puede estar apagado con los
+                // avisos concedidos: quien los concedió antes de la 0.3.8 nunca
+                // llegó a decir que sí a esto, y el sistema no vuelve a
+                // preguntar. Así que no se supone, se lee — y se dice **solo
+                // cuando está apagado**, que es cuando hay algo que hacer.
+                if avisos == .authorized, !globo {
+                    Button {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        Label("Encender los globos del icono", systemImage: "app.badge")
+                    }
+                    .listRowBackground(Papel.bg)
                 }
                 FilaDePermiso(nombre: "Calendario",
                               concedido: calendario == .fullAccess,
@@ -222,6 +239,7 @@ struct AjustesView: View {
         .task {
             avisos = await Avisos.authorization()
             calendario = Agenda.authorization
+            globo = await Avisos.puedeGlobo()
         }
         // La hora del repaso cambia lo que hay programado: esperar al siguiente
         // cambio en las tareas dejaría la hora nueva sin efecto hasta mañana.

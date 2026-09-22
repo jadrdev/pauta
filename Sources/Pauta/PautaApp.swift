@@ -147,6 +147,10 @@ struct Entry {
                                "ephemeral"]
                 let i = await Avisos.authorization().rawValue
                 print("permiso de avisos: \(i < nombres.count ? nombres[i] : "\(i)")")
+                // El globo es un permiso aparte y puede estar apagado con los
+                // avisos concedidos: se lee, no se supone.
+                print("globo en el icono: "
+                      + (await Avisos.puedeGlobo() ? "permitido" : "no permitido"))
                 let pendientes = await Avisos.pending()
                 print("avisos programados: \(pendientes.count)")
                 if let hora = Repaso.hora {
@@ -324,6 +328,12 @@ struct PautaApp: App {
         Vistazo.publicar(vistazo)
         vistazoDelDia = vistazo.dia
         WidgetCenter.shared.reloadAllTimelines()
+        // El globo del Dock, del mismo vistazo que el widget: así no pueden
+        // discrepar. En el Mac no hace falta permiso —lo pinta el propio
+        // proceso— pero por eso mismo **solo existe mientras la app corre**: si
+        // la cierras del todo, no hay globo. Vivir en la barra de menús es lo
+        // que hace que eso no importe casi nunca.
+        NSApp.dockTile.badgeLabel = vistazo.globo
     }
 
     var body: some Scene {

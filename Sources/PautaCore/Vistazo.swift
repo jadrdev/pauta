@@ -77,6 +77,19 @@ public struct Vistazo: Codable, Equatable, Sendable {
         hoy == 0 ? "Nada para hoy" : "\(hoy) para hoy"
     }
 
+    /// Lo que va en el globo del icono: cuántas atrasadas, o nada.
+    ///
+    /// **`nil` y nunca «0».** Un indicador encendido todos los días deja de
+    /// leerse —es la misma razón por la que la cuenta atrás de la barra de menús
+    /// solo sale cuando falta menos de una hora— y entonces tampoco avisa el día
+    /// que sí importa. Este se apaga solo en cuanto pagas la deuda, que es lo
+    /// que lo hace distinto de un contador de «lo de hoy».
+    ///
+    /// Es la **misma** cuenta que el apunte del widget y que la marca de cada
+    /// fila, a propósito: cuatro sitios diciendo lo mismo con números distintos
+    /// es cuatro veces peor que no decirlo.
+    public var globo: String? { atrasadas > 0 ? "\(atrasadas)" : nil }
+
     /// «2 atrasadas», si hay. Es el dato que cambia lo que haces con el día, y
     /// por eso va aparte del titular en vez de sumado dentro.
     public var apunte: String? {

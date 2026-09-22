@@ -144,10 +144,35 @@ public enum Avisos {
     }
 
     /// Pide permiso. Devuelve si quedó concedido.
+    ///
+    /// `.badge` va desde la 0.3.8, para el globo del icono con las atrasadas. A
+    /// quien ya había concedido los avisos **no se le vuelve a preguntar**: el
+    /// sistema solo enseña el diálogo cuando no hay decisión tomada, así que su
+    /// globo se queda apagado hasta que lo encienda a mano. Por eso existe
+    /// `puedeGlobo`: la app lee el estado de verdad en vez de suponerlo, y lo
+    /// dice donde se pueda arreglar.
     @discardableResult
     public static func request() async -> Bool {
         guard let centro else { return false }
-        return (try? await centro.requestAuthorization(options: [.alert, .sound])) ?? false
+        return (try? await centro.requestAuthorization(
+            options: [.alert, .sound, .badge])) ?? false
+    }
+
+    /// Si el sistema deja poner el globo en el icono.
+    ///
+    /// Es un permiso aparte del de avisar, y puede estar apagado con los avisos
+    /// concedidos. Se lee, no se supone.
+    ///
+    /// En el reloj no existe la pregunta —`badgeSetting` no está disponible en
+    /// watchOS— y como el núcleo es el mismo, se responde que no en vez de no
+    /// compilar allí.
+    public static func puedeGlobo() async -> Bool {
+        #if os(watchOS)
+        return false
+        #else
+        guard let centro else { return false }
+        return await centro.notificationSettings().badgeSetting == .enabled
+        #endif
     }
 
     /// Lo que el sistema ya ha entregado y sigue en el centro de

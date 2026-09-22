@@ -4374,3 +4374,43 @@ struct OrdenDesdeElRelojTests {
         #expect(Retention.leQuedan(desde: hace(45)) == "se va hoy")
     }
 }
+
+/// El globo del icono: las atrasadas, o nada.
+@Suite struct GloboTests {
+
+    private func tarea(hace dias: Int) -> Item {
+        var i = Item(title: "t")
+        i.when = Calendar.current.date(byAdding: .day, value: -dias, to: .now)
+        return i
+    }
+
+    /// **Sin atrasadas no hay globo, y no hay un globo con un cero.** Un
+    /// indicador encendido todos los días deja de leerse —es la misma razón por
+    /// la que la cuenta atrás de la barra de menús solo sale cuando falta menos
+    /// de una hora—, y entonces tampoco avisa el día que sí importa.
+    @Test func nothingLateMeansNoBadge() {
+        #expect(Vistazo.de([tarea(hace: 0)], limite: 5).globo == nil)
+        #expect(Vistazo.de([], limite: 5).globo == nil)
+    }
+
+    @Test func itIsTheNumberOfLateOnes() {
+        #expect(Vistazo.de([tarea(hace: 3)], limite: 5).globo == "1")
+        #expect(Vistazo.de([tarea(hace: 3), tarea(hace: 1), tarea(hace: 0)],
+                           limite: 5).globo == "2")
+    }
+
+    /// Cuenta **todas** las atrasadas, no solo las que caben en el widget: el
+    /// globo no tiene límite de sitio y recortarlo mentiría sobre la deuda.
+    @Test func theBadgeIgnoresTheWidgetLimit() {
+        let muchas = (1...9).map { tarea(hace: $0) }
+        #expect(Vistazo.de(muchas, limite: 3).filas.count == 3)
+        #expect(Vistazo.de(muchas, limite: 3).globo == "9")
+    }
+
+    /// Lo completado y lo aparcado no deben nada.
+    @Test func doneAndParkedOweNothing() {
+        var hecha = tarea(hace: 2); hecha.isCompleted = true
+        var aparcada = tarea(hace: 2); aparcada.isSomeday = true
+        #expect(Vistazo.de([hecha, aparcada], limite: 5).globo == nil)
+    }
+}
