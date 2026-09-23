@@ -4751,3 +4751,65 @@ struct OrdenDesdeElRelojTests {
         #expect(s.items.map(\.id) == [tarea.id])
     }
 }
+
+/// Tachar en un aparato y que el otro lo destache al abrirse.
+///
+/// Al abrir, el almacén renumeraba **todas** las tareas si dos compartían
+/// posición, y lo hacía desde lo que tenía en su carpeta, con fecha nueva. Dos
+/// aparatos apuntando a la vez dan ese empate —cada uno pone la suya al final—,
+/// y entonces el primero que se abría con una copia vieja ganaba en todas: lo
+/// tachado en el otro volvía a estar pendiente. Pasó el 23 de septiembre de
+/// 2026 con 99 tareas reescritas en el mismo instante.
+@MainActor @Suite struct AbrirNoPisaLoTachadoTests {
+
+    private func carpeta() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-pisa-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    @Test func openingWithAStaleCopyDoesNotUncompleteWhatTheOtherSideDid() {
+        let mac = carpeta(), telefono = carpeta()
+        defer {
+            try? FileManager.default.removeItem(at: mac)
+            try? FileManager.default.removeItem(at: telefono)
+        }
+
+        let enElMac = Store(root: mac)
+        let tarea = enElMac.addItem(title: "Revisar fondos", in: .today)
+        Puente.cruzar(mac, telefono)
+
+        // Cada aparato apunta una a la vez: las dos caen en la misma posición.
+        _ = enElMac.addItem(title: "Del Mac", in: .inbox)
+        _ = Store(root: telefono).addItem(title: "Del teléfono", in: .inbox)
+        Puente.cruzar(mac, telefono)
+
+        // Se tacha en el Mac, y el teléfono se abre antes de cruzar.
+        enElMac.reload()
+        enElMac.toggleComplete(tarea)
+        _ = Store(root: telefono)
+        Puente.cruzar(mac, telefono)
+
+        enElMac.reload()
+        #expect(enElMac.items.first { $0.id == tarea.id }?.isCompleted == true,
+                "el teléfono la destachó al abrirse")
+    }
+
+    /// Sin renumerar al abrir, arrastrar entre dos empatadas tiene que seguir
+    /// moviendo la tarea: el punto medio entre dos iguales es el mismo número.
+    @Test func draggingBetweenTiedTasksStillMoves() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "A", in: .inbox)
+        let b = s.addItem(title: "B", in: .inbox)
+        let c = s.addItem(title: "C", in: .inbox)
+        var empatada = s.items.first { $0.id == b.id }!
+        empatada.position = s.items.first { $0.id == a.id }!.position
+        s.update(empatada)
+
+        s.place(c, before: b, in: .inbox)
+        let orden = s.items(for: .inbox).map(\.title)
+        #expect(orden.firstIndex(of: "C")! < orden.firstIndex(of: "B")!)
+        #expect(Set(s.items(for: .inbox).map(\.position)).count == 3)
+    }
+}

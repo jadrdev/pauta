@@ -423,9 +423,11 @@ struct PautaApp: App {
                     // esta ventana, y un aviso se atiende con la ventana
                     // cerrada. Sin esto, completar desde el aviso dejaría la
                     // insistencia sonando y aplazar no volvería nunca.
+                    // `completar` y no alternar: el aviso pudo quedarse en
+                    // pantalla mientras la tarea se tachaba en el teléfono, y
+                    // alternar la destacharía.
                     AvisoAcciones.alCompletar = { id in
-                        guard let item = store.items.first(where: { $0.id == id }) else { return }
-                        store.toggleComplete(item)
+                        guard store.completar(id) else { return }
                         Task { await Avisos.reschedule(store.items) }
                     }
                     // El repaso no lleva tarea: abre Hoy, que es donde se

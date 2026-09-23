@@ -64,6 +64,15 @@ reciente y marca las demás como resueltas — si no se marcaran, el conflicto s
 quedaría ahí para siempre. Que la decisión salga del contenido del archivo y no de
 su fecha en disco la hace determinista: los dos dispositivos eligen lo mismo.
 
+**Abrir no escribe nada.** Cada cambio reescribe la tarea entera con fecha
+nueva, así que una escritura hecha desde una copia vieja gana y pisa lo que el
+otro aparato hizo después. Por eso nada puede escribir tareas por su cuenta al
+arrancar. Pasó con la renumeración de posiciones: si dos tareas empataban —dos
+aparatos apuntando a la vez—, el almacén las renumeraba **todas** al abrirse, y
+el teléfono, abierto antes de cruzar con el Mac, destachaba lo tachado allí. Hoy
+los empates se resuelven al arrastrar, solo en la lista que se ordena y solo en
+las empatadas; y el aviso de completar completa, no alterna.
+
 **Refresco en vivo.** La app vigila la carpeta con FSEvents y recarga cuando algo
 cambia, así que lo que llegue de otro dispositivo aparece sin reabrirla. Se usa
 FSEvents y no `DispatchSource.makeFileSystemObjectSource`: este último solo se

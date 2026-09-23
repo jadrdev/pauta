@@ -288,7 +288,6 @@ public final class Store {
             try? fm.createDirectory(at: projectsDir, withIntermediateDirectories: true)
             try? fm.createDirectory(at: areasDir, withIntermediateDirectories: true)
             load()
-            normalizePositionsIfNeeded()
             purgeOldTombstones()
         }
     }
@@ -1076,28 +1075,23 @@ public final class Store {
         return borrados
     }
 
-    /// Da posiciones distintas a todas las tareas si hay empates.
+    /// Posiciones estrictamente crecientes para una lista ya ordenada,
+    /// cambiando solo las que empatan con la anterior.
     ///
-    /// Las tareas guardadas antes de que existiera el campo valen todas 0, y
-    /// entre dos ceros no hay punto medio: sin esto el primer arrastre no movería
-    /// nada. Se numeran respetando el orden que ya tenían, y se hace una sola vez
-    /// porque después las posiciones ya son distintas.
-    func normalizePositionsIfNeeded() {
-        if Set(items.map(\.position)).count != items.count {
-            for (i, item) in items.sorted(by: Item.byPosition).enumerated() {
-                mutateItem(item.id) { $0.position = Double(i + 1) }
-            }
+    /// Entre dos iguales no hay punto medio, así que arrastrar entre ellas no
+    /// movería nada. Antes esto se arreglaba **al abrir** renumerando todas
+    /// las tareas, y era lo que destachaba lo tachado en el otro aparato: se
+    /// reescribían desde la copia de esta carpeta, que podía ser vieja, y con
+    /// fecha nueva ganaban en el siguiente cruce. Ahora se hace al arrastrar,
+    /// solo en la lista que se ordena y solo en las empatadas.
+    nonisolated static func desempatadas(_ posiciones: [Double]) -> [Double] {
+        var nuevas = posiciones
+        for i in nuevas.indices.dropFirst() where nuevas[i] <= nuevas[i - 1] {
+            let previa = nuevas[i - 1]
+            let siguiente = nuevas[(i + 1)...].first { $0 > previa }
+            nuevas[i] = siguiente.map { (previa + $0) / 2 } ?? previa + 1
         }
-        if Set(projects.map(\.position)).count != projects.count {
-            for (i, project) in projects.sorted(by: Project.byPosition).enumerated() {
-                mutateProject(project.id) { $0.position = Double(i + 1) }
-            }
-        }
-        if Set(areas.map(\.position)).count != areas.count {
-            for (i, area) in areas.sorted(by: Area.byPosition).enumerated() {
-                mutateArea(area.id) { $0.position = Double(i + 1) }
-            }
-        }
+        return nuevas
     }
 
     /// Coloca `item` justo antes de `other`, o al final si `other` es `nil`.
@@ -1150,6 +1144,13 @@ public final class Store {
         // que cuentan son los del día de destino.
         if let destino { lista = lista.filter { $0.day == destino } }
         guard !lista.isEmpty else { return }
+        if Set(lista.map(\.position)).count != lista.count {
+            let nuevas = Store.desempatadas(lista.map(\.position))
+            for i in lista.indices where nuevas[i] != lista[i].position {
+                mutateItem(lista[i].id) { $0.position = nuevas[i] }
+                lista[i].position = nuevas[i]
+            }
+        }
 
         let nueva: Double
         if let other, let idx = lista.firstIndex(where: { $0.id == other.id }) {
@@ -1296,8 +1297,15 @@ public final class Store {
     /// Coloca `project` justo antes de `other`, o al final si `other` es `nil`.
     /// Mismo hueco entre vecinos que en las tareas: mueve uno, escribe uno.
     public func place(_ project: Project, before other: Project?) {
-        let lista = projects.filter { $0.id != project.id }
+        var lista = projects.filter { $0.id != project.id }
         guard !lista.isEmpty else { return }
+        if Set(lista.map(\.position)).count != lista.count {
+            let nuevas = Store.desempatadas(lista.map(\.position))
+            for i in lista.indices where nuevas[i] != lista[i].position {
+                mutateProject(lista[i].id) { $0.position = nuevas[i] }
+                lista[i].position = nuevas[i]
+            }
+        }
 
         let nueva: Double
         if let other, let idx = lista.firstIndex(where: { $0.id == other.id }) {
@@ -1465,8 +1473,15 @@ public final class Store {
 
     /// Coloca `area` justo antes de `other`, o al final si `other` es `nil`.
     public func place(_ area: Area, before other: Area?) {
-        let lista = areas.filter { $0.id != area.id }
+        var lista = areas.filter { $0.id != area.id }
         guard !lista.isEmpty else { return }
+        if Set(lista.map(\.position)).count != lista.count {
+            let nuevas = Store.desempatadas(lista.map(\.position))
+            for i in lista.indices where nuevas[i] != lista[i].position {
+                mutateArea(lista[i].id) { $0.position = nuevas[i] }
+                lista[i].position = nuevas[i]
+            }
+        }
 
         let nueva: Double
         if let other, let idx = lista.firstIndex(where: { $0.id == other.id }) {
