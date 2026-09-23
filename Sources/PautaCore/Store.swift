@@ -388,7 +388,8 @@ public final class Store {
     }
 
     /// Lo ya leído de un archivo y el sello que tenía al leerlo. `value` en
-    /// `nil` recuerda que estaba ilegible, para no reintentarlo en cada recarga.
+    /// `nil` es que no se pudo leer, y eso **no se da por bueno**: se reintenta
+    /// en la carga siguiente aunque el sello no haya cambiado.
     private struct Cached<T> {
         var stamp: FileStamp?
         var value: T?
@@ -428,7 +429,13 @@ public final class Store {
         for file in files where file.pathExtension == "json" {
             let nombre = file.lastPathComponent
             let sello = stamp(of: file)
-            if let sello, let conocido = cache[nombre], conocido.stamp == sello {
+            // Solo se reaprovecha lo que se leyó bien. Un archivo de iCloud
+            // sin bajar ya tiene su fecha y su tamaño definitivos, así que
+            // bajarlo no cambia el sello: si lo ilegible se recordara, se
+            // quedaría oculto hasta reiniciar la app. Pasó, y parecía que se
+            // habían perdido los proyectos.
+            if let sello, let conocido = cache[nombre], conocido.stamp == sello,
+               conocido.value != nil {
                 fresh[nombre] = conocido
                 continue
             }
@@ -1033,6 +1040,14 @@ public final class Store {
     /// resucite la tarea al sincronizar. Cumplido ese plazo ya no protege de
     /// nada: es un archivo que se lee en cada carga y ocupa sitio en iCloud.
     ///
+    /// Hace falta que **las dos fechas** pasen del plazo: la del borrado y la
+    /// de la última modificación. Vaciar la papelera pone la de borrado un mes
+    /// atrás, y mirando solo esa el archivo se barría en el siguiente arranque,
+    /// antes de que el otro aparato recibiera la caducidad; el puente veía que
+    /// aquí faltaba y devolvía su copia, y la papelera se rellenaba sola. La
+    /// última modificación es la del vaciado, así que la lápida caducada espera
+    /// el mismo mes que cualquier otra, invisible.
+    ///
     /// Devuelve cuántos archivos borró.
     @discardableResult
     func purgeOldTombstones(olderThan retention: TimeInterval = Retention.tombstones,
@@ -1042,15 +1057,16 @@ public final class Store {
         let limite = now.addingTimeInterval(-retention)
         var borrados = 0
 
-        func purge<T: Decodable>(_ dir: URL, as type: T.Type,
-                                 deletedAt: (T) -> Date?) {
+        func purge<T: Timestamped>(_ dir: URL, as type: T.Type,
+                                   deletedAt: (T) -> Date?) {
             guard let files = try? fm.contentsOfDirectory(at: dir,
                                                           includingPropertiesForKeys: nil)
             else { return }
             for file in files where file.pathExtension == "json" {
                 guard let data = try? Data(contentsOf: file),
                       let objeto = try? decoder.decode(T.self, from: data),
-                      let fecha = deletedAt(objeto), fecha < limite else { continue }
+                      let fecha = deletedAt(objeto), fecha < limite,
+                      objeto.updatedAt < limite else { continue }
                 if (try? fm.removeItem(at: file)) != nil { borrados += 1 }
             }
         }

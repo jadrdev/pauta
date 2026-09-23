@@ -736,6 +736,16 @@ Detalle que se descubrió probándolo: la caducidad se escribe con una fecha
 redondean al milisegundo, así que borrar algo y vaciar la papelera acto seguido
 daban el mismo sello y el puente no veía ganar a la caducidad.
 
+Y otro, que se descubrió con los datos de verdad: la limpieza miraba solo la
+fecha de borrado, y como vaciar la pone un mes atrás, **el siguiente arranque
+barría el archivo en el acto**. Si el Mac se reabría antes de que el teléfono
+cruzara —bastaba abrir las dos apps a la vez—, al Mac le faltaba el archivo y el
+teléfono le devolvía su copia sin caducar: la papelera, llena otra vez. Ahora la
+limpieza exige que también la última modificación tenga más de treinta días. La
+última modificación es la del vaciado, así que una lápida caducada se queda un
+mes en la carpeta, invisible, el mismo plazo que ya se daba a cualquier otra
+para que el otro aparato se enterase.
+
 ## Vaciar la bandeja
 
 La bandeja existe para poder **apuntar sin decidir**. El precio es decidir

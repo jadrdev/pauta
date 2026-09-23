@@ -4453,8 +4453,14 @@ struct OrdenDesdeElRelojTests {
         // aparato reciba la caducidad en vez de devolvernos su copia.
         #expect(quedan("items").count == 1)
 
-        // Y al abrir el almacén de nuevo, la limpieza de siempre se lo lleva.
-        _ = Store(root: raiz)
+        // Reabrir no la barre todavía: el otro aparato puede no haber cruzado.
+        let reabierto = Store(root: raiz)
+        #expect(quedan("items").count == 1)
+        #expect(reabierto.borradas.isEmpty)
+
+        // Pasado el mes desde el vaciado, la limpieza de siempre se lo lleva.
+        let dentroDeUnMes = Date.now.addingTimeInterval(Retention.tombstones + 60)
+        reabierto.purgeOldTombstones(now: dentroDeUnMes)
         #expect(quedan("items").isEmpty, "la limpieza no barrió la tarea")
         #expect(quedan("projects").isEmpty, "la limpieza no barrió el proyecto")
     }
@@ -4528,6 +4534,35 @@ struct OrdenDesdeElRelojTests {
         s.vaciarPapelera()
         Puente.cruzar(mac, telefono)
         #expect(Store(root: telefono).borradas.isEmpty, "el teléfono sigue con ella")
+    }
+
+    /// **El segundo fallo**, el del 23 de septiembre de 2026. Vaciar caduca la
+    /// lápida, y la limpieza del siguiente arranque la barría en el acto
+    /// porque solo miraba la fecha de borrado. Si el Mac se reabre antes de
+    /// que el teléfono cruce —las dos apps abiertas a la vez basta—, al Mac le
+    /// falta el archivo y el teléfono le devuelve su copia sin caducar.
+    @Test func reopeningBeforeTheOtherSideSyncsDoesNotRefillTheTrash() {
+        let mac = carpeta(), telefono = carpeta()
+        defer {
+            try? FileManager.default.removeItem(at: mac)
+            try? FileManager.default.removeItem(at: telefono)
+        }
+
+        let s = Store(root: mac)
+        let tarea = s.addItem(title: "Mirar lo del seguro", in: .inbox)
+        let proyecto = s.addProject(name: "Cursillo")
+        s.delete(tarea)
+        s.delete(proyecto)
+        Puente.cruzar(mac, telefono)
+
+        s.vaciarPapelera()
+        _ = Store(root: mac)                  // el Mac se reabre y limpia…
+        Puente.cruzar(mac, telefono)          // …y luego cruza el teléfono
+
+        let reabierto = Store(root: mac)
+        #expect(reabierto.borradas.isEmpty, "la tarea volvió del teléfono")
+        #expect(reabierto.proyectosBorrados.isEmpty, "el proyecto volvió del teléfono")
+        #expect(Store(root: telefono).borradas.isEmpty)
     }
 
     /// Una lápida caducada no sale en la papelera aunque su archivo siga ahí:
@@ -4673,5 +4708,46 @@ struct OrdenDesdeElRelojTests {
         #expect(s.items.map(\.title).sorted() == ["Comprar pan", "Llamar al fontanero"])
         #expect(s.items.first { $0.title == "Comprar pan" }?.when == nil)
         #expect(s.items.first { $0.title == "Llamar al fontanero" }?.timeOfDay == 9 * 60)
+    }
+}
+
+/// Un archivo que no se pudo leer una vez no puede quedarse oculto para
+/// siempre.
+///
+/// La caché compara fecha y tamaño para no releer lo que no cambió. Pero un
+/// archivo de iCloud que todavía no ha bajado ya tiene su fecha y su tamaño
+/// definitivos: si se lee en ese momento falla, y al bajar no cambia nada que
+/// la caché mire. Pasó el 23 de septiembre de 2026: la app del Mac arrancó
+/// mientras el teléfono y iCloud movían archivos, y se quedó sin proyectos ni
+/// tareas hasta reiniciarla, con los datos intactos en la carpeta.
+@MainActor @Suite struct LoIlegibleSeReintentaTests {
+
+    @Test func aFileThatFailedOnceIsReadAgainEvenWithTheSameStamp() throws {
+        let raiz = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-ilegible-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: raiz) }
+
+        let origen = Store(root: raiz)
+        let tarea = origen.addItem(title: "Llamar al fontanero", in: .inbox)
+        let archivo = raiz.appendingPathComponent("items/\(tarea.id.uuidString).json")
+        let bueno = try Data(contentsOf: archivo)
+        let fecha = try #require(try archivo.resourceValues(
+            forKeys: [.contentModificationDateKey]).contentModificationDate)
+
+        // Mismo tamaño y misma fecha, contenido que no se entiende: lo que ve
+        // quien lee un archivo a medio bajar.
+        func escribir(_ datos: Data) throws {
+            try datos.write(to: archivo)
+            try FileManager.default.setAttributes([.modificationDate: fecha],
+                                                  ofItemAtPath: archivo.path)
+        }
+        try escribir(Data(repeating: 0x20, count: bueno.count))
+
+        let s = Store(root: raiz)
+        #expect(s.items.isEmpty)
+
+        try escribir(bueno)
+        s.reload()
+        #expect(s.items.map(\.id) == [tarea.id])
     }
 }
