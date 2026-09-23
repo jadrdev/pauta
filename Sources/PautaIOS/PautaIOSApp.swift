@@ -22,6 +22,13 @@ struct PautaIOSApp: App {
         // Y la sesión con el reloj, que tarda en activarse: pedirla al arrancar
         // es lo que hace que el primer vistazo salga y no se quede esperando.
         EnlaceConElReloj.shared.activar()
+        // El refresco en segundo plano se registra **aquí**: el sistema exige
+        // que sea antes de que termine el lanzamiento, y desde una vista ya es
+        // tarde. Su almacén es propio y no el de la interfaz, porque cuando el
+        // sistema despierta la app no hay ninguna interfaz montada.
+        RefrescoEnSegundoPlano.registrar {
+            await RefrescoEnSegundoPlano.cruzarYAvisar()
+        }
     }
 
     var body: some Scene {
@@ -59,6 +66,9 @@ struct RaizView: View {
     /// de apuntar. Con un booleano habría que acordarse de bajarlo, y dos
     /// toques seguidos en el widget no harían nada la segunda vez.
     @State private var pulsoApuntar = 0
+    /// Vigila la carpeta del Mac mientras la app está delante, para que un
+    /// cambio hecho allí aparezca aquí sin tener que salir y volver.
+    @State private var vigilante = VigilanteDeCarpeta()
 
     private enum Pestana: Hashable { case hoy, proximamente, bandeja, mas }
 
@@ -102,7 +112,20 @@ struct RaizView: View {
         // Al volver del fondo: el día pudo cambiar mientras la app dormía, y lo
         // que era «de hoy» pasó a ser atrasado.
         .onChange(of: fase) { _, nueva in
-            guard nueva == .active else { return }
+            // Al irse al fondo se suelta la carpeta —mantener abierto un permiso
+            // de ámbito seguro sin nadie mirando no sirve de nada— y se pide el
+            // siguiente despertar.
+            guard nueva == .active else {
+                vigilante.parar()
+                RefrescoEnSegundoPlano.programar()
+                return
+            }
+            vigilante.empezar {
+                Task {
+                    await Sincronizar.conElMac(store)
+                    store.reload()
+                }
+            }
             store.reload()
             // Al volver del fondo es cuando hace falta cruzar con el Mac: entre
             // dejar el teléfono y volver a cogerlo es cuando se ha estado
@@ -142,6 +165,16 @@ struct RaizView: View {
             // en un arranque entero, y el reloj esperando un vistazo que no
             // salía.
             avisarAFuera()
+            // También al arrancar en frío: el cambio de fase no siempre pasa por
+            // «activa» cuando la app se abre de cero, y apoyarse solo en él deja
+            // la primera sesión sin vigilante.
+            vigilante.empezar {
+                Task {
+                    await Sincronizar.conElMac(store)
+                    store.reload()
+                }
+            }
+            RefrescoEnSegundoPlano.programar()
             // Y quién atiende lo que pida el reloj, que hasta ahora solo
             // recibía. Se instala aquí porque el almacén vive en la vista: el
             // enlace no guarda ninguno a propósito.

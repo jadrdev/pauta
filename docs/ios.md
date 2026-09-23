@@ -140,6 +140,58 @@ pantalla solo las dibuja.
 Lo que **no** hay en el teléfono es `⌘Z`. Ahí deshacer es un atajo de teclado, y
 lo que hay es la lista.
 
+## Enterarse de los cambios sin abrir la app
+
+El Mac vigila su carpeta con FSEvents y se entera al instante. El teléfono no
+podía: se cruzaba con el Mac **al abrir la app y al volver del fondo**, y nada
+más. Si dejabas la app delante y tocabas algo en el Mac, no aparecía hasta que
+salías y volvías; y con el teléfono en el bolsillo, el widget y el globo se
+quedaban con lo de la última vez.
+
+Ahora hay dos piezas, y ninguna de las dos es tiempo real. Conviene decirlo así.
+
+### Mientras la app está delante
+
+Un `NSFilePresenter` sobre la carpeta elegida. Un cambio hecho en el Mac aparece
+en segundos.
+
+**No es `FolderWatcher`**, que usa FSEvents y no existe en iOS. Y no es
+`DispatchSource` sobre un descriptor, que es la tentación: eso solo ve altas y
+bajas de entradas, no que cambie el **contenido** de un archivo que ya estaba —
+que es justo lo que hace iCloud al traer una edición de otro aparato.
+
+La carpeta es de ámbito seguro, así que el permiso se abre al empezar a vigilar y
+se suelta al irse al fondo: mantenerlo abierto sin nadie mirando no sirve de
+nada. Y los avisos se agrupan un segundo, porque iCloud trae una edición como
+varias escrituras seguidas y cruzar una vez por archivo sería cruzar diez veces
+por un cambio.
+
+### Cuando no está delante
+
+Un `BGAppRefreshTask`. **Quien decide cuándo despertar es iOS**, según lo que uses
+la app, la batería y la red: puede ser en minutos o en horas, y con el ahorro de
+batería puesto puede no ocurrir. No arregla la app —esa se cruza al abrirla—
+sino lo que se ve **sin** abrirla: el widget, el globo del icono y lo que el
+reloj tenga guardado.
+
+Se registra en el `init` de la app porque el sistema exige que sea antes de que
+termine el lanzamiento, y con un identificador que no esté en
+`BGTaskSchedulerPermittedIdentifiers` la app **revienta al arrancar** — así que
+arrancar es la prueba de que está bien registrado. El siguiente despertar se pide
+lo primero al entrar en la tarea y no al final: si el sistema la corta por
+tiempo, no quedaría ninguno pedido y no volvería a despertar nunca.
+
+Su almacén es propio y no el de la interfaz, porque cuando el sistema despierta
+la app no hay ninguna interfaz montada de la que sacarlo.
+
+### Lo que esto no es
+
+Para que el teléfono se entere **al segundo** con la pantalla apagada haría falta
+CloudKit, con su base de datos y sus avisos por push. Eso es cambiarle los
+cimientos a la app: hoy tus tareas son archivos JSON en tu carpeta de iCloud
+Drive, que puedes abrir, copiar y leer sin Pauta. CloudKit los mueve a una base de
+datos que solo entiende la app.
+
 ## Lo que el teléfono todavía no puede
 
 - **Sincronizar.** En iOS la app va en sandbox y no puede entrar en la carpeta de

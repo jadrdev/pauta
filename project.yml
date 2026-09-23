@@ -75,6 +75,11 @@ targets:
         CFBundleDevelopmentRegion: es
         CFBundleLocalizations: [es]
         UILaunchScreen: {}
+        # Para que iOS despierte la app de vez en cuando y cruce con el Mac: sin
+        # esto, el widget y el globo se quedan con lo de la última vez que la
+        # abriste. Quien decide cuándo despertar es el sistema.
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [dev.jadrdev.pauta.refresco]
         # Sin estas cadenas, pedir acceso al calendario aborta el proceso.
         NSCalendarsFullAccessUsageDescription: >-
           Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.
