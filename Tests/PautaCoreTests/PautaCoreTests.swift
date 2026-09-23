@@ -4414,3 +4414,135 @@ struct OrdenDesdeElRelojTests {
         #expect(Vistazo.de([hecha, aparcada], limite: 5).globo == nil)
     }
 }
+
+/// Vaciar la papelera **contra disco**, que es donde pasa de verdad.
+///
+/// La otra prueba de vaciar usa un almacén en memoria, donde borrar archivos no
+/// hace nada: pasaba sin ejercitar una sola línea del camino real.
+@MainActor
+@Suite struct VaciarLaPapeleraEnDiscoTests {
+
+    private func carpeta() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-papelera-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    @Test func emptyingExpiresTheTombstonesAndTheSweepTakesTheFiles() throws {
+        let raiz = carpeta()
+        defer { try? FileManager.default.removeItem(at: raiz) }
+
+        let s = Store(root: raiz)
+        let tarea = s.addItem(title: "Mirar lo del seguro", in: .inbox)
+        let proyecto = s.addProject(name: "Cursillo")
+        s.delete(tarea)
+        s.delete(proyecto)
+        #expect(s.papeleraLlena)
+
+        s.vaciarPapelera()
+        #expect(s.borradas.isEmpty)
+        #expect(s.proyectosBorrados.isEmpty)
+
+        let quedan = { (dir: String) in
+            ((try? FileManager.default.contentsOfDirectory(
+                atPath: raiz.appendingPathComponent(dir).path)) ?? [])
+                .filter { $0.hasSuffix(".json") }
+        }
+        // El archivo sigue ahí **a propósito**: caducado, para que el otro
+        // aparato reciba la caducidad en vez de devolvernos su copia.
+        #expect(quedan("items").count == 1)
+
+        // Y al abrir el almacén de nuevo, la limpieza de siempre se lo lleva.
+        _ = Store(root: raiz)
+        #expect(quedan("items").isEmpty, "la limpieza no barrió la tarea")
+        #expect(quedan("projects").isEmpty, "la limpieza no barrió el proyecto")
+    }
+
+    /// Y no vuelve al releer: si la lápida sigue en la carpeta, la papelera se
+    /// rellena sola en cuanto el vigilante avisa de un cambio.
+    @Test func itDoesNotComeBackOnReload() {
+        let raiz = carpeta()
+        defer { try? FileManager.default.removeItem(at: raiz) }
+
+        let s = Store(root: raiz)
+        let tarea = s.addItem(title: "Mirar lo del seguro", in: .inbox)
+        s.delete(tarea)
+        s.vaciarPapelera()
+
+        s.reload()
+        #expect(s.borradas.isEmpty, "volvió al recargar el mismo almacén")
+        #expect(Store(root: raiz).borradas.isEmpty, "volvió al abrir de nuevo")
+    }
+}
+
+/// Vaciar la papelera y que el teléfono la resucite en el siguiente cruce.
+@MainActor
+@Suite struct LaPapeleraResucitaTests {
+
+    private func carpeta() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-resu-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    /// **El fallo.** El puente no borra nunca: copia a cada lado lo que le
+    /// falta. Así que vaciar la papelera en el Mac quita el archivo, y el
+    /// siguiente cruce con el teléfono —que sigue teniendo su copia— lo trae de
+    /// vuelta. La papelera se rellena sola y parece que el botón no funciona.
+    @Test func emptyingIsUndoneByTheNextSync() {
+        let mac = carpeta(), telefono = carpeta()
+        defer {
+            try? FileManager.default.removeItem(at: mac)
+            try? FileManager.default.removeItem(at: telefono)
+        }
+
+        let s = Store(root: mac)
+        let tarea = s.addItem(title: "Mirar lo del seguro", in: .inbox)
+        s.delete(tarea)
+        Puente.cruzar(mac, telefono)          // el teléfono se lleva la lápida
+
+        s.vaciarPapelera()
+        #expect(s.borradas.isEmpty)
+
+        Puente.cruzar(mac, telefono)          // y en el siguiente cruce…
+        s.reload()
+        #expect(s.borradas.isEmpty, "la lápida volvió del teléfono")
+    }
+
+    /// Y el teléfono también se entera: vaciar no es una decisión local, es un
+    /// dato que viaja. Si allí siguiera en la papelera, la volvería a mandar.
+    @Test func theOtherSideEmptiesToo() {
+        let mac = carpeta(), telefono = carpeta()
+        defer {
+            try? FileManager.default.removeItem(at: mac)
+            try? FileManager.default.removeItem(at: telefono)
+        }
+
+        let s = Store(root: mac)
+        let tarea = s.addItem(title: "Mirar lo del seguro", in: .inbox)
+        s.delete(tarea)
+        Puente.cruzar(mac, telefono)
+
+        s.vaciarPapelera()
+        Puente.cruzar(mac, telefono)
+        #expect(Store(root: telefono).borradas.isEmpty, "el teléfono sigue con ella")
+    }
+
+    /// Una lápida caducada no sale en la papelera aunque su archivo siga ahí:
+    /// está esperando a que la barran, no esperando a que la recuperes.
+    @Test func anExpiredTombstoneIsNotInTheTrash() {
+        let raiz = carpeta()
+        defer { try? FileManager.default.removeItem(at: raiz) }
+        let s = Store(root: raiz)
+        let tarea = s.addItem(title: "Mirar lo del seguro", in: .inbox)
+        s.delete(tarea)
+        s.vaciarPapelera()
+
+        // Sin reabrir el almacén, así que el archivo sigue en la carpeta.
+        s.reload()
+        #expect(s.borradas.isEmpty)
+        #expect(s.restaurar(tarea.id) == false)
+    }
+}

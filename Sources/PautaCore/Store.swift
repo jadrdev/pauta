@@ -60,6 +60,24 @@ enum ISODate {
 public enum Retention {
     public static let tombstones: TimeInterval = 30 * 24 * 3600
 
+    /// Si una lápida ya no cuenta: ni sale en la papelera ni se puede recuperar,
+    /// solo espera a que la barran.
+    public static func caducada(_ borrado: Date, ahora: Date = .now) -> Bool {
+        ahora.timeIntervalSince(borrado) >= tombstones
+    }
+
+    /// La fecha que se le pone a una lápida al vaciar la papelera.
+    ///
+    /// **Vaciar no borra el archivo, lo caduca.** Borrarlo no funciona: el
+    /// puente con el otro aparato no borra nunca —copia a cada lado lo que le
+    /// falta— así que el archivo volvía en el siguiente cruce y la papelera se
+    /// rellenaba sola. Caducarlo sí viaja, porque es un cambio del archivo y
+    /// gana la versión más reciente; entonces los dos lados lo barren por su
+    /// cuenta con la limpieza de siempre.
+    public static func caducar(_ ahora: Date = .now) -> Date {
+        ahora.addingTimeInterval(-tombstones - 60)
+    }
+
     /// Cuánto le queda a una lápida antes de irse sola.
     ///
     /// Es lo que enseña la papelera en cada fila, y no cuándo se borró: lo que
@@ -448,8 +466,12 @@ public final class Store {
         }
         let freshItems = live.sorted(by: Item.byCreation)
         if freshItems != items { items = freshItems }
-        let freshBorradas = enterrado.sorted { ($0.deletedAt ?? .distantPast)
-                                             > ($1.deletedAt ?? .distantPast) }
+        // Las caducadas no salen: no esperan a que las recuperes, esperan a
+        // que las barran. Es lo que hace que vaciar se note al instante aunque
+        // el archivo siga en la carpeta hasta la próxima limpieza.
+        let freshBorradas = enterrado
+            .filter { !Retention.caducada($0.deletedAt ?? .distantPast) }
+            .sorted { ($0.deletedAt ?? .distantPast) > ($1.deletedAt ?? .distantPast) }
         if freshBorradas != borradas { borradas = freshBorradas }
 
         let todosProyectos = loadObjects(in: projectsDir, cache: &projectCache)
@@ -458,7 +480,7 @@ public final class Store {
             .sorted(by: Project.byPosition)
         if freshProjects != projects { projects = freshProjects }
         let freshProyectosBorrados = todosProyectos
-            .filter { $0.deletedAt != nil }
+            .filter { $0.deletedAt.map { !Retention.caducada($0) } ?? false }
             .sorted { ($0.deletedAt ?? .distantPast) > ($1.deletedAt ?? .distantPast) }
         if freshProyectosBorrados != proyectosBorrados {
             proyectosBorrados = freshProyectosBorrados
@@ -470,7 +492,7 @@ public final class Store {
             .sorted(by: Area.byPosition)
         if freshAreas != areas { areas = freshAreas }
         let freshAreasBorradas = todasAreas
-            .filter { $0.deletedAt != nil }
+            .filter { $0.deletedAt.map { !Retention.caducada($0) } ?? false }
             .sorted { ($0.deletedAt ?? .distantPast) > ($1.deletedAt ?? .distantPast) }
         if freshAreasBorradas != areasBorradas { areasBorradas = freshAreasBorradas }
     }
@@ -1570,21 +1592,47 @@ public final class Store {
     /// ofrecer un `⌘Z` que no hace nada.
     public var hayAlgoQueDeshacer: Bool { !pilaDeBorrados.isEmpty }
 
-    /// Vacía la papelera. **Es lo único que borra de verdad**, y por eso se pide
-    /// a mano: lo demás se va solo a los treinta días.
+    /// Vacía la papelera: lo de dentro deja de poder recuperarse.
+    ///
+    /// **Caduca las lápidas en vez de borrar sus archivos.** Borrarlos era lo
+    /// obvio y no funcionaba: el puente con el otro aparato no borra nunca —le
+    /// copia a cada lado lo que le falta— así que el archivo volvía en el
+    /// siguiente cruce y la papelera se rellenaba sola. Desde fuera parecía que
+    /// el botón no hacía nada.
+    ///
+    /// Caducarla sí viaja, porque es un cambio del archivo y entre dos versiones
+    /// gana la más reciente. El otro aparato la recibe ya caducada, tampoco la
+    /// enseña, y la limpieza de siempre se lleva los archivos en los dos lados.
     public func vaciarPapelera() {
-        for item in borradas { olvidar(item.id, in: itemsDir) }
-        for p in proyectosBorrados { olvidar(p.id, in: projectsDir) }
-        for a in areasBorradas { olvidar(a.id, in: areasDir) }
+        let caducidad = Retention.caducar()
+        // Estrictamente posterior a lo que tenía, no «ahora»: las fechas se
+        // redondean al milisegundo, así que borrar y vaciar seguidos dan el
+        // mismo sello y el puente no vería ganar a la caducidad. Con minutos de
+        // por medio da igual; con dos clics seguidos, no.
+        func sello(_ tenia: Date) -> Date {
+            max(Store.stamped(), Store.stamped(tenia.addingTimeInterval(0.001)))
+        }
+        // Se escriben a pelo y no con `mutateItem`: una lápida ya no está en
+        // `items` —`delete` la saca— así que el mutador no encontraría nada.
+        for var item in borradas {
+            item.deletedAt = caducidad
+            item.updatedAt = sello(item.updatedAt)
+            persist(item)
+        }
+        for var proyecto in proyectosBorrados {
+            proyecto.deletedAt = caducidad
+            proyecto.updatedAt = sello(proyecto.updatedAt)
+            persist(proyecto)
+        }
+        for var area in areasBorradas {
+            area.deletedAt = caducidad
+            area.updatedAt = sello(area.updatedAt)
+            persist(area)
+        }
         borradas = []
         proyectosBorrados = []
         areasBorradas = []
         pilaDeBorrados = []
-    }
-
-    private func olvidar(_ id: UUID, in dir: URL) {
-        guard !inMemory else { return }
-        try? FileManager.default.removeItem(at: dir.appendingPathComponent("\(id).json"))
     }
 }
 

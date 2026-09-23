@@ -711,9 +711,30 @@ Si la tarea que devuelves tenía un proyecto que ya no existe, vuelve a la
 bandeja: una tarea con un `projectID` que no está no sale en ninguna lista, y un
 «recuperado» que la deja invisible es peor que no recuperarla.
 
-**Vaciar la papelera es lo único que borra de verdad**, y por eso se pide a mano
-y con una confirmación que lo dice. Lo que no toques se va solo a los treinta
-días.
+### Vaciar no borra el archivo: lo caduca
+
+Vaciar la papelera se pide a mano y con una confirmación, porque a partir de ahí
+no hay vuelta atrás. Pero **no borra los archivos**, y eso costó un rato
+entenderlo.
+
+Borrarlos era lo obvio y no funcionaba. El puente con el teléfono **no borra
+nunca**: le copia a cada lado lo que le falta, que es lo que permite que un cruce
+con la carpeta equivocada se deshaga cruzando con la buena. Así que vaciar en el
+Mac quitaba el archivo y el siguiente cruce lo traía de vuelta desde el teléfono
+—que seguía teniendo su copia—. La papelera se rellenaba sola en segundos y desde
+fuera parecía que el botón no hacía nada.
+
+Lo que sí viaja es un **cambio** del archivo, porque entre dos versiones gana la
+más reciente. Así que vaciar le pone a la lápida una fecha de borrado ya vencida.
+El otro aparato la recibe caducada, tampoco la enseña, y la limpieza de los
+treinta días —que ya existía— se lleva los archivos en los dos lados. Una lápida
+caducada no sale en la papelera ni se puede recuperar: no espera a que la
+recuperes, espera a que la barran.
+
+Detalle que se descubrió probándolo: la caducidad se escribe con una fecha
+**estrictamente posterior** a la que tenía, no con «ahora». Las fechas se
+redondean al milisegundo, así que borrar algo y vaciar la papelera acto seguido
+daban el mismo sello y el puente no veía ganar a la caducidad.
 
 ## Vaciar la bandeja
 
