@@ -779,6 +779,47 @@ La cola **se congela al abrir**. Despachar una tarea la saca de la bandeja, así
 que una lista viva se reordenaría bajo la mano y perdería la cuenta de cuántas
 quedan; y así puede entrar algo nuevo por Siri sin empujar nada.
 
+## La fecha se saca de lo que escribes
+
+Escribes **«Llamar a la gestoría mañana a las 10»** y sale una tarea que se llama
+*Llamar a la gestoría*, para mañana, a las diez. Escribirlo y luego abrir un
+selector para repetirlo es hacer dos veces el mismo trabajo.
+
+Quien entiende el español es `NSDataDetector`, que trae el sistema: sabe de
+«pasado mañana», «el viernes» y «el 3 de octubre» sin que en el código haya una
+sola lista de meses. Va sin red, sin cuenta y sin coste. Lo que pone Pauta es lo
+que él no hace:
+
+**No se inventa nada.** «Comprar pan» no tiene fecha, y «Comprar 3 cajas de
+leche» tampoco — un número suelto no es un día. Una tarea con fecha que tú no
+pediste es peor que una tarea sin fecha, porque además trae aviso.
+
+**Día sin hora deja la hora en blanco.** El detector rellena las doce del
+mediodía cuando no le dices ninguna; tragárselo le pondría a la tarea una hora
+inventada, y a las doce sonaría un aviso que nadie pidió.
+
+**Se limpia lo que queda colgando.** Al sacar la fecha del medio quedan
+preposiciones sueltas —«Cita con el dentista **el**»— que no son título de nada.
+
+**Y se juntan los trozos.** Este es el caso que lo motivó:
+
+```
+«28 de Septiembre de Sección de Inicio de Uned a las 18:00»
+```
+
+Con el título metido **entre** la fecha y la hora, el detector saca dos trozos
+sueltos: «28 de septiembre», que se inventa las doce, y «18:00», que se inventa
+hoy. Ninguno acierta solo. Se combinan —el día del que trae día, la hora del que
+trae hora— y sale *Sección de Inicio de Uned*, el 28 a las 18:00.
+
+Si al quitar la fecha no queda título, no se toca nada: escribir «mañana a las
+10» crea una tarea que se llama así, no una tarea en blanco con fecha.
+
+Esto vive en el núcleo y se engancha en `addItems(from:)`, que es por donde entran
+**todas**: la fila de la lista, el panel del atajo, la barra de menús, la captura
+del teléfono, el atajo de Siri y lo que le dictas al reloj. Seis interfaces que
+entienden lo mismo porque llaman a lo mismo, no porque se hayan puesto de acuerdo.
+
 ## Fechas límite
 
 Una cosa es **cuándo pienso ponerme** (la fecha de planificación) y otra **cuándo
@@ -1516,6 +1557,7 @@ Sources/PautaCore/        librería sin UI: la comparten macOS, iOS y el widget
   Pliegue.swift           qué grupos cerraste hoy, y que mañana se abren solos
   Cuenta.swift            cuánto falta para lo siguiente
   Duracion.swift          cuánto dura cada cosa y cuánto suma el día
+  Cuando.swift            el día y la hora que trae escritos una tarea
   Ajustes.swift           las preferencias, en UserDefaults
   Paleta.swift            los colores en crudo, que usan las dos interfaces
   Enlaces.swift           las direcciones, que son las mismas en las dos apps

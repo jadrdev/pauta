@@ -748,8 +748,20 @@ public final class Store {
 
     /// Crea una tarea por cada línea del texto, en orden.
     @discardableResult
+    /// Aquí entran **todas** las tareas que se escriben o se dictan: la fila de
+    /// la lista, el panel del atajo, la barra de menús, la captura del teléfono,
+    /// el atajo de Siri y lo que se dicta al reloj. Por eso la fecha se lee aquí
+    /// y no en cada sitio: seis interfaces que entienden lo mismo porque llaman
+    /// a lo mismo, no porque se hayan puesto de acuerdo.
     public func addItems(from text: String, in perspective: Perspective) -> [Item] {
-        Store.titles(from: text).map { addItem(title: $0, in: perspective) }
+        Store.titles(from: text).map { linea in
+            let leido = Cuando.leer(linea)
+            let item = addItem(title: leido.titulo, in: perspective)
+            guard let dia = leido.dia else { return item }
+            schedule(item, to: dia)
+            if let minuto = leido.minuto { setTime(item, to: minuto) }
+            return items.first { $0.id == item.id } ?? item
+        }
     }
 
     /// La otra lectura del mismo texto: una sola tarea, y el resto de líneas

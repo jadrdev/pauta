@@ -4546,3 +4546,132 @@ struct OrdenDesdeElRelojTests {
         #expect(s.restaurar(tarea.id) == false)
     }
 }
+
+/// Sacar el día y la hora de lo que escribes o dictas.
+@Suite struct CuandoTests {
+
+    private var cal: Calendar { .current }
+    private func dia(_ d: Int) -> Date {
+        cal.startOfDay(for: cal.date(byAdding: .day, value: d, to: .now)!)
+    }
+
+    /// Lo de siempre: la fecha va al final y se la lleva del título.
+    @Test func aDateAtTheEndIsTakenOut() {
+        let r = Cuando.leer("Llamar a la gestoría mañana a las 10")
+        #expect(r.titulo == "Llamar a la gestoría")
+        #expect(r.dia == dia(1))
+        #expect(r.minuto == 10 * 60)
+    }
+
+    /// **No inventa.** Ni con un texto sin fecha ni con un número suelto, que es
+    /// lo que convertiría esto en una molestia: una tarea con día puesto sin que
+    /// lo hayas pedido es peor que una sin día.
+    @Test func itNeverMakesOneUp() {
+        for texto in ["Comprar pan", "Comprar 3 cajas de leche", "Cambiar la cadena"] {
+            let r = Cuando.leer(texto)
+            #expect(r.dia == nil, "se inventó un día con «\(texto)»")
+            #expect(r.minuto == nil)
+            #expect(r.titulo == texto)
+        }
+    }
+
+    /// Día sin hora deja la hora en blanco. El detector del sistema rellena las
+    /// doce del mediodía cuando no le dices ninguna, y tragárselo sería ponerle
+    /// a la tarea una hora que tú no dijiste —con su aviso incluido—.
+    @Test func aDayWithoutATimeHasNoTime() {
+        let r = Cuando.leer("Cita con el dentista pasado mañana")
+        #expect(r.dia == dia(2))
+        #expect(r.minuto == nil)
+    }
+
+    /// Las preposiciones que quedan colgando al quitar la fecha se limpian:
+    /// «Cita con el dentista el» no es un título.
+    @Test func danglingWordsAreTrimmed() {
+        #expect(Cuando.leer("Cita con el dentista el pasado mañana").titulo
+                == "Cita con el dentista")
+        #expect(Cuando.leer("Reunión pasado mañana a las 9:30").titulo == "Reunión")
+    }
+
+    /// **El caso difícil**, y el que motivó todo esto: el título metido *entre*
+    /// la fecha y la hora. El detector saca dos trozos sueltos —«28 de
+    /// septiembre», que se inventa las doce, y «18:00», que se inventa hoy— y
+    /// ninguno de los dos acierta solo. Se combinan: el día del que trae día, la
+    /// hora del que trae hora.
+    @Test func theHardOneWithTheTitleInTheMiddle() throws {
+        let r = Cuando.leer("28 de Septiembre de Sección de Inicio de Uned a las 18:00")
+        let d = try #require(r.dia)
+        #expect(cal.component(.day, from: d) == 28)
+        #expect(cal.component(.month, from: d) == 9)
+        #expect(r.minuto == 18 * 60)
+        #expect(r.titulo == "Sección de Inicio de Uned")
+    }
+
+    /// Una hora a secas es hoy: una hora sin día no dice cuándo, y el modelo no
+    /// admite lo segundo sin lo primero.
+    @Test func aBareTimeMeansToday() {
+        let r = Cuando.leer("Llamar al fontanero a las 17:30")
+        #expect(r.dia == dia(0))
+        #expect(r.minuto == 17 * 60 + 30)
+        #expect(r.titulo == "Llamar al fontanero")
+    }
+
+    /// Si al quitar la fecha no queda título, no se toca nada: una tarea en
+    /// blanco con fecha es peor que una tarea que se llama «mañana».
+    @Test func aLineThatIsOnlyADateIsLeftAlone() {
+        let r = Cuando.leer("mañana a las 10")
+        #expect(r.titulo == "mañana a las 10")
+        #expect(r.dia == nil)
+        #expect(r.minuto == nil)
+    }
+}
+
+/// Y que la fecha leída llegue de verdad a la tarea.
+@MainActor
+@Suite struct ApuntarConFechaTests {
+
+    private func manana() -> Date {
+        Calendar.current.startOfDay(
+            for: Calendar.current.date(byAdding: .day, value: 1, to: .now)!)
+    }
+
+    @Test func theDateEndsUpOnTheTask() throws {
+        let s = Store(inMemory: true)
+        _ = s.addItems(from: "Llamar a la gestoría mañana a las 10", in: .inbox)
+        let t = try #require(s.items.first)
+        #expect(t.title == "Llamar a la gestoría")
+        #expect(t.when == manana())
+        #expect(t.timeOfDay == 10 * 60)
+    }
+
+    /// Sin fecha en el texto, nada cambia: sigue cayendo donde la apuntaste.
+    @Test func withoutADateNothingMoves() throws {
+        let s = Store(inMemory: true)
+        _ = s.addItems(from: "Comprar pan", in: .inbox)
+        let t = try #require(s.items.first)
+        #expect(t.title == "Comprar pan")
+        #expect(t.when == nil)
+        #expect(s.items(for: .inbox).count == 1)
+    }
+
+    /// Apuntada dentro de un proyecto, se queda en el proyecto **y** coge la
+    /// fecha: son dos cosas distintas y no compiten.
+    @Test func itKeepsTheProjectItWasAddedTo() throws {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Mudanza")
+        _ = s.addItems(from: "Recoger las llaves pasado mañana", in: .project(p.id))
+        let t = try #require(s.items.first)
+        #expect(t.projectID == p.id)
+        #expect(t.title == "Recoger las llaves")
+        #expect(t.when != nil)
+    }
+
+    /// Varias líneas, varias tareas, cada una con su fecha.
+    @Test func eachLineGetsItsOwn() {
+        let s = Store(inMemory: true)
+        _ = s.addItems(from: "Comprar pan\nLlamar al fontanero mañana a las 9",
+                       in: .inbox)
+        #expect(s.items.map(\.title).sorted() == ["Comprar pan", "Llamar al fontanero"])
+        #expect(s.items.first { $0.title == "Comprar pan" }?.when == nil)
+        #expect(s.items.first { $0.title == "Llamar al fontanero" }?.timeOfDay == 9 * 60)
+    }
+}
