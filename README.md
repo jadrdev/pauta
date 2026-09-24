@@ -492,7 +492,16 @@ Un aviso a hora fija —**8:30** por defecto— que dice qué quedó sin hacer:
 
 ```
 Repaso del día
-2 sin hacer de días pasados · 1 para hoy · 4 paradas desde hace semanas
+2 sin hacer de días pasados · 1 para hoy · 4 sin fecha desde hace semanas
+```
+
+Lo último son tareas **sin fecha** apuntadas hace tres semanas o más. Decía
+«paradas», y se leía como un retraso; el retraso es la primera parte. Y cuando
+son una o dos **se nombran**, porque contarlas sin decir cuáles dejaba un
+acertijo:
+
+```
+«Comprar licencia de Developer iOS» lleva 4 semanas sin fecha
 ```
 
 Existe porque nada te lo cuenta si no abres la app, y antes, si no te acuerdas

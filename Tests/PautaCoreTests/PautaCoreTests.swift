@@ -2354,7 +2354,33 @@ struct RepasoTests {
                      tarea("c", dia: fecha(2026, 9, 1)),
                      tarea("d", dia: nil, creada: fecha(2026, 7, 1))]
         let r = Repaso.resumen(items, para: fecha(2026, 9, 1), calendar: cal)
-        #expect(r.cuerpo == "2 sin hacer de días pasados · 1 para hoy · 1 parada desde hace semanas")
+        #expect(r.cuerpo == "2 sin hacer de días pasados · 1 para hoy · «d» lleva 8 semanas sin fecha")
+    }
+
+    /// Contarla sin decir cuál era un acertijo: «1 parada desde hace
+    /// semanas» y había que buscarla. Con una o dos se nombran; con más, se
+    /// cuentan, porque una lista de títulos no cabe en un aviso.
+    @Test func itNamesTheStuckOnesWhenThereAreFew() {
+        let dia = fecha(2026, 9, 24)
+        let licencia = tarea("Comprar licencia de Developer iOS", dia: nil,
+                             creada: fecha(2026, 8, 27))
+        #expect(Repaso.resumen([licencia], para: dia, calendar: cal).cuerpo
+                == "«Comprar licencia de Developer iOS» lleva 4 semanas sin fecha")
+
+        let vieja = tarea("Renovar el DNI", dia: nil, creada: fecha(2026, 6, 1))
+        #expect(Repaso.resumen([licencia, vieja], para: dia, calendar: cal).cuerpo
+                == "«Renovar el DNI» y «Comprar licencia de Developer iOS» llevan semanas sin fecha")
+
+        let otra = tarea("Llamar al seguro", dia: nil, creada: fecha(2026, 8, 1))
+        #expect(Repaso.resumen([licencia, vieja, otra], para: dia, calendar: cal).cuerpo
+                == "3 sin fecha desde hace semanas")
+    }
+
+    @Test func aLongTitleIsCutAndOldOnesAreCountedInMonths() {
+        let larga = tarea(String(repeating: "a", count: 60), dia: nil,
+                          creada: fecha(2026, 6, 1))
+        let cuerpo = Repaso.resumen([larga], para: fecha(2026, 9, 24), calendar: cal).cuerpo
+        #expect(cuerpo == "«\(String(repeating: "a", count: 39))…» lleva 3 meses sin fecha")
     }
 
     @Test func andInSingularWhenThereIsOne() {
