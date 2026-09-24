@@ -19,8 +19,8 @@ name: Pauta
 # nadie mira hasta que falla. Aquí se hereda.
 settings:
   base:
-    MARKETING_VERSION: "0.3.9"
-    CURRENT_PROJECT_VERSION: "14"
+    MARKETING_VERSION: "0.4.0"
+    CURRENT_PROJECT_VERSION: "15"
 
 options:
   bundleIdPrefix: dev.jadrdev
