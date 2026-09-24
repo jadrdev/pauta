@@ -379,11 +379,17 @@ public final class Store {
         load()
     }
 
-    /// Sello de un archivo: fecha de modificación y tamaño. Con eso basta para
-    /// saber si cambió sin volver a abrirlo.
+    /// Sello de un archivo, para saber si cambió sin volver a abrirlo.
+    ///
+    /// Fecha y tamaño **no bastan**. iCloud pone en el Mac la fecha de la
+    /// versión nueva —la del aparato que la escribió, no la de llegada— antes
+    /// de traer su contenido, y quien lee en ese hueco se lleva lo viejo con la
+    /// firma nueva. Por eso va también la fecha de cambio del archivo, que el
+    /// sistema mueve con cualquier escritura y nadie puede fijar a mano.
     private struct FileStamp: Equatable {
         var modified: Date
         var size: Int
+        var changed: Date?
     }
 
     /// Lo ya leído de un archivo y el sello que tenía al leerlo. `value` en
@@ -394,8 +400,13 @@ public final class Store {
         var value: T?
     }
 
+    /// Cuántos archivos se han abierto de verdad, sin contar los que salieron
+    /// de la caché. Solo lo miran los tests.
+    private(set) var lecturas = 0
+
     private static let stampKeys: Set<URLResourceKey> = [
-        .contentModificationDateKey, .fileSizeKey,
+        .contentModificationDateKey, .fileSizeKey, .attributeModificationDateKey,
+        .ubiquitousItemDownloadingStatusKey,
     ]
 
     private func stamp(of file: URL) -> FileStamp? {
@@ -403,7 +414,14 @@ public final class Store {
               let modified = values.contentModificationDate,
               let size = values.fileSize
         else { return nil }
-        return FileStamp(modified: modified, size: size)
+        // Lo que iCloud aún no ha terminado de bajar no tiene sello: se relee
+        // en cada carga hasta que esté, en vez de recordar lo que hubiera.
+        if let estado = values.ubiquitousItemDownloadingStatus, estado != .current {
+            try? FileManager.default.startDownloadingUbiquitousItem(at: file)
+            return nil
+        }
+        return FileStamp(modified: modified, size: size,
+                         changed: values.attributeModificationDate)
     }
 
     /// Lee una carpeta reaprovechando lo que ya se había leído.
@@ -443,6 +461,7 @@ public final class Store {
             // acompañado de un cambio en el archivo.
             //
             // Un archivo corrupto se salta: no debe tumbar la carga.
+            lecturas += 1
             let valor = resolveConflict(at: file, as: T.self)
                 ?? (try? Data(contentsOf: file))
                     .flatMap { try? decoder.decode(T.self, from: $0) }

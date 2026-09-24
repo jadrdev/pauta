@@ -64,6 +64,17 @@ reciente y marca las demás como resueltas — si no se marcaran, el conflicto s
 quedaría ahí para siempre. Que la decisión salga del contenido del archivo y no de
 su fecha en disco la hace determinista: los dos dispositivos eligen lo mismo.
 
+**La fecha de un archivo no dice cuándo llegó.** Para no releerlo todo en cada
+cambio, la app guarda de cada archivo un sello y solo abre los que cambiaron.
+El sello era fecha y tamaño, y no basta: iCloud pone en el Mac la fecha de la
+versión nueva —la del aparato que la escribió— antes de traer su contenido.
+Quien lee en ese hueco se lleva lo viejo con el sello nuevo, y cuando llega lo
+nuevo el sello ya no cambia. Pasó dos veces seguidas: el Mac sin proyectos, y
+tareas movidas en el iPhone que en el Mac seguían atrasadas. Ahora el sello
+lleva también la fecha de cambio del archivo, que el sistema mueve con
+cualquier escritura, lo que iCloud aún no ha bajado no se sella, y lo que no se
+pudo leer se reintenta.
+
 **Abrir no escribe nada.** Cada cambio reescribe la tarea entera con fecha
 nueva, así que una escritura hecha desde una copia vieja gana y pisa lo que el
 otro aparato hizo después. Por eso nada puede escribir tareas por su cuenta al

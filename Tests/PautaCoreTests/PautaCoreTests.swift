@@ -871,30 +871,33 @@ struct IncrementalLoadTests {
                                               ofItemAtPath: file.path)
     }
 
+    /// Lo que no se ha tocado sale de la caché, y lo que se toca se abre.
+    ///
+    /// Antes esto se probaba escribiendo basura con la misma fecha y tamaño y
+    /// comprobando que **no** se leía. Era justo el fallo: iCloud hace eso mismo
+    /// con las versiones que llegan del teléfono, y la app se quedaba con lo
+    /// viejo. Ahora se cuentan las lecturas.
     @Test func unchangedFilesAreNotReadAgain() throws {
         let root = tempRoot()
         let store = Store(root: root)
         let a = store.addItem(title: "intacta", in: .inbox)
-        let file = archivo(root, a.id)
-        let bytes = try Data(contentsOf: file).count
-
-        try fija(file)
+        store.addItem(title: "otra", in: .inbox)
         // Dos caminos para llenar la caché: quien escribió el archivo y quien
         // solo lo leyó. Los dos tienen que quedar sellados igual.
-        store.reload()
         let otro = Store(root: root)
 
-        try Data(repeating: 0x78, count: bytes).write(to: file)
-        try fija(file)
-
+        let antes = (store.lecturas, otro.lecturas)
         store.reload()
         otro.reload()
-        #expect(store.items(for: .inbox).map(\.title) == ["intacta"])
-        #expect(otro.items(for: .inbox).map(\.title) == ["intacta"])
+        #expect(store.lecturas == antes.0, "releyó lo que había escrito él")
+        #expect(otro.lecturas == antes.1, "releyó lo que no había cambiado")
 
-        // Y uno que estrena caché sí lo abre, y lo encuentra ilegible: la
-        // basura estaba escrita de verdad.
-        #expect(Store(root: root).items.isEmpty)
+        var tocada = otro.items.first { $0.id == a.id }!
+        tocada.title = "tocada"
+        otro.update(tocada)
+        store.reload()
+        #expect(store.lecturas == antes.0 + 1, "tenía que abrir solo la tocada")
+        #expect(store.items.contains { $0.title == "tocada" })
     }
 
     /// El tamaño forma parte del sello porque dos escrituras seguidas pueden
@@ -4811,5 +4814,43 @@ struct OrdenDesdeElRelojTests {
         let orden = s.items(for: .inbox).map(\.title)
         #expect(orden.firstIndex(of: "C")! < orden.firstIndex(of: "B")!)
         #expect(Set(s.items(for: .inbox).map(\.position)).count == 3)
+    }
+}
+
+/// Un archivo que cambia de contenido sin cambiar de fecha ni de tamaño.
+///
+/// En el Mac, iCloud pone primero la fecha y el tamaño de la versión nueva —la
+/// fecha del teléfono, no la de llegada— y trae el contenido después. Quien lee
+/// en ese hueco se lleva lo viejo con la firma nueva, y al llegar lo nuevo la
+/// firma ya no cambia. Pasó el 24 de septiembre de 2026: tres tareas movidas a
+/// hoy en el iPhone seguían en el Mac como atrasadas de ayer hasta reiniciarlo.
+@MainActor @Suite struct ContenidoNuevoMismaFirmaTests {
+
+    @Test func newContentWithTheSameDateAndSizeIsReadAgain() throws {
+        let raiz = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-firma-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: raiz) }
+
+        let origen = Store(root: raiz)
+        let tarea = origen.addItem(title: "Video", in: .inbox)
+        let archivo = raiz.appendingPathComponent("items/\(tarea.id.uuidString).json")
+        // Una fecha redonda, puesta a mano las dos veces: así la firma es
+        // idéntica y no difiere por la precisión con que se guarda.
+        let fecha = Date(timeIntervalSince1970: 1_790_000_000)
+        try FileManager.default.setAttributes([.modificationDate: fecha],
+                                              ofItemAtPath: archivo.path)
+
+        let s = Store(root: raiz)
+        #expect(s.items.first?.title == "Video")
+
+        // Mismo tamaño, misma fecha, otro contenido.
+        let viejo = try String(contentsOf: archivo, encoding: .utf8)
+        try viejo.replacingOccurrences(of: "\"Video\"", with: "\"Audio\"")
+            .write(to: archivo, atomically: false, encoding: .utf8)
+        try FileManager.default.setAttributes([.modificationDate: fecha],
+                                              ofItemAtPath: archivo.path)
+
+        s.reload()
+        #expect(s.items.first?.title == "Audio")
     }
 }
