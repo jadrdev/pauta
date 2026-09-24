@@ -118,6 +118,10 @@ struct RaizView: View {
             guard nueva == .active else {
                 vigilante.parar()
                 RefrescoEnSegundoPlano.programar()
+                // Y lo último que se hizo aquí sale hacia el Mac antes de
+                // dormir. El sistema da unos segundos si se piden; sin
+                // pedirlos, la app se congela a medio cruce.
+                if nueva == .background { cruzarAntesDeDormir() }
                 return
             }
             vigilante.empezar {
@@ -148,6 +152,12 @@ struct RaizView: View {
             guard !Task.isCancelled else { return }
             await Avisos.reschedule(store.items)
             avisarAFuera()
+            // Lo cambiado aquí sale hacia el Mac al momento, y no la próxima
+            // vez que se abra la app: antes una fecha cambiada en el teléfono
+            // se quedaba en el teléfono hasta entonces, y en el Mac parecía
+            // que no se había guardado. Si el cruce trae algo, recarga y este
+            // bloque vuelve a correr, pero el segundo cruce ya no mueve nada.
+            await Sincronizar.conElMac(store)
         }
         .task {
             // También al arrancar en frío: apoyarse solo en el cambio de fase
@@ -215,13 +225,14 @@ struct RaizView: View {
                 .notifications(named: .pautaApuntadoDesdeFuera).map({ _ in () }) {
                 store.reload()
             }
-            // Lo mismo para el atajo de Siri, que escribe en la carpeta por su
-            // cuenta: sin esto, apuntar con la app delante no cambiaría nada en
-            // pantalla hasta salir y volver.
-            for await _ in NotificationCenter.default
-                .notifications(named: .pautaApuntadoDesdeFuera).map({ _ in () }) {
-                store.reload()
-            }
+        }
+    }
+
+    private func cruzarAntesDeDormir() {
+        let permiso = UIApplication.shared.beginBackgroundTask(withName: "cruzar")
+        Task {
+            await Sincronizar.conElMac(store)
+            UIApplication.shared.endBackgroundTask(permiso)
         }
     }
 

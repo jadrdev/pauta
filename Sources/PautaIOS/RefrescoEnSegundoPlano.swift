@@ -39,25 +39,6 @@ enum RefrescoEnSegundoPlano {
     }
 
     /// Lo que se hace al despertar: cruzar con el Mac y refrescar lo que se ve
-    /// sin abrir la app.
-    ///
-    /// Almacén propio y no el de la interfaz: cuando el sistema despierta la app
-    /// no hay interfaz montada.
-    static func cruzarYAvisar() {
-        let almacen = Store()
-        Task {
-            await Sincronizar.conElMac(almacen)
-            almacen.reload()
-            let vistazo = Vistazo.de(almacen.items, proyectos: almacen.projects,
-                                     limite: Vistazo.limitePublicado)
-            WidgetCenter.shared.reloadAllTimelines()
-            EnlaceConElReloj.shared.publicar(vistazo)
-            try? await UNUserNotificationCenter.current()
-                .setBadgeCount(vistazo.atrasadas)
-        }
-    }
-
-    /// Lo que se hace al despertar: cruzar con el Mac y refrescar lo que se ve
     /// **sin** abrir la app — el widget, el globo y lo que tenga el reloj.
     ///
     /// Almacén propio y no el de la interfaz: cuando el sistema despierta la app

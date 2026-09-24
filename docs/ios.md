@@ -184,6 +184,19 @@ tiempo, no quedaría ninguno pedido y no volvería a despertar nunca.
 Su almacén es propio y no el de la interfaz, porque cuando el sistema despierta
 la app no hay ninguna interfaz montada de la que sacarlo.
 
+### Y lo que cambias en el teléfono
+
+Hasta el 24 de septiembre de 2026 el teléfono cruzaba al abrirse, al volver
+a primer plano y cuando cambiaba algo en el Mac, pero **no cuando cambiabas
+algo en el propio teléfono**. Una fecha movida en el iPhone se quedaba allí
+hasta la siguiente vez que se abriera la app, y en el Mac parecía que no se
+había guardado. Ahora cruza un segundo después de cada cambio —el mismo
+compás que ya esperaban los avisos y el widget— y otra vez al irse al fondo,
+pidiendo al sistema los segundos que hacen falta para terminar.
+
+Desde ahí al Mac queda iCloud, que sube y baja cuando puede: normalmente
+segundos, a veces un minuto. Eso no lo controla la app.
+
 ### Lo que esto no es
 
 Para que el teléfono se entere **al segundo** con la pantalla apagada haría falta
