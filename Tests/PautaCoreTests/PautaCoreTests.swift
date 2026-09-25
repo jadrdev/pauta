@@ -4880,3 +4880,48 @@ struct OrdenDesdeElRelojTests {
         #expect(s.items.first?.title == "Audio")
     }
 }
+
+/// Un archivo a medio bajar existe: no se le puede copiar encima lo del otro
+/// lado.
+///
+/// Pasó el 25 de septiembre de 2026. La «Revisión diaria» del 24 se tachó y
+/// nació la del 25; el teléfono cruzó antes de que iCloud le bajara la versión
+/// tachada, la dio por ausente y le copió encima la suya, sin tachar. Quedaron
+/// dos: la de ayer, atrasada, y la de hoy.
+@MainActor @Suite struct LoAMedioBajarNoSePisaTests {
+
+    private func carpeta() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-amedias-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    @Test func aFileStillDownloadingIsNotOverwrittenWithAnOlderCopy() throws {
+        let mac = carpeta(), telefono = carpeta()
+        defer {
+            try? FileManager.default.removeItem(at: mac)
+            try? FileManager.default.removeItem(at: telefono)
+        }
+
+        let enElMac = Store(root: mac)
+        let tarea = enElMac.addItem(title: "Revisión diaria", in: .today)
+        Puente.cruzar(telefono, mac)
+        enElMac.toggleComplete(tarea)
+
+        // Lo tachado está en el Mac, pero en el teléfono aún no ha bajado.
+        let archivo = mac.appendingPathComponent("items/\(tarea.id.uuidString).json")
+        let balance = Puente.cruzar(telefono, mac, enLocal: {
+            !($0.lastPathComponent == archivo.lastPathComponent
+              && $0.path.hasSuffix(mac.lastPathComponent + "/items/" + archivo.lastPathComponent))
+        })
+
+        #expect(balance.llevadas == 0, "le copió encima la copia vieja")
+        #expect(balance.pendientesDeBajar == 1)
+        #expect(Store(root: mac).items.first { $0.id == tarea.id }?.isCompleted == true)
+
+        // Y cuando baja, llega al teléfono como siempre.
+        Puente.cruzar(telefono, mac)
+        #expect(Store(root: telefono).items.first { $0.id == tarea.id }?.isCompleted == true)
+    }
+}

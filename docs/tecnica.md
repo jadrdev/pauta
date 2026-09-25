@@ -75,6 +75,15 @@ lleva también la fecha de cambio del archivo, que el sistema mueve con
 cualquier escritura, lo que iCloud aún no ha bajado no se sella, y lo que no se
 pudo leer se reintenta.
 
+**A medio bajar no es lo mismo que faltar.** El puente del teléfono aparta los
+archivos que iCloud aún no le ha bajado en su última versión, porque leerlos
+congela la app. Pero luego los trataba como **ausentes** y les copiaba encima
+la versión del otro lado, que era la vieja: el teléfono cruzaba antes de que le
+llegara lo tachado en el Mac y lo destachaba. Así volvió una «Revisión diaria»
+que se había hecho, y junto a la sucesora que ya había nacido parecía que las
+repetitivas se duplicaban. Ahora lo que está a medio bajar en cualquiera de los
+dos lados no se toca hasta el cruce siguiente.
+
 **Abrir no escribe nada.** Cada cambio reescribe la tarea entera con fecha
 nueva, así que una escritura hecha desde una copia vieja gana y pisa lo que el
 otro aparato hizo después. Por eso nada puede escribir tareas por su cuenta al

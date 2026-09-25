@@ -41,29 +41,33 @@ public enum Puente {
 
     private static let subcarpetas = ["items", "projects", "areas"]
 
+    /// Si el archivo está de verdad en el disco, y en su última versión.
+    ///
+    /// Un archivo de iCloud puede existir en el listado y no estar bajado.
+    /// Sin esta comprobación, leerlo dispara la descarga y **espera**: es lo
+    /// que congelaba la app en el primer cruce con una carpeta de verdad.
+    /// Lo que no es de iCloud no tiene este estado y se da por bueno.
+    public static func enLocal(_ url: URL) -> Bool {
+        guard let valores = try? url.resourceValues(
+                forKeys: [.ubiquitousItemDownloadingStatusKey]),
+              let estado = valores.ubiquitousItemDownloadingStatus else { return true }
+        return estado == .current
+    }
+
     /// Cruza dos carpetas de datos. Devuelve qué se movió.
     ///
     /// No borra nunca un archivo: lo que sobrescribe es la versión perdedora, y
     /// un borrado viaja como lápida. Así un cruce con la carpeta equivocada se
     /// deshace volviendo a cruzar con la buena.
+    ///
+    /// `enLocal` solo lo cambian los tests: fuera de iCloud no hay archivos a
+    /// medio bajar con los que probar.
     @discardableResult
-    public static func cruzar(_ aqui: URL, _ alla: URL) -> Balance {
+    public static func cruzar(_ aqui: URL, _ alla: URL,
+                              enLocal: (URL) -> Bool = Puente.enLocal) -> Balance {
         var balance = Balance()
         let fm = FileManager.default
         let decoder = ISODate.decodificador()
-
-        /// Si el archivo está de verdad en el disco.
-        ///
-        /// Un archivo de iCloud puede existir en el listado y no estar bajado.
-        /// Sin esta comprobación, leerlo dispara la descarga y **espera**: es lo
-        /// que congelaba la app en el primer cruce con una carpeta de verdad.
-        /// Lo que no es de iCloud no tiene este estado y se da por bueno.
-        func enLocal(_ url: URL) -> Bool {
-            guard let valores = try? url.resourceValues(
-                    forKeys: [.ubiquitousItemDownloadingStatusKey]),
-                  let estado = valores.ubiquitousItemDownloadingStatus else { return true }
-            return estado == .current
-        }
 
         /// La fecha de un archivo, o `nil` si no se entiende. Un archivo que no
         /// se puede leer no gana nunca: sobrescribir datos buenos con algo
@@ -96,6 +100,10 @@ public enum Puente {
             /// queda esperando la descarga, y con sesenta archivos eso es una
             /// app que parece colgada. Se pide la descarga y se dejan para el
             /// cruce siguiente.
+            ///
+            /// Los que se quedan fuera se anotan en `aMedias`: existen, solo que
+            /// aún no se pueden leer, y eso **no es lo mismo que faltar**.
+            var aMedias: Set<String> = []
             func nombres(_ dir: URL) -> Set<String> {
                 let todo = (try? fm.contentsOfDirectory(at: dir,
                             includingPropertiesForKeys: [.ubiquitousItemDownloadingStatusKey])) ?? []
@@ -110,6 +118,7 @@ public enum Puente {
                         buenos.insert(url.lastPathComponent)
                     } else {
                         balance.pendientesDeBajar += 1
+                        aMedias.insert(url.lastPathComponent)
                         try? fm.startDownloadingUbiquitousItem(at: url)
                     }
                 }
@@ -119,7 +128,13 @@ public enum Puente {
             let deAqui = nombres(dirAqui)
             let deAlla = nombres(dirAlla)
 
-            for nombre in deAqui.union(deAlla) {
+            // Lo que está a medio bajar en cualquiera de los dos lados no se
+            // toca hasta el cruce siguiente. Antes se tomaba por ausente y se
+            // le copiaba encima la versión del otro lado, **más vieja**: el
+            // teléfono cruzaba antes de que iCloud le bajara lo tachado en el
+            // Mac, y lo destachaba. Así volvió una «Revisión diaria» que se
+            // había hecho, y junto a su sucesora parecía una tarea repetida.
+            for nombre in deAqui.union(deAlla).subtracting(aMedias) {
                 let uno = dirAqui.appendingPathComponent(nombre)
                 let otro = dirAlla.appendingPathComponent(nombre)
                 switch (deAqui.contains(nombre), deAlla.contains(nombre)) {
