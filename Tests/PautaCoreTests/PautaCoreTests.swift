@@ -1774,6 +1774,7 @@ struct AgendaTests {
             switch $0 {
             case .tarea(let i): i.title
             case .evento(let e): e.title
+            case .juntos(let e, _): e.title
             }
         }
     }
@@ -5070,5 +5071,60 @@ struct OrdenDesdeElRelojTests {
         let antes = try Data(contentsOf: archivo)
         s.restaurar(s.instantanea())
         #expect(try Data(contentsOf: archivo) == antes)
+    }
+}
+
+/// La tarea y el evento que son lo mismo salen en una fila, en Hoy.
+@MainActor @Suite struct MismaCosaTests {
+
+    private func a(_ h: Int, _ m: Int = 0) -> Date {
+        Calendar.current.date(bySettingHour: h, minute: m, second: 0, of: .now)!
+    }
+    private func evento(_ titulo: String, _ h: Int, _ m: Int = 0) -> Evento {
+        Evento(id: UUID().uuidString, title: titulo, start: a(h, m), end: a(h + 1, m),
+               isAllDay: false, calendarName: "Universidad", color: nil)
+    }
+    private func tarea(_ titulo: String, _ h: Int, _ m: Int = 0) -> Item {
+        var i = Item(title: titulo)
+        i.when = Calendar.current.startOfDay(for: .now)
+        i.timeOfDay = h * 60 + m
+        return i
+    }
+
+    /// El caso que lo trajo: el evento y la tarea, a las seis.
+    @Test func theUnedSessionIsOneRow() {
+        let e = evento("Sesión Inicio UNED", 18)
+        let t = tarea("Sección de Inicio de Uned", 18)
+        let dia = Agenda.dia(tareas: [t], eventos: [e])
+        #expect(dia.conHora == [.juntos(e, t)])
+    }
+
+    @Test func theSameTimeWithDifferentTitlesStaysApart() {
+        let e = evento("Reunión con Talega", 18)
+        let t = tarea("Llamar al fontanero", 18)
+        #expect(Agenda.dia(tareas: [t], eventos: [e]).conHora == [.evento(e), .tarea(t)])
+    }
+
+    @Test func theSameTitleAtAnotherTimeStaysApart() {
+        let e = evento("Sesión Inicio UNED", 18)
+        let t = tarea("Sesión Inicio UNED", 17, 30)
+        #expect(Agenda.dia(tareas: [t], eventos: [e]).conHora == [.tarea(t), .evento(e)])
+    }
+
+    /// Una palabra en común no basta cuando los dos tienen más: «inicio» sale
+    /// en muchas cosas.
+    @Test func oneSharedWordIsNotEnoughWhenBothHaveMore() {
+        #expect(!MismaCosa.titulos("Inicio del curso de inglés", "Inicio de la obra"))
+        #expect(MismaCosa.titulos("Dentista", "Dentista"))
+        #expect(MismaCosa.titulos("Dentista", "Cita con el dentista"))
+        #expect(!MismaCosa.titulos("de la", "de la"), "sin palabras que digan algo")
+    }
+
+    /// Un evento se junta con una sola tarea; la segunda sale aparte.
+    @Test func anEventTakesOnlyOneTask() {
+        let e = evento("Sesión Inicio UNED", 18)
+        let t1 = tarea("Sesión inicio UNED", 18)
+        let t2 = tarea("Preparar sesión inicio UNED", 18)
+        #expect(Agenda.dia(tareas: [t1, t2], eventos: [e]).conHora == [.juntos(e, t1), .tarea(t2)])
     }
 }

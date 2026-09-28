@@ -66,6 +66,10 @@ struct ItemRowView: View {
     /// tiene encima. Es la misma regla que ya siguen las etiquetas y la lista de
     /// un proyecto — no se repite en cada fila lo que la lista ya dice arriba.
     var enGrupo = false
+    /// El evento del calendario que es esta misma tarea, en Hoy. La fila la
+    /// enseña una vez, con el horario del evento: dos filas para la misma
+    /// cosa se leían como dos compromisos.
+    var evento: Evento?
 
     @State private var title = ""
     @State private var notes = ""
@@ -245,7 +249,23 @@ struct ItemRowView: View {
                 .foregroundStyle(Paper.inkSoft)
                 .help("Planificada para el \(when.formatted(.dateTime.day().month(.wide)))")
             }
-            if let hora = item.timeLabel, !item.isCompleted {
+            if let evento, !item.isCompleted {
+                HStack(spacing: 5) {
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(evento.color.map { Color(.sRGB, red: $0.red, green: $0.green,
+                                                       blue: $0.blue) } ?? Paper.inkFaint)
+                        .frame(width: 3, height: 11)
+                    Text(evento.timeLabel)
+                        .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    if let margen = item.warnLabel {
+                        Image(systemName: "bell.badge")
+                            .font(.system(size: 9))
+                            .help("Aviso \(margen)")
+                    }
+                }
+                .foregroundStyle(Paper.inkSoft)
+                .help("También en tu calendario: «\(evento.title)» · \(evento.calendarName)")
+            } else if let hora = item.timeLabel, !item.isCompleted {
                 HStack(spacing: 3) {
                     Text(hora)
                         .font(.system(size: 11, weight: .semibold).monospacedDigit())

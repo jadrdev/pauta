@@ -52,6 +52,8 @@ struct ItemListView: View {
                             switch fila {
                             case .tarea(let item): ItemRowView(item: item)
                             case .evento(let evento): EventoRow(evento: evento)
+                            case .juntos(let evento, let item):
+                                ItemRowView(item: item, evento: evento)
                             }
                         }
                         ForEach(Hoy.bloques(sinHora: dia.sinHora,

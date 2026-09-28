@@ -16,6 +16,9 @@ struct FilaView: View {
     /// encima, y en un teléfono repetirlo en cada fila gasta la segunda línea de
     /// la fila en algo que ya se sabe.
     var enGrupo = false
+    /// El evento del calendario que es esta misma tarea, en Hoy: una fila y no
+    /// dos, con el horario del evento.
+    var evento: Evento?
     let alPulsar: () -> Void
     @Environment(Store.self) private var store
 
@@ -66,7 +69,21 @@ struct FilaView: View {
     /// Lo del reloj, en columna a la derecha.
     @ViewBuilder private var reloj: some View {
         VStack(alignment: .trailing, spacing: 3) {
-            if let hora = item.timeLabel {
+            if let evento {
+                HStack(spacing: 5) {
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(evento.color.map { Color(.sRGB, red: $0.red, green: $0.green,
+                                                       blue: $0.blue) } ?? Papel.inkFaint)
+                        .frame(width: 3, height: 13)
+                    Text(evento.timeLabel)
+                        .font(.system(size: 14, weight: .semibold).monospacedDigit())
+                    if item.warnBefore != nil {
+                        Image(systemName: "bell.badge").font(.system(size: 10))
+                    }
+                }
+                .foregroundStyle(Papel.inkSoft)
+                .accessibilityLabel("También en tu calendario, \(evento.timeLabel)")
+            } else if let hora = item.timeLabel {
                 HStack(spacing: 3) {
                     Text(hora)
                         .font(.system(size: 14, weight: .semibold).monospacedDigit())

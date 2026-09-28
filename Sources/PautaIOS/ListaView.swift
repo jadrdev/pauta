@@ -130,6 +130,7 @@ struct ListaView: View {
                         switch fila {
                         case .tarea(let item): filaDeTarea(item)
                         case .evento(let evento): filaDeEvento(evento)
+                        case .juntos(let evento, let item): filaDeTarea(item, evento: evento)
                         }
                     }
                     ForEach(Hoy.bloques(sinHora: dia.sinHora,
@@ -160,6 +161,7 @@ struct ListaView: View {
                         switch fila {
                         case .tarea(let item): filaDeTarea(item)
                         case .evento(let evento): filaDeEvento(evento)
+                        case .juntos(let evento, let item): filaDeTarea(item, evento: evento)
                         }
                     }
                 }
@@ -179,8 +181,9 @@ struct ListaView: View {
     /// veces: las listas de siempre, el tramo con hora y lo que cuelga de un
     /// bloque son la misma fila, y tres copias acaban discrepando.
     @ViewBuilder
-    private func filaDeTarea(_ item: Item, enGrupo: Bool = false) -> some View {
-        FilaView(item: item, enGrupo: enGrupo) { abierta = item }
+    private func filaDeTarea(_ item: Item, enGrupo: Bool = false,
+                             evento: Evento? = nil) -> some View {
+        FilaView(item: item, enGrupo: enGrupo, evento: evento) { abierta = item }
             .listRowBackground(Papel.bg)
             // Sangrada cuando cuelga de un proyecto: es lo que dice que cuelga.
             .listRowInsets(EdgeInsets(top: 9, leading: enGrupo ? 34 : 16,

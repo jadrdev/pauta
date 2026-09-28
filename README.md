@@ -234,6 +234,26 @@ el rótulo dice «4 EVENTOS · 7 ABIERTAS», porque un evento no es algo que hac
 ./build/Pauta.app/Contents/MacOS/Pauta --eventos
 ```
 
+### Si la tarea y el evento son lo mismo
+
+Pasa sin querer: se crea el evento en el calendario y se apunta la tarea para no
+olvidarla, y Hoy enseñaba las dos:
+
+```
+▌ Sesión Inicio UNED                       18:00 – 19:00
+○ Sección de Inicio de Uned                18:00   Universidad
+```
+
+Ahora salen en **una fila**: la de la tarea, que es la que se tacha, con el
+horario y el color del evento. No se toca ningún dato: el evento sigue en el
+calendario y la tarea en Pauta. Al tachar la tarea, el evento vuelve a salir solo.
+
+La regla es estricta, porque juntar dos cosas distintas es peor que enseñar dos
+veces la misma: **la misma hora de inicio** y **al menos dos palabras del
+título en común** —o la única, si uno solo tiene una—, sin mayúsculas, sin
+tildes y sin las palabras que no dicen nada. «Sesión» y «Sección» no son la
+misma palabra; «inicio» y «uned» bastan.
+
 ### Varias del mismo proyecto
 
 <div align="center">

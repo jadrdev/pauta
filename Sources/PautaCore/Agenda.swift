@@ -59,12 +59,50 @@ public struct RGB: Hashable, Sendable {
 public enum FilaDelDia: Identifiable, Hashable {
     case tarea(Item)
     case evento(Evento)
+    /// La tarea y el evento que son lo mismo, en una fila: la de la tarea, que
+    /// es la que se tacha, con el horario del evento.
+    case juntos(Evento, Item)
 
     public var id: String {
         switch self {
         case .tarea(let item): "t:\(item.id.uuidString)"
         case .evento(let evento): "e:\(evento.id)"
+        case .juntos(let evento, let item): "j:\(evento.id):\(item.id.uuidString)"
         }
+    }
+}
+
+/// Cuándo una tarea y un evento son la misma cosa apuntada dos veces.
+///
+/// Pasa sin querer: se crea el evento en el calendario y se apunta la tarea
+/// para no olvidarla, y Hoy enseña «Sesión Inicio UNED 18:00 – 19:00» y debajo
+/// «Sección de Inicio de Uned 18:00». Dos filas para una sola cosa.
+///
+/// La regla es estricta a propósito, porque juntar dos cosas distintas es peor
+/// que enseñar dos veces la misma: **la misma hora de inicio**, al minuto, y
+/// **al menos dos palabras del título en común** —o la única, si uno de los dos
+/// solo tiene una—. Las palabras se comparan sin mayúsculas ni tildes y sin las
+/// que no dicen nada («de», «la», «con»…). «Sesión» y «Sección» no son la misma
+/// palabra; «inicio» y «uned» bastan.
+public enum MismaCosa {
+    static let vacias: Set<String> = [
+        "de", "del", "la", "el", "los", "las", "lo", "y", "e", "o", "u", "a", "al",
+        "en", "con", "por", "para", "un", "una", "unos", "unas", "que", "se", "mi",
+        "tu", "su", "sus", "mis",
+    ]
+
+    static func palabras(_ titulo: String) -> Set<String> {
+        let plano = titulo.folding(options: [.caseInsensitive, .diacriticInsensitive],
+                                   locale: Locale(identifier: "es_ES"))
+        let trozos = plano.split { !$0.isLetter && !$0.isNumber }.map(String.init)
+        return Set(trozos.filter { !vacias.contains($0) })
+    }
+
+    public static func titulos(_ uno: String, _ otro: String) -> Bool {
+        let a = palabras(uno), b = palabras(otro)
+        guard !a.isEmpty, !b.isEmpty else { return false }
+        let comunes = a.intersection(b).count
+        return comunes >= min(2, min(a.count, b.count))
     }
 }
 
@@ -222,6 +260,17 @@ public final class Agenda {
             guard let minutos = tarea.timeOfDay else { continue }
             let base = Calendar.current.startOfDay(for: tarea.when ?? .now)
             let momento = Calendar.current.date(byAdding: .minute, value: minutos, to: base) ?? base
+            // Si es el mismo evento apuntado como tarea, ocupa su fila. Cada
+            // evento se junta con una sola tarea: la primera, que es la de
+            // más prioridad.
+            if let i = conHora.firstIndex(where: { hora, fila in
+                guard case .evento(let evento) = fila else { return false }
+                return abs(hora.timeIntervalSince(momento)) < 60
+                    && MismaCosa.titulos(evento.title, tarea.title)
+            }), case .evento(let evento) = conHora[i].1 {
+                conHora[i].1 = .juntos(evento, tarea)
+                continue
+            }
             conHora.append((momento, .tarea(tarea)))
         }
         // Estable: a igual hora se respeta el orden en que venían, que para las
