@@ -5128,3 +5128,24 @@ struct OrdenDesdeElRelojTests {
         #expect(Agenda.dia(tareas: [t1, t2], eventos: [e]).conHora == [.juntos(e, t1), .tarea(t2)])
     }
 }
+
+/// Los emojis de proyectos y áreas.
+@Suite struct IconosTests {
+    @Test func fortyDifferentOnesInRowsOfEight() {
+        #expect(Iconos.paleta.count == 40)
+        #expect(Set(Iconos.paleta).count == 40)
+        #expect(Iconos.temas.allSatisfy { $0.emojis.count == 8 })
+    }
+
+    /// Lo que se escribe o se pega en «Otro».
+    @Test func itFindsTheLastEmojiAndIgnoresPlainText() {
+        #expect(Iconos.emoji(en: "hola🎓") == "🎓")
+        #expect(Iconos.emoji(en: "🎓🚀") == "🚀")
+        #expect(Iconos.emoji(en: "✍️") == "✍️")
+        #expect(Iconos.emoji(en: "👨‍👩‍👧") == "👨‍👩‍👧")
+        #expect(Iconos.emoji(en: "🇪🇸") == "🇪🇸")
+        #expect(Iconos.emoji(en: "hola") == nil)
+        #expect(Iconos.emoji(en: "1") == nil)
+        #expect(Iconos.emoji(en: "#") == nil)
+    }
+}

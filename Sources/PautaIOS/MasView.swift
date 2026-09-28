@@ -10,6 +10,26 @@ struct MasView: View {
     /// Qué nombre se está pidiendo, si se está pidiendo alguno.
     @State private var rotulo: Rotulo?
     @State private var nombre = ""
+    /// De qué se está eligiendo el emoji, si de algo.
+    @State private var emojiDe: ConEmoji?
+
+    private enum ConEmoji: Identifiable {
+        case proyecto(Project)
+        case area(Area)
+
+        var id: String {
+            switch self {
+            case .proyecto(let p): "p:\(p.id)"
+            case .area(let a): "a:\(a.id)"
+            }
+        }
+        var actual: String {
+            switch self {
+            case .proyecto(let p): p.icon
+            case .area(let a): a.icon
+            }
+        }
+    }
 
     /// Los cuatro momentos en que esta pantalla pide un nombre. Uno solo diálogo
     /// para los cuatro: son la misma pregunta —«¿cómo se llama?»— y cuatro
@@ -76,6 +96,8 @@ struct MasView: View {
                                     .tint(Papel.warning)
                                 Button("Renombrar") { pedirNombre(.renombrarArea(area)) }
                                     .tint(Papel.accentInk)
+                                Button("Emoji") { emojiDe = .area(area) }
+                                    .tint(Papel.inkSoft)
                             }
                             ForEach(store.projects(in: area.id)) { proyecto in
                                 filaProyecto(proyecto, sangrado: true)
@@ -120,6 +142,14 @@ struct MasView: View {
             .scrollContentBackground(.hidden)
             .background(Papel.bg)
             .navigationTitle("Más")
+            .sheet(item: $emojiDe) { cual in
+                ElegirEmojiView(actual: cual.actual) { emoji in
+                    switch cual {
+                    case .proyecto(let p): store.setIcon(p, to: emoji)
+                    case .area(let a): store.setIcon(a, to: emoji)
+                    }
+                }
+            }
             // Hasta ahora los proyectos aquí eran de **solo lectura**: se veían
             // los del Mac y no se podía crear ninguno, que en un teléfono sin
             // sincronizar deja la sección vacía para siempre.
@@ -219,6 +249,8 @@ struct MasView: View {
                 .tint(Papel.warning)
             Button("Renombrar") { pedirNombre(.renombrarProyecto(proyecto)) }
                 .tint(Papel.accentInk)
+            Button("Emoji") { emojiDe = .proyecto(proyecto) }
+                .tint(Papel.inkSoft)
         }
     }
 }

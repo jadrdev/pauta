@@ -483,29 +483,6 @@ private struct IconoEditable: View {
     @State private var showingPicker = false
     @State private var otro = ""
 
-    private static let palette = [
-        // Trabajo
-        "💼", "💻", "📱", "🖥️", "🌐", "🧾", "📊", "🚀",
-        // Estudiar y crear
-        "📚", "🎓", "✍️", "🎨", "🎬", "📷", "🎸", "🎵",
-        // Casa y fuera
-        "🏠", "🛒", "🍳", "🧹", "🚗", "✈️", "🎁", "🐾",
-        // Cuerpo y ocio
-        "💪", "🩺", "⚽️", "🎮", "🌱", "☕️", "❤️", "🧠",
-        // Para marcar
-        "📌", "⭐️", "🔥", "🎯", "💡", "💰", "🛠️", "📦",
-    ]
-
-    /// El último emoji de lo escrito, o `nil` si no hay ninguno. El último y
-    /// no el primero: escribir encima de uno ya puesto es cambiarlo.
-    static func emoji(en texto: String) -> String? {
-        texto.reversed().first { c in
-            c.unicodeScalars.contains { $0.properties.isEmojiPresentation }
-                || (c.unicodeScalars.count > 1
-                    && c.unicodeScalars.contains { $0.properties.isEmoji })
-        }.map(String.init)
-    }
-
     var body: some View {
         Button { showingPicker.toggle() } label: {
             if icon.isEmpty {
@@ -521,7 +498,7 @@ private struct IconoEditable: View {
             VStack(alignment: .leading, spacing: 10) {
                 LazyVGrid(columns: Array(repeating: GridItem(.fixed(30)), count: 8),
                           spacing: 6) {
-                    ForEach(Self.palette, id: \.self) { emoji in
+                    ForEach(Iconos.paleta, id: \.self) { emoji in
                         Button {
                             alElegir(emoji)
                             showingPicker = false
@@ -544,7 +521,7 @@ private struct IconoEditable: View {
                         .font(.system(size: 12))
                         .frame(width: 150)
                         .onChange(of: otro) {
-                            guard let elegido = Self.emoji(en: otro) else { return }
+                            guard let elegido = Iconos.emoji(en: otro) else { return }
                             alElegir(elegido)
                             otro = ""
                             showingPicker = false

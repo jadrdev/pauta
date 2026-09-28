@@ -19,6 +19,17 @@ struct ListaView: View {
     @State private var abierta: Item?
     @State private var apuntando = false
     @State private var vaciando = false
+    @State private var eligiendoEmoji = false
+
+    /// El emoji de lo que se está viendo, si es un proyecto o un área; `nil` en
+    /// las demás listas, que no llevan.
+    private var emojiEditable: String? {
+        switch perspectiva {
+        case .project(let id): store.projects.first { $0.id == id }?.icon
+        case .area(let id): store.area(id)?.icon
+        default: nil
+        }
+    }
 
     private var items: [Item] { store.items(for: perspectiva) }
     private var pliegue: Pliegue { Pliegue.shared }
@@ -47,6 +58,20 @@ struct ListaView: View {
             .navigationTitle(store.title(for: perspectiva))
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
+                // El emoji de un proyecto o un área, arriba y a mano: es donde
+                // se mira cuando se está dentro.
+                if let emoji = emojiEditable {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { eligiendoEmoji = true } label: {
+                            if emoji.isEmpty {
+                                Image(systemName: "face.smiling")
+                            } else {
+                                Text(emoji).font(.system(size: 20))
+                            }
+                        }
+                        .accessibilityLabel("Cambiar emoji")
+                    }
+                }
                 // Solo en la bandeja y solo si hay algo: es la única lista que
                 // se supone que se vacía.
                 if case .inbox = perspectiva, !items.isEmpty {
@@ -69,6 +94,17 @@ struct ListaView: View {
             // con el teclado abierto, y su barra flotante robaba el sitio justo
             // donde hay que escribir.
             .toolbar(apuntando ? .hidden : .visible, for: .tabBar)
+            .sheet(isPresented: $eligiendoEmoji) {
+                ElegirEmojiView(actual: emojiEditable ?? "") { emoji in
+                    switch perspectiva {
+                    case .project(let id):
+                        if let p = store.projects.first(where: { $0.id == id }) { store.setIcon(p, to: emoji) }
+                    case .area(let id):
+                        if let a = store.area(id) { store.setIcon(a, to: emoji) }
+                    default: break
+                    }
+                }
+            }
         }
         .sheet(item: $abierta) { DetalleView(item: $0) }
         .onChange(of: pidenApuntar) { _, _ in apuntando = true }
