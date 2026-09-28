@@ -21,19 +21,25 @@ struct EsferaView: View {
     @Environment(\.widgetFamily) private var familia
 
     var body: some View {
-        switch familia {
-        case .accessoryInline:
-            // Una sola línea y sin fondo: es texto al lado de la hora.
-            Text(vistazo?.renglon ?? "Pauta · sin datos")
-        case .accessoryCorner:
-            Text(EsferaTextos.cifra(vistazo))
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
-                .widgetLabel(vistazo?.renglon ?? "Sin datos")
-        case .accessoryRectangular:
-            RectanguloDeEsfera(vistazo: vistazo)
-        default:
-            CirculoDeEsfera(vistazo: vistazo)
+        Group {
+            switch familia {
+            case .accessoryInline:
+                // Una sola línea y sin fondo: es texto al lado de la hora.
+                Text(vistazo?.renglon ?? "Pauta · sin datos")
+            case .accessoryCorner:
+                Text(EsferaTextos.cifra(vistazo))
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .widgetLabel(vistazo?.renglon ?? "Sin datos")
+            case .accessoryRectangular:
+                RectanguloDeEsfera(vistazo: vistazo)
+            default:
+                CirculoDeEsfera(vistazo: vistazo)
+            }
         }
+        // Transparente, que manda la esfera. Pero **declarado**: sin esto
+        // watchOS no dibuja la complicación y pone en su sitio «Please adopt
+        // containerBackground API», en inglés y en la muñeca.
+        .containerBackground(.clear, for: .widget)
     }
 }
 
