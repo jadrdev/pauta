@@ -4925,3 +4925,150 @@ struct OrdenDesdeElRelojTests {
         #expect(Store(root: telefono).items.first { $0.id == tarea.id }?.isCompleted == true)
     }
 }
+
+/// La copia de seguridad del día y volver a ella.
+@MainActor @Suite struct CopiasTests {
+
+    private func carpeta() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-copias-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    private func dia(_ d: Int, _ h: Int = 9) -> Date {
+        Calendar.current.date(from: DateComponents(year: 2026, month: 9, day: d, hour: h))!
+    }
+
+    /// gzip de verdad: lo abre el `gunzip` del sistema, sin Pauta.
+    @Test func theBackupIsARealGzipThatTheSystemOpens() throws {
+        let raiz = carpeta()
+        defer { try? FileManager.default.removeItem(at: raiz) }
+        let s = Store(root: raiz)
+        s.addItem(title: "Llamar a la gestoría", in: .inbox)
+        let url = try #require(s.copiaDelDia(ahora: dia(28)))
+        #expect(url.lastPathComponent == "Pauta-2026-09-28.json.gz")
+
+        let proceso = Process()
+        proceso.executableURL = URL(fileURLWithPath: "/usr/bin/gunzip")
+        proceso.arguments = ["-c", url.path]
+        let tubo = Pipe()
+        proceso.standardOutput = tubo
+        try proceso.run()
+        let salida = tubo.fileHandleForReading.readDataToEndOfFile()
+        proceso.waitUntilExit()
+        #expect(proceso.terminationStatus == 0)
+        #expect(String(decoding: salida, as: UTF8.self).contains("Llamar a la gestoría"))
+        #expect(Copias.leer(url)?.items.map(\.title) == ["Llamar a la gestoría"])
+    }
+
+    /// Un archivo cortado no se restaura como si estuviera entero.
+    @Test func aTruncatedBackupDoesNotOpen() throws {
+        let datos = Data(String(repeating: "pauta ", count: 500).utf8)
+        let gz = try #require(Copias.gzip(datos))
+        #expect(Copias.gunzip(gz) == datos)
+        #expect(Copias.gunzip(gz.dropLast(3)) == nil)
+    }
+
+    @Test func oneADayAndOnlyTheFirstTime() {
+        let raiz = carpeta()
+        defer { try? FileManager.default.removeItem(at: raiz) }
+        let s = Store(root: raiz)
+        #expect(s.copiaDelDia(ahora: dia(28)) == nil, "copió una carpeta vacía")
+        s.addItem(title: "Una", in: .inbox)
+        #expect(s.copiaDelDia(ahora: dia(28, 8)) != nil)
+        s.addItem(title: "Otra", in: .inbox)
+        #expect(s.copiaDelDia(ahora: dia(28, 20)) == nil, "la del día ya estaba hecha")
+        #expect(Copias.leer(s.copiasGuardadas[0])?.items.count == 1)
+        #expect(s.copiaDelDia(ahora: dia(29)) != nil)
+        #expect(s.copiasGuardadas.map(\.lastPathComponent)
+                == ["Pauta-2026-09-29.json.gz", "Pauta-2026-09-28.json.gz"])
+    }
+
+    @Test func onlyTheLastThirtyAreKept() {
+        let raiz = carpeta()
+        defer { try? FileManager.default.removeItem(at: raiz) }
+        let s = Store(root: raiz)
+        s.addItem(title: "Una", in: .inbox)
+        let cal = Calendar.current
+        for n in 0..<35 { s.copiaDelDia(ahora: cal.date(byAdding: .day, value: n, to: dia(1))!) }
+        #expect(s.copiasGuardadas.count == Copias.cuantas)
+        #expect(s.copiasGuardadas.last?.lastPathComponent == "Pauta-2026-09-06.json.gz")
+    }
+
+    /// Restaurar deja todo como estaba: lo cambiado vuelve, lo borrado vuelve,
+    /// y lo creado después va a la papelera en vez de desaparecer.
+    @Test func restoringPutsEverythingBackAndSendsTheNewToTheTrash() throws {
+        let raiz = carpeta()
+        defer { try? FileManager.default.removeItem(at: raiz) }
+        let s = Store(root: raiz)
+        let hecha = s.addItem(title: "Revisión diaria", in: .today)
+        let borrada = s.addItem(title: "Llamar al seguro", in: .inbox)
+        let proyecto = s.addProject(name: "Talega")
+        let copia = s.instantanea()
+
+        s.toggleComplete(hecha)
+        s.delete(borrada)
+        s.delete(proyecto)
+        let nueva = s.addItem(title: "Apuntada después", in: .inbox)
+
+        s.restaurar(copia)
+        #expect(s.items.first { $0.id == hecha.id }?.isCompleted == false)
+        #expect(s.items.contains { $0.id == borrada.id })
+        #expect(s.projects.contains { $0.id == proyecto.id })
+        #expect(!s.items.contains { $0.id == nueva.id })
+        #expect(s.borradas.contains { $0.id == nueva.id }, "lo nuevo tenía que ir a la papelera")
+    }
+
+    /// Y se puede deshacer: antes de restaurar se guarda cómo estaba.
+    @Test func restoringCanBeUndone() throws {
+        let raiz = carpeta()
+        defer { try? FileManager.default.removeItem(at: raiz) }
+        let s = Store(root: raiz)
+        s.addItem(title: "De antes", in: .inbox)
+        let copia = s.instantanea()
+        let despues = s.addItem(title: "De después", in: .inbox)
+
+        let respaldo = try #require(s.restaurar(copia))
+        #expect(respaldo.lastPathComponent.contains("antes-de-restaurar"))
+        #expect(!s.items.contains { $0.id == despues.id })
+
+        s.restaurar(try #require(Copias.leer(respaldo)))
+        #expect(s.items.contains { $0.id == despues.id })
+    }
+
+    /// Y viaja: el otro aparato acaba igual, porque lo restaurado lleva fecha
+    /// nueva y gana en el cruce.
+    @Test func theRestoreReachesTheOtherDevice() {
+        let mac = carpeta(), telefono = carpeta()
+        defer {
+            try? FileManager.default.removeItem(at: mac)
+            try? FileManager.default.removeItem(at: telefono)
+        }
+        let s = Store(root: mac)
+        let tarea = s.addItem(title: "Revisión diaria", in: .today)
+        let copia = s.instantanea()
+        s.toggleComplete(tarea)
+        let nueva = s.addItem(title: "Apuntada después", in: .inbox)
+        Puente.cruzar(telefono, mac)
+
+        s.restaurar(copia)
+        Puente.cruzar(telefono, mac)
+        let alla = Store(root: telefono)
+        #expect(alla.items.first { $0.id == tarea.id }?.isCompleted == false)
+        #expect(!alla.items.contains { $0.id == nueva.id })
+    }
+
+    /// Lo que ya estaba igual no se reescribe: restaurar la copia de hace un
+    /// momento no debe mover ni un archivo.
+    @Test func whatIsAlreadyTheSameIsNotRewritten() throws {
+        let raiz = carpeta()
+        defer { try? FileManager.default.removeItem(at: raiz) }
+        let s = Store(root: raiz)
+        let tarea = s.addItem(title: "Quieta", in: .inbox)
+        let archivo = raiz.appendingPathComponent("items/\(tarea.id.uuidString).json")
+        let antes = try Data(contentsOf: archivo)
+        s.restaurar(s.instantanea())
+        #expect(try Data(contentsOf: archivo) == antes)
+    }
+}

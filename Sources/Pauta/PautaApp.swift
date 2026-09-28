@@ -413,6 +413,9 @@ struct PautaApp: App {
                     // por delante el resto de la tarea, que es quien instala lo
                     // que hacen los botones de los avisos.
                     if !Launch.demo { publicarVistazo() }
+                    // La copia de seguridad del día, si aún no está: la foto de
+                    // cómo empezó, a la que volver si algo sale mal.
+                    if !Launch.demo { store.copiaDelDia() }
 
                     AvisoAcciones.alAbrir = { id in
                         openWindow(id: "main")
@@ -448,6 +451,8 @@ struct PautaApp: App {
                 .onReceive(NotificationCenter.default.publisher(
                     for: .NSCalendarDayChanged).receive(on: RunLoop.main)) { _ in
                     guard !Launch.demo else { return }
+                    // Una app que se queda abierta días también hace su copia.
+                    store.copiaDelDia()
                     Task {
                         await Avisos.reschedule(store.items)
                         await agenda.load(force: true)

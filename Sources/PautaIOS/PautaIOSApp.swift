@@ -131,6 +131,9 @@ struct RaizView: View {
                 }
             }
             store.reload()
+            // El teléfono puede pasar días sin cerrarse del todo: la copia del
+            // día se pide también al volver.
+            store.copiaDelDia()
             // Al volver del fondo es cuando hace falta cruzar con el Mac: entre
             // dejar el teléfono y volver a cogerlo es cuando se ha estado
             // delante del otro aparato. Sin carpeta elegida no hace nada, y
@@ -165,6 +168,8 @@ struct RaizView: View {
             // «inactiva» antes de «activa». Cruzar dos veces no hace nada, así
             // que sobra pedirlo dos veces y falta no pedirlo ninguna.
             await Sincronizar.conElMac(store)
+            // La copia de seguridad del día, si aún no está.
+            store.copiaDelDia()
             // Se avisa a fuera **aquí también**, no solo en el bloque de
             // arriba.
             //

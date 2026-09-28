@@ -39,6 +39,15 @@ struct AjustesView: View {
     @State private var falloDeArranque = false
     @State private var grabandoAtajo = false
     @State private var novedad = Novedad.shared
+    @State private var copias: [Copias.Guardada] = []
+    @State private var aRestaurar: Copias.Guardada?
+    @State private var restaurada: String?
+
+    init(ajustes: Ajustes, store: Store) {
+        self.ajustes = ajustes
+        self.store = store
+        _copias = State(initialValue: store.copias)
+    }
 
     /// Qué contar del último vistazo a las versiones. «No se pudo comprobar» no
     /// es lo mismo que «estás al día», y decir lo segundo cuando pasó lo primero
@@ -169,6 +178,49 @@ struct AjustesView: View {
                 .toggleStyle(.switch)
             }
 
+            grupo("COPIAS DE SEGURIDAD") {
+                Text(copias.first.map { "La última: \($0.titulo.lowercased())" }
+                     ?? "Todavía ninguna: se hace la primera al abrir la app")
+                    .ajusteStyle()
+                Text("Una al día, de los últimos \(Copias.cuantas) días, junto a tus datos en "
+                     + "iCloud. Volver a una deja todo como estaba ese día; lo apuntado "
+                     + "después va a la papelera, y antes se guarda una copia de ahora.")
+                    .ajusteNota()
+                HStack(spacing: 14) {
+                    Menu("Volver a una copia…") {
+                        ForEach(copias) { copia in
+                            Button("\(copia.titulo) — \(copia.detalle)") { aRestaurar = copia }
+                        }
+                    }
+                    .disabled(copias.isEmpty)
+                    .fixedSize()
+                    EnlaceDeTexto("Mostrar en el Finder") {
+                        NSWorkspace.shared.activateFileViewerSelecting(
+                            [copias.first?.url ?? store.carpetaDeCopias])
+                    }
+                }
+                .padding(.top, 4)
+                if let restaurada {
+                    Text(restaurada).ajusteNota(Paper.accentInk)
+                }
+            }
+            .confirmationDialog(
+                "¿Dejar todo como estaba el \(aRestaurar?.titulo.lowercased() ?? "")?",
+                isPresented: Binding(get: { aRestaurar != nil },
+                                     set: { if !$0 { aRestaurar = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Volver a esa copia", role: .destructive) {
+                    guard let elegida = aRestaurar, let copia = Copias.leer(elegida.url) else { return }
+                    store.restaurar(copia)
+                    restaurada = "Hecho: todo está como el \(elegida.titulo.lowercased())."
+                    copias = store.copias
+                }
+            } message: {
+                Text("Lo que hayas apuntado después irá a la papelera. Antes se guarda "
+                     + "una copia de cómo está ahora, por si quieres volver.")
+            }
+
             Rectangle().fill(Paper.hairline).frame(height: 1).padding(.vertical, 14)
             HStack {
                 EnlaceDeTexto("Restaurar los valores de fábrica") { ajustes.restaurar() }
@@ -188,7 +240,10 @@ struct AjustesView: View {
         .onChange(of: ajustes.minutosAplazados) { Avisos.actualizarCategorias() }
         // Un permiso concedido o revocado en los ajustes del sistema mientras
         // esto estaba cerrado.
-        .onAppear { alArrancar = Arranque.activo }
+        .onAppear {
+            alArrancar = Arranque.activo
+            copias = store.copias
+        }
     }
 
     @ViewBuilder

@@ -200,6 +200,18 @@ struct AjustesView: View {
             }
 
             Section {
+                NavigationLink {
+                    CopiasView()
+                } label: {
+                    Label("Copias de seguridad", systemImage: "clock.arrow.circlepath")
+                }
+            } header: {
+                Text("COPIAS DE SEGURIDAD")
+            } footer: {
+                Text("Una al día. Para volver a como estaba todo otro día.")
+            }
+
+            Section {
                 Text(SobreLaApp.rutaDeDatos(store))
                     .font(.system(size: 13).monospaced())
                     .foregroundStyle(Papel.inkSoft)

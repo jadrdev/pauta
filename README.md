@@ -755,6 +755,48 @@ limpieza exige que también la última modificación tenga más de treinta días
 mes en la carpeta, invisible, el mismo plazo que ya se daba a cualquier otra
 para que el otro aparato se enterase.
 
+## Copias de seguridad
+
+Una al día, la primera vez que se abre la app, en `copias/` dentro de la
+carpeta de datos:
+
+```
+copias/Pauta-2026-09-28.json.gz
+```
+
+En el Mac esa carpeta está en iCloud Drive, así que la copia sobrevive a perder
+el Mac. Se guardan las de los últimos **30 días**.
+
+Es **gzip de verdad** y no un formato propio: `gunzip -c` la abre sin Pauta, y
+lo que sale es JSON legible. Una copia que solo sabe abrir la app que se rompió
+no es una copia.
+
+### Por qué aparte y no en vez de los archivos
+
+La idea de guardar los datos directamente en un solo archivo comprimido se
+descartó. Cada cambio reescribiría el archivo entero, y si el Mac y el teléfono
+lo tocan a la vez iCloud se queda con uno de los dos enteros: se perderían todos
+los cambios del otro, no los de una tarea. Un archivo por tarea es lo que hace
+que un fallo de sincronización toque una tarea y no todas. La copia es la foto
+del día **a la que volver**, no donde se trabaja.
+
+### Volver a una
+
+En **Ajustes ▸ Copias de seguridad**, en el Mac y en el teléfono. Deja todo como
+estaba ese día:
+
+- Lo cambiado después vuelve a como era; lo borrado vuelve.
+- Lo **apuntado después va a la papelera**, no desaparece.
+- **Antes de restaurar se guarda una copia de ahora**, así que restaurar se
+  deshace restaurando esa.
+- Todo se escribe **con fecha nueva**. La sincronización se queda con la versión
+  más reciente, y con la fecha de entonces lo restaurado perdería contra lo de
+  ahora y el otro aparato no se enteraría. Así viaja como cualquier cambio.
+- Lo que ya estaba igual no se toca.
+
+Cada aparato guarda y restaura **sus** copias: las del Mac están junto a sus
+datos en iCloud, y las del teléfono en su carpeta.
+
 ## Vaciar la bandeja
 
 La bandeja existe para poder **apuntar sin decidir**. El precio es decidir

@@ -608,6 +608,14 @@ public final class Store {
         Date(timeIntervalSince1970: (date.timeIntervalSince1970 * 1000).rounded() / 1000)
     }
 
+    /// La fecha de un cambio: ahora, pero **siempre posterior** a la que
+    /// tenía. Redondeando al milisegundo, dos cambios seguidos —crear una tarea
+    /// y ponerle la fecha que venía escrita— podían quedar con la misma, y el
+    /// otro aparato, que se queda con la más reciente, no veía el segundo.
+    static func sello(despuesDe previa: Date, ahora: Date = .now) -> Date {
+        max(stamped(ahora), stamped(previa.addingTimeInterval(0.001)))
+    }
+
     /// Fuerza que la fecha de creación sea estrictamente posterior a la de
     /// cualquier tarea existente.
     ///
@@ -637,22 +645,25 @@ public final class Store {
     /// Centralizado para que ninguna mutación se olvide de una de las tres.
     private func mutateItem(_ id: UUID, _ change: (inout Item) -> Void) {
         guard let idx = items.firstIndex(where: { $0.id == id }) else { return }
+        let antes = items[idx].updatedAt
         change(&items[idx])
-        items[idx].updatedAt = Store.stamped()
+        items[idx].updatedAt = Store.sello(despuesDe: antes)
         persist(items[idx])
     }
 
     private func mutateProject(_ id: UUID, _ change: (inout Project) -> Void) {
         guard let idx = projects.firstIndex(where: { $0.id == id }) else { return }
+        let antes = projects[idx].updatedAt
         change(&projects[idx])
-        projects[idx].updatedAt = Store.stamped()
+        projects[idx].updatedAt = Store.sello(despuesDe: antes)
         persist(projects[idx])
     }
 
     private func mutateArea(_ id: UUID, _ change: (inout Area) -> Void) {
         guard let idx = areas.firstIndex(where: { $0.id == id }) else { return }
+        let antes = areas[idx].updatedAt
         change(&areas[idx])
-        areas[idx].updatedAt = Store.stamped()
+        areas[idx].updatedAt = Store.sello(despuesDe: antes)
         persist(areas[idx])
     }
 
@@ -975,7 +986,7 @@ public final class Store {
     public func delete(_ item: Item) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         var buried = items.remove(at: idx)
-        buried.deletedAt = Store.stamped()
+        buried.deletedAt = Store.sello(despuesDe: buried.updatedAt)
         buried.updatedAt = buried.deletedAt!
         enterradas.insert(buried.id)
         borradas.insert(buried, at: 0)
@@ -1523,7 +1534,7 @@ public final class Store {
         for id in sueltos { mutateProject(id) { $0.areaID = nil } }
         guard let idx = areas.firstIndex(where: { $0.id == area.id }) else { return }
         var buried = areas.remove(at: idx)
-        buried.deletedAt = Store.stamped()
+        buried.deletedAt = Store.sello(despuesDe: buried.updatedAt)
         buried.updatedAt = buried.deletedAt!
         buried.sueltos = sueltos
         areasBorradas.insert(buried, at: 0)
@@ -1537,7 +1548,7 @@ public final class Store {
         for id in sueltas { mutateItem(id) { $0.projectID = nil } }
         guard let idx = projects.firstIndex(where: { $0.id == project.id }) else { return }
         var buried = projects.remove(at: idx)
-        buried.deletedAt = Store.stamped()
+        buried.deletedAt = Store.sello(despuesDe: buried.updatedAt)
         buried.updatedAt = buried.deletedAt!
         buried.sueltos = sueltas
         proyectosBorrados.insert(buried, at: 0)
@@ -1557,7 +1568,7 @@ public final class Store {
         guard let idx = borradas.firstIndex(where: { $0.id == id }) else { return false }
         var vuelta = borradas.remove(at: idx)
         vuelta.deletedAt = nil
-        vuelta.updatedAt = Store.stamped()
+        vuelta.updatedAt = Store.sello(despuesDe: vuelta.updatedAt)
         if let proyecto = vuelta.projectID,
            !projects.contains(where: { $0.id == proyecto }) {
             vuelta.projectID = nil
@@ -1580,7 +1591,7 @@ public final class Store {
         var vuelto = proyectosBorrados.remove(at: idx)
         let recuperables = vuelto.sueltos
         vuelto.deletedAt = nil
-        vuelto.updatedAt = Store.stamped()
+        vuelto.updatedAt = Store.sello(despuesDe: vuelto.updatedAt)
         vuelto.sueltos = []
         if let area = vuelto.areaID, !areas.contains(where: { $0.id == area }) {
             vuelto.areaID = nil
@@ -1603,7 +1614,7 @@ public final class Store {
         var vuelta = areasBorradas.remove(at: idx)
         let recuperables = vuelta.sueltos
         vuelta.deletedAt = nil
-        vuelta.updatedAt = Store.stamped()
+        vuelta.updatedAt = Store.sello(despuesDe: vuelta.updatedAt)
         vuelta.sueltos = []
         areas.append(vuelta)
         areas.sort(by: Area.byPosition)
@@ -1814,5 +1825,122 @@ extension Store {
         store.addItem(title: "Preguntar el precio", in: .project(cursillo.id))
         store.delete(cursillo)
         return store
+    }
+}
+
+// MARK: - Copias de seguridad
+
+extension Store {
+    public var carpetaDeCopias: URL { Copias.carpeta(en: root) }
+    public var copiasGuardadas: [URL] { Copias.guardadas(en: root) }
+    public var copias: [Copias.Guardada] { Copias.resumenes(en: root) }
+
+    /// Todo lo que hay en la carpeta, tal como está en el disco: lo vivo y lo
+    /// de la papelera. Del disco y no de memoria, porque la memoria no guarda
+    /// las lápidas caducadas y la copia tiene que ser completa.
+    public func instantanea(ahora: Date = .now) -> Copia {
+        func todos<T: Decodable>(_ dir: URL, _: T.Type) -> [T] {
+            let archivos = (try? FileManager.default.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: nil)) ?? []
+            return archivos.filter { $0.pathExtension == "json" }.compactMap {
+                (try? Data(contentsOf: $0)).flatMap { try? decoder.decode(T.self, from: $0) }
+            }
+        }
+        return Copia(hecha: Store.stamped(ahora),
+                     items: todos(itemsDir, Item.self).sorted { $0.id.uuidString < $1.id.uuidString },
+                     projects: todos(projectsDir, Project.self).sorted { $0.id.uuidString < $1.id.uuidString },
+                     areas: todos(areasDir, Area.self).sorted { $0.id.uuidString < $1.id.uuidString })
+    }
+
+    /// La copia del día, si todavía no está hecha. Devuelve dónde la dejó.
+    ///
+    /// Se pide al abrir la app y al cambiar de día, y solo escribe la primera
+    /// vez: es la foto de cómo empezó el día, no de cómo acabó. Una carpeta sin
+    /// ninguna tarea no se copia, porque una copia vacía podría acabar
+    /// desplazando a las buenas al podar.
+    @discardableResult
+    public func copiaDelDia(ahora: Date = .now, calendar: Calendar = .current) -> URL? {
+        guard !inMemory else { return nil }
+        let destino = carpetaDeCopias.appendingPathComponent(
+            Copias.nombre(para: ahora, calendar: calendar))
+        guard !FileManager.default.fileExists(atPath: destino.path) else { return nil }
+        let copia = instantanea(ahora: ahora)
+        guard !copia.items.isEmpty else { return nil }
+        guard (try? Copias.escribir(copia, en: destino)) != nil else { return nil }
+        Copias.podar(en: root)
+        return destino
+    }
+
+    /// Deja todo como estaba en la copia.
+    ///
+    /// Primero guarda una copia de ahora, para que restaurar se pueda deshacer
+    /// restaurando esa. Luego escribe cada tarea, proyecto y área **con fecha
+    /// nueva**: la sincronización se queda con la versión más reciente, y si
+    /// se escribieran con su fecha de entonces perderían contra las de ahora y
+    /// el otro aparato no se enteraría. Lo que no está en la copia —lo creado
+    /// después— va a la papelera, no desaparece. Lo que ya estaba igual no se
+    /// toca.
+    ///
+    /// Devuelve la copia de antes de restaurar.
+    @discardableResult
+    public func restaurar(_ copia: Copia, ahora: Date = .now,
+                          calendar: Calendar = .current) -> URL? {
+        guard !inMemory else { return nil }
+        let antes = instantanea(ahora: ahora)
+        let respaldo = carpetaDeCopias.appendingPathComponent(
+            Copias.nombreAntesDeRestaurar(ahora, calendar: calendar))
+        guard (try? Copias.escribir(antes, en: respaldo)) != nil else { return nil }
+
+        func sello(despuesDe previa: Date?) -> Date {
+            let nuevo = Store.stamped(ahora)
+            guard let previa else { return nuevo }
+            return max(nuevo, Store.stamped(previa.addingTimeInterval(0.001)))
+        }
+
+        let items = Dictionary(antes.items.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        for var suya in copia.items {
+            let actual = items[suya.id]
+            if var igual = actual { igual.updatedAt = suya.updatedAt; if igual == suya { continue } }
+            suya.updatedAt = sello(despuesDe: actual?.updatedAt)
+            persist(suya)
+        }
+        let enLaCopia = Set(copia.items.map(\.id))
+        for var sobra in antes.items where !enLaCopia.contains(sobra.id) && sobra.deletedAt == nil {
+            sobra.updatedAt = sello(despuesDe: sobra.updatedAt)
+            sobra.deletedAt = sobra.updatedAt
+            persist(sobra)
+        }
+
+        let proyectos = Dictionary(antes.projects.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        for var suyo in copia.projects {
+            let actual = proyectos[suyo.id]
+            if var igual = actual { igual.updatedAt = suyo.updatedAt; if igual == suyo { continue } }
+            suyo.updatedAt = sello(despuesDe: actual?.updatedAt)
+            persist(suyo)
+        }
+        let proyectosDeLaCopia = Set(copia.projects.map(\.id))
+        for var sobra in antes.projects where !proyectosDeLaCopia.contains(sobra.id) && sobra.deletedAt == nil {
+            sobra.updatedAt = sello(despuesDe: sobra.updatedAt)
+            sobra.deletedAt = sobra.updatedAt
+            persist(sobra)
+        }
+
+        let areas = Dictionary(antes.areas.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        for var suya in copia.areas {
+            let actual = areas[suya.id]
+            if var igual = actual { igual.updatedAt = suya.updatedAt; if igual == suya { continue } }
+            suya.updatedAt = sello(despuesDe: actual?.updatedAt)
+            persist(suya)
+        }
+        let areasDeLaCopia = Set(copia.areas.map(\.id))
+        for var sobra in antes.areas where !areasDeLaCopia.contains(sobra.id) && sobra.deletedAt == nil {
+            sobra.updatedAt = sello(despuesDe: sobra.updatedAt)
+            sobra.deletedAt = sobra.updatedAt
+            persist(sobra)
+        }
+
+        Copias.podar(en: root)
+        reload()
+        return respaldo
     }
 }
