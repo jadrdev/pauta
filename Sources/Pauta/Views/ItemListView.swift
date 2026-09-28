@@ -471,17 +471,40 @@ private struct DayHeader: View {
 }
 
 /// Emoji del proyecto o del área en la cabecera; al pulsarlo se abre un panel
-/// para elegirlo. Paleta corta y curada a propósito: entre veinte se escoge
-/// de un vistazo, en el teclado de emojis completo del sistema no.
+/// para elegirlo.
+///
+/// Paleta curada y no el teclado entero del sistema: entre unas decenas se
+/// escoge de un vistazo, entre miles no. Eran veinte y se quedaban cortos, así
+/// que son cuarenta **por temas, una fila cada uno**, que es lo que hace que
+/// cuarenta se sigan leyendo de un vistazo. Y para lo que no esté, «Otro».
 private struct IconoEditable: View {
     let icon: String
     let alElegir: (String) -> Void
     @State private var showingPicker = false
+    @State private var otro = ""
 
     private static let palette = [
-        "📌", "⭐️", "🔥", "🎯", "🏠", "💼", "📚", "🎨", "🎸", "🌱",
-        "✈️", "🛒", "💪", "🧠", "🖥️", "📷", "🧾", "🛠️", "🐾", "🎁",
+        // Trabajo
+        "💼", "💻", "📱", "🖥️", "🌐", "🧾", "📊", "🚀",
+        // Estudiar y crear
+        "📚", "🎓", "✍️", "🎨", "🎬", "📷", "🎸", "🎵",
+        // Casa y fuera
+        "🏠", "🛒", "🍳", "🧹", "🚗", "✈️", "🎁", "🐾",
+        // Cuerpo y ocio
+        "💪", "🩺", "⚽️", "🎮", "🌱", "☕️", "❤️", "🧠",
+        // Para marcar
+        "📌", "⭐️", "🔥", "🎯", "💡", "💰", "🛠️", "📦",
     ]
+
+    /// El último emoji de lo escrito, o `nil` si no hay ninguno. El último y
+    /// no el primero: escribir encima de uno ya puesto es cambiarlo.
+    static func emoji(en texto: String) -> String? {
+        texto.reversed().first { c in
+            c.unicodeScalars.contains { $0.properties.isEmojiPresentation }
+                || (c.unicodeScalars.count > 1
+                    && c.unicodeScalars.contains { $0.properties.isEmoji })
+        }.map(String.init)
+    }
 
     var body: some View {
         Button { showingPicker.toggle() } label: {
@@ -496,7 +519,7 @@ private struct IconoEditable: View {
         .buttonStyle(.plain)
         .popover(isPresented: $showingPicker, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: 10) {
-                LazyVGrid(columns: Array(repeating: GridItem(.fixed(30)), count: 5),
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(30)), count: 8),
                           spacing: 6) {
                     ForEach(Self.palette, id: \.self) { emoji in
                         Button {
@@ -513,14 +536,29 @@ private struct IconoEditable: View {
                         .buttonStyle(.plain)
                     }
                 }
-                if !icon.isEmpty {
-                    Button("Quitar emoji") {
-                        alElegir("")
-                        showingPicker = false
+                HStack(spacing: 8) {
+                    // Cualquier otro: se escribe o se pega, o se abre el
+                    // teclado de emojis del sistema con ⌃⌘Espacio.
+                    TextField("Otro (⌃⌘Espacio)", text: $otro)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12))
+                        .frame(width: 150)
+                        .onChange(of: otro) {
+                            guard let elegido = Self.emoji(en: otro) else { return }
+                            alElegir(elegido)
+                            otro = ""
+                            showingPicker = false
+                        }
+                    Spacer(minLength: 0)
+                    if !icon.isEmpty {
+                        Button("Quitar emoji") {
+                            alElegir("")
+                            showingPicker = false
+                        }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Paper.inkSoft)
                     }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Paper.inkSoft)
                 }
             }
             .padding(12)
