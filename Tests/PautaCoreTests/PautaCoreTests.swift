@@ -5149,3 +5149,51 @@ struct OrdenDesdeElRelojTests {
         #expect(Iconos.emoji(en: "#") == nil)
     }
 }
+
+/// Ordenar un proyecto por fecha, cuando se pide.
+@MainActor @Suite struct OrdenarPorFechaTests {
+
+    private func dia(_ m: Int, _ d: Int) -> Date {
+        Calendar.current.date(from: DateComponents(year: 2026, month: m, day: d))!
+    }
+
+    @Test func datedFirstByDayAndTimeThenTheRestAsTheyWere() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "F. Sistemas Digitales")
+        func tarea(_ t: String, _ cuando: Date?, hora: Int? = nil) {
+            var i = s.addItem(title: t, in: .project(p.id))
+            i.when = cuando
+            i.timeOfDay = hora
+            s.update(i)
+        }
+        tarea("Entrega PEC 1", dia(11, 28))
+        tarea("Sin fecha A", nil)
+        tarea("Sesión 13 oct", dia(10, 13))
+        tarea("Curso 18:00", dia(10, 5), hora: 18 * 60)
+        tarea("Sin fecha B", nil)
+        tarea("Bienvenida", dia(10, 5))
+        let otra = s.addItem(title: "De otra lista", in: .inbox)
+        let suPosicion = s.items.first { $0.id == otra.id }!.position
+
+        s.ordenarPorFecha(p)
+        #expect(s.items(for: .project(p.id)).map(\.title)
+                == ["Curso 18:00", "Bienvenida", "Sesión 13 oct", "Entrega PEC 1",
+                    "Sin fecha A", "Sin fecha B"])
+        #expect(s.items.first { $0.id == otra.id }!.position == suPosicion,
+                "movió una tarea de otra lista")
+    }
+
+    /// Lo que ya está en orden no se reescribe.
+    @Test func whatIsAlreadyInOrderIsNotRewritten() {
+        let s = Store(inMemory: true)
+        let p = s.addProject(name: "Ordenado")
+        for d in [5, 13, 19] {
+            var i = s.addItem(title: "Sesión \(d)", in: .project(p.id))
+            i.when = dia(10, d)
+            s.update(i)
+        }
+        let antes = s.items.map(\.updatedAt)
+        s.ordenarPorFecha(p)
+        #expect(s.items.map(\.updatedAt) == antes)
+    }
+}

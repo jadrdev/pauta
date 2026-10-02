@@ -577,6 +577,15 @@ struct PautaApp: App {
                         .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")),
                                           modifiers: .command)
                 }
+                Divider()
+                // Solo dentro de un proyecto: es el único sitio donde el orden
+                // es tuyo y una fecha puede querer mandar sobre él.
+                Button("Ordenar el proyecto por fecha") {
+                    if case .project(let id) = nav.perspective, let p = store.project(id) {
+                        withAnimation { store.ordenarPorFecha(p) }
+                    }
+                }
+                .disabled({ if case .project = nav.perspective { false } else { true } }())
             }
         }
 

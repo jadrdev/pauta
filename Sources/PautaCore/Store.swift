@@ -1380,6 +1380,37 @@ public final class Store {
         projects.sort(by: Project.byPosition)
     }
 
+    /// Ordena las tareas pendientes de un proyecto por fecha, una vez.
+    ///
+    /// Una vez y no para siempre: el orden de un proyecto es el que tú
+    /// decides, y después de esto se sigue arrastrando como siempre. Primero
+    /// lo que tiene día, por día y dentro del día por hora; detrás lo que no
+    /// tiene, en el orden en que estaba. Se reparten **los mismos huecos** de
+    /// posición que ya ocupaban, así que las demás listas no se mueven, y solo
+    /// se escribe lo que cambia de sitio.
+    public func ordenarPorFecha(_ project: Project, calendar: Calendar = .current) {
+        let lista = items(for: .project(project.id))
+        guard lista.count > 1 else { return }
+        let huecos = Store.desempatadas(lista.map(\.position).sorted())
+        let ordenadas = lista.enumerated().sorted { a, b in
+            func clave(_ i: Item) -> (Date, Int)? {
+                (i.when ?? i.deadline).map { (calendar.startOfDay(for: $0), i.timeOfDay ?? Int.max) }
+            }
+            switch (clave(a.element), clave(b.element)) {
+            case let (x?, y?):
+                if x.0 != y.0 { return x.0 < y.0 }
+                if x.1 != y.1 { return x.1 < y.1 }
+                return a.offset < b.offset
+            case (_?, nil): return true
+            case (nil, _?): return false
+            case (nil, nil): return a.offset < b.offset
+            }
+        }.map(\.element)
+        for (i, item) in ordenadas.enumerated() where item.position != huecos[i] {
+            mutateItem(item.id) { $0.position = huecos[i] }
+        }
+    }
+
     public func rename(_ project: Project, to name: String) {
         mutateProject(project.id) { $0.name = name }
     }

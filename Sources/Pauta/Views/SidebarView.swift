@@ -451,6 +451,9 @@ private struct SidebarRow: View {
                     }
                 }
             }
+            Button("Ordenar sus tareas por fecha") {
+                withAnimation { store.ordenarPorFecha(project) }
+            }
             Button("Ordenar áreas y proyectos alfabéticamente") {
                 store.sortAlphabetically()
             }

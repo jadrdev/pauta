@@ -72,6 +72,23 @@ struct ListaView: View {
                         .accessibilityLabel("Cambiar emoji")
                     }
                 }
+                // Ordenar por fecha, una vez: solo en un proyecto, que es donde
+                // el orden es tuyo.
+                if case .project(let id) = perspectiva, items.count > 1,
+                   let proyecto = store.projects.first(where: { $0.id == id }) {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            Button {
+                                withAnimation { store.ordenarPorFecha(proyecto) }
+                            } label: {
+                                Label("Ordenar por fecha", systemImage: "calendar")
+                            }
+                        } label: {
+                            Image(systemName: "arrow.up.arrow.down")
+                        }
+                        .accessibilityLabel("Ordenar")
+                    }
+                }
                 // Solo en la bandeja y solo si hay algo: es la única lista que
                 // se supone que se vacía.
                 if case .inbox = perspectiva, !items.isEmpty {
