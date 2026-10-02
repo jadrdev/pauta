@@ -134,6 +134,18 @@ struct ItemListView: View {
                 .help("Decidir una por una qué hacer con lo que hay en la bandeja")
                 .padding(.trailing, 12)
             }
+            // A la vista y no solo en un menú: escondido en el clic derecho no
+            // lo encontraba nadie. Una vez, cuando se pide; después se sigue
+            // arrastrando.
+            if case .project(let id) = nav.perspective, items.count > 1,
+               let project = store.project(id) {
+                Button { withAnimation { store.ordenarPorFecha(project) } } label: {
+                    Text("ORDENAR POR FECHA").rubricStyle(Paper.accentInk)
+                }
+                .buttonStyle(.plain)
+                .help("Por día y hora; lo que no tiene fecha, detrás. Luego se sigue arrastrando")
+                .padding(.trailing, 12)
+            }
             if !items.isEmpty || !eventosDeHoy.isEmpty {
                 Text(countLabel)
                     .rubricStyle()
