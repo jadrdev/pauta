@@ -5332,3 +5332,30 @@ struct OrdenDesdeElRelojTests {
         #expect(repetidas == [l.propuestas[0].id])
     }
 }
+
+/// Un toque en un aviso que llega antes de que la app sepa qué hacer con él.
+@MainActor @Suite(.serialized) struct AvisoPendienteTests {
+    @Test func aTapThatArrivesTooEarlyWaitsInsteadOfGettingLost() async throws {
+        AvisoAcciones.alAbrir = nil
+        AvisoAcciones.alCompletar = nil
+        let tarea = UUID()
+        await AvisoAcciones.entregar(.abrir(tarea))
+        await AvisoAcciones.entregar(.completar(tarea))
+
+        var abiertas: [UUID] = []
+        var completadas: [UUID] = []
+        AvisoAcciones.alAbrir = { abiertas.append($0) }
+        AvisoAcciones.alCompletar = { completadas.append($0) }
+        for _ in 0..<20 where abiertas.isEmpty || completadas.isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(abiertas == [tarea])
+        #expect(completadas == [tarea])
+
+        // Y con alguien ya escuchando, se atiende al momento y una sola vez.
+        await AvisoAcciones.entregar(.abrir(tarea))
+        #expect(abiertas == [tarea, tarea])
+        AvisoAcciones.alAbrir = nil
+        AvisoAcciones.alCompletar = nil
+    }
+}

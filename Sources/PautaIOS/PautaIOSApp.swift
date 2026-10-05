@@ -19,6 +19,10 @@ struct PautaIOSApp: App {
         // Antes de la interfaz: un aviso pulsado con la app cerrada se entrega
         // sin nadie que lo atienda si el delegado llega tarde.
         Avisos.hookUp()
+        // Los botones del aviso, también aquí y no en una vista: iOS los
+        // atiende en segundo plano, cuando puede no haber ninguna montada.
+        AvisoAcciones.alCompletar = { await DesdeElAviso.completar($0) }
+        AvisoAcciones.alAplazar = { await DesdeElAviso.aplazar($0, minutos: $1) }
         // Y la sesión con el reloj, que tarda en activarse: pedirla al arrancar
         // es lo que hace que el primer vistazo salga y no se quede esperando.
         EnlaceConElReloj.shared.activar()
@@ -193,6 +197,16 @@ struct RaizView: View {
             // Y quién atiende lo que pida el reloj, que hasta ahora solo
             // recibía. Se instala aquí porque el almacén vive en la vista: el
             // enlace no guarda ninguno a propósito.
+            // Tocar el aviso abre **su** tarea, como un toque en el widget; y
+            // el repaso abre Hoy, que es donde se decide el día. Antes el
+            // teléfono no sabía qué hacer con el toque y se abría donde
+            // estuviera. Si el toque llegó con la app cerrada, estaba
+            // esperando y se atiende ahora.
+            AvisoAcciones.alAbrir = { id in
+                pestana = .hoy
+                delEnlace = store.items.first { $0.id == id && $0.deletedAt == nil }
+            }
+            AvisoAcciones.alRepasar = { pestana = .hoy }
             EnlaceConElReloj.shared.obedecer = { orden in
                 switch orden {
                 case .completar(let tarea):

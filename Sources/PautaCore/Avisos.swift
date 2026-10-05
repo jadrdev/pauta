@@ -29,13 +29,55 @@ public final class AvisoEstado {
 /// que se completó, se movió de día, se borró o volvió de otro dispositivo.
 /// Lo que la app quiere que pase cuando se toca un aviso. Lo rellena la app al
 /// arrancar; vive aquí porque el delegado no tiene forma de alcanzarla.
+///
+/// **Lo que llega antes de que haya quien lo atienda se guarda.** Con la app
+/// cerrada, tocar un aviso la arranca y el toque se entrega enseguida, antes de
+/// que la interfaz haya dicho qué hacer con él. Antes se perdía: la app se
+/// abría y no iba a ninguna parte. Ahora espera, y se atiende en cuanto se
+/// instala lo que le toca.
 @MainActor
 public enum AvisoAcciones {
-    public static var alAbrir: ((UUID) -> Void)?
-    public static var alCompletar: ((UUID) -> Void)?
-    public static var alAplazar: ((UUID, Int) -> Void)?
+    public static var alAbrir: ((UUID) -> Void)? { didSet { atenderPendientes() } }
+    /// Asíncronas porque en el teléfono se atienden sin abrir la app: el
+    /// sistema espera a que terminen, y si volvieran antes de escribir, la app
+    /// podría dormirse a medias.
+    public static var alCompletar: ((UUID) async -> Void)? { didSet { atenderPendientes() } }
+    public static var alAplazar: ((UUID, Int) async -> Void)? { didSet { atenderPendientes() } }
     /// El repaso no lleva tarea dentro: abre la app para decidir el día.
-    public static var alRepasar: (() -> Void)?
+    public static var alRepasar: (() -> Void)? { didSet { atenderPendientes() } }
+
+    enum Respuesta { case abrir(UUID), completar(UUID), aplazar(UUID, Int), repasar }
+    private static var pendientes: [Respuesta] = []
+
+    static func entregar(_ respuesta: Respuesta) async {
+        if await !atender(respuesta) { pendientes.append(respuesta) }
+    }
+
+    /// Si había quien la atendiera.
+    private static func atender(_ respuesta: Respuesta) async -> Bool {
+        switch respuesta {
+        case .abrir(let id):
+            guard let alAbrir else { return false }
+            alAbrir(id)
+        case .completar(let id):
+            guard let alCompletar else { return false }
+            await alCompletar(id)
+        case .aplazar(let id, let minutos):
+            guard let alAplazar else { return false }
+            await alAplazar(id, minutos)
+        case .repasar:
+            guard let alRepasar else { return false }
+            alRepasar()
+        }
+        return true
+    }
+
+    private static func atenderPendientes() {
+        guard !pendientes.isEmpty else { return }
+        let cola = pendientes
+        pendientes = []
+        Task { for r in cola { await entregar(r) } }
+    }
 }
 
 /// Delegado del centro de notificaciones.
@@ -58,17 +100,17 @@ public final class AvisoDelegado: NSObject, UNUserNotificationCenterDelegate {
     ) async {
         let peticion = response.notification.request.identifier
         if peticion == Repaso.identificador {
-            await MainActor.run { AvisoAcciones.alRepasar?() }
+            await AvisoAcciones.entregar(.repasar)
             return
         }
         guard let id = UUID(uuidString: peticion) else { return }
-        let accion = response.actionIdentifier
-        await MainActor.run {
-            switch accion {
-            case Avisos.accionCompletar: AvisoAcciones.alCompletar?(id)
-            case Avisos.accionAplazar:   AvisoAcciones.alAplazar?(id, Avisos.minutosAplazados)
-            default:                     AvisoAcciones.alAbrir?(id)
-            }
+        switch response.actionIdentifier {
+        case Avisos.accionCompletar:
+            await AvisoAcciones.entregar(.completar(id))
+        case Avisos.accionAplazar:
+            await AvisoAcciones.entregar(.aplazar(id, await Avisos.minutosAplazados))
+        default:
+            await AvisoAcciones.entregar(.abrir(id))
         }
     }
 }
