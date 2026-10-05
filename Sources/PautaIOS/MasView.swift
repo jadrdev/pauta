@@ -12,6 +12,7 @@ struct MasView: View {
     @State private var nombre = ""
     /// De qué se está eligiendo el emoji, si de algo.
     @State private var emojiDe: ConEmoji?
+    @State private var pegando = false
 
     private enum ConEmoji: Identifiable {
         case proyecto(Project)
@@ -142,6 +143,7 @@ struct MasView: View {
             .scrollContentBackground(.hidden)
             .background(Papel.bg)
             .navigationTitle("Más")
+            .sheet(isPresented: $pegando) { PegarCalendarioView(proyectoInicial: nil) }
             .sheet(item: $emojiDe) { cual in
                 ElegirEmojiView(actual: cual.actual) { emoji in
                     switch cual {
@@ -156,6 +158,9 @@ struct MasView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
+                        Button { pegando = true } label: {
+                            Label("Pegar un calendario", systemImage: "calendar.badge.plus")
+                        }
                         Button { pedirNombre(.proyectoNuevo) } label: {
                             Label("Proyecto nuevo", systemImage: "folder.badge.plus")
                         }

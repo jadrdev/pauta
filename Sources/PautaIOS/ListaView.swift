@@ -20,6 +20,7 @@ struct ListaView: View {
     @State private var apuntando = false
     @State private var vaciando = false
     @State private var eligiendoEmoji = false
+    @State private var pegando = false
 
     /// El emoji de lo que se está viendo, si es un proyecto o un área; `nil` en
     /// las demás listas, que no llevan.
@@ -72,21 +73,27 @@ struct ListaView: View {
                         .accessibilityLabel("Cambiar emoji")
                     }
                 }
-                // Ordenar por fecha, una vez: solo en un proyecto, que es donde
-                // el orden es tuyo.
-                if case .project(let id) = perspectiva, items.count > 1,
+                // Lo que se hace con un proyecto entero: ordenarlo por fecha
+                // —una vez; el orden sigue siendo tuyo— y llenarlo pegando un
+                // calendario, que tiene sentido también cuando está vacío.
+                if case .project(let id) = perspectiva,
                    let proyecto = store.projects.first(where: { $0.id == id }) {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
-                            Button {
-                                withAnimation { store.ordenarPorFecha(proyecto) }
-                            } label: {
-                                Label("Ordenar por fecha", systemImage: "calendar")
+                            if items.count > 1 {
+                                Button {
+                                    withAnimation { store.ordenarPorFecha(proyecto) }
+                                } label: {
+                                    Label("Ordenar por fecha", systemImage: "calendar")
+                                }
+                            }
+                            Button { pegando = true } label: {
+                                Label("Pegar un calendario", systemImage: "calendar.badge.plus")
                             }
                         } label: {
-                            Image(systemName: "arrow.up.arrow.down")
+                            Image(systemName: "ellipsis.circle")
                         }
-                        .accessibilityLabel("Ordenar")
+                        .accessibilityLabel("Más acciones del proyecto")
                     }
                 }
                 // Solo en la bandeja y solo si hay algo: es la única lista que
@@ -111,6 +118,11 @@ struct ListaView: View {
             // con el teclado abierto, y su barra flotante robaba el sitio justo
             // donde hay que escribir.
             .toolbar(apuntando ? .hidden : .visible, for: .tabBar)
+            .sheet(isPresented: $pegando) {
+                PegarCalendarioView(proyectoInicial: {
+                    if case .project(let id) = perspectiva { id } else { nil }
+                }())
+            }
             .sheet(isPresented: $eligiendoEmoji) {
                 ElegirEmojiView(actual: emojiEditable ?? "") { emoji in
                     switch perspectiva {

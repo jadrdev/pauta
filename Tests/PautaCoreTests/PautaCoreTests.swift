@@ -5197,3 +5197,138 @@ struct OrdenDesdeElRelojTests {
         #expect(s.items.map(\.updatedAt) == antes)
     }
 }
+
+/// Pegar un calendario: de un texto, una tarea por día.
+@Suite struct CalendarioTests {
+
+    private let hoy = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 5))!
+    private func dia(_ y: Int, _ m: Int, _ d: Int) -> Date {
+        Calendar.current.date(from: DateComponents(year: y, month: m, day: d))!
+    }
+
+    /// El PDF de la UNED, tal como sale al copiarlo.
+    @Test func theUnedTutorialsPdf() {
+        let texto = """
+        UNED Tutorías 2026-27
+        Fundamentos Sistemas Digitales (Viernes 17 a 18h)
+        Boole: 9, 16 y 23 octubre
+        Combinacionales: 30 octubre; 6, 13 y 20 noviembre
+        Secuenciales: 27 noviembre; 4, 11 y 18 diciembre; 8 enero
+        Memorias: 15 y 22 enero
+        PEC (20%): noviembre y enero
+        Fundamentos Físicos de la Informática (Viernes 18 a 19h)
+        Campo eléctrico: 9, 16 y 23 octubre
+        Campo Magnético: 30 octubre; 6, 13 y 20 noviembre
+        Circuitos CC y CA: 27 noviembre; 4 y 11 diciembre
+        Disp. electrónic. y fotónicos y
+        familias lógicas: 18 diciembre; 8, 15 y 22 enero
+        PEC (10%) noviembre y enero
+        """
+        let l = Calendario.leer(texto, hoy: hoy)
+        #expect(l.propuestas.count == 28)
+        #expect(l.secciones == ["Fundamentos Sistemas Digitales", "Fundamentos Físicos de la Informática"])
+        #expect(l.propuestas.allSatisfy { $0.aviso == nil }, "todas son viernes")
+        #expect(l.propuestas.allSatisfy { $0.duracion == 60 })
+
+        let fsd = l.propuestas.filter { $0.seccion == "Fundamentos Sistemas Digitales" }
+        #expect(fsd.count == 14)
+        #expect(fsd.allSatisfy { $0.minuto == 17 * 60 })
+        #expect(fsd.first?.titulo == "Boole")
+        #expect(fsd.first?.dia == dia(2026, 10, 9))
+        #expect(fsd.filter { $0.titulo == "Secuenciales" }.map(\.dia)
+                == [dia(2026, 11, 27), dia(2026, 12, 4), dia(2026, 12, 11), dia(2026, 12, 18), dia(2027, 1, 8)])
+        #expect(fsd.filter { $0.titulo == "Memorias" }.map(\.dia) == [dia(2027, 1, 15), dia(2027, 1, 22)])
+
+        let ffi = l.propuestas.filter { $0.seccion == "Fundamentos Físicos de la Informática" }
+        #expect(ffi.count == 14)
+        #expect(ffi.allSatisfy { $0.minuto == 18 * 60 })
+        #expect(ffi.first?.dia == dia(2026, 10, 9), "volvió a octubre de 2026, no de 2027")
+        // El título partido en dos líneas se junta.
+        #expect(ffi.filter { $0.titulo == "Disp. electrónic. y fotónicos y familias lógicas" }.count == 4)
+
+        // Lo que no tiene día no se inventa: sale aparte.
+        #expect(l.ignoradas == ["UNED Tutorías 2026-27", "PEC (20%): noviembre y enero",
+                                "PEC (10%) noviembre y enero"])
+    }
+
+    /// El mensaje de las sesiones: primero el mes, y la inicial del día.
+    @Test func theYouTubeSessionsMessage() {
+        let texto = """
+        Sessiones de Youtbe Octubre L5 (bienvenida), M13, L19, L26
+        Noviembre M3, L9, L16, L23, L30
+        Diciembre X9, X16
+        Enero L11, L18
+        """
+        let l = Calendario.leer(texto, hoy: hoy)
+        #expect(l.propuestas.count == 13)
+        #expect(l.propuestas.first?.titulo == "Sessiones de Youtbe (bienvenida)")
+        #expect(l.propuestas.dropFirst().allSatisfy { $0.titulo == "Sessiones de Youtbe" })
+        #expect(l.propuestas.allSatisfy { $0.aviso == nil && $0.minuto == nil })
+        #expect(l.propuestas.map(\.dia).last == dia(2027, 1, 18))
+        #expect(l.ignoradas.isEmpty)
+    }
+
+    /// Si la inicial no cuadra con la fecha, se dice; no se corrige.
+    @Test func aWrongWeekdayIsFlaggedNotFixed() {
+        let l = Calendario.leer("Clase octubre L6, M13", hoy: hoy)
+        #expect(l.propuestas.map(\.dia) == [dia(2026, 10, 6), dia(2026, 10, 13)])
+        #expect(l.propuestas[0].aviso == "Dice lunes, pero ese día es martes")
+        #expect(l.propuestas[1].aviso == nil)
+    }
+
+    @Test func aTimeOnTheLineAndADayThatDoesNotExist() {
+        let l = Calendario.leer("Dentista: 14 octubre a las 10:30\nRevisión: 31 noviembre", hoy: hoy)
+        #expect(l.propuestas.count == 1)
+        #expect(l.propuestas[0].titulo == "Dentista")
+        #expect(l.propuestas[0].minuto == 10 * 60 + 30)
+        #expect(l.ignoradas.count == 1)
+    }
+}
+
+@MainActor @Suite struct CrearDesdeCalendarioTests {
+    @Test func theSectionGoesToItsProjectAndTheTasksKeepDayTimeAndLength() {
+        let s = Store(inMemory: true)
+        let fsd = s.addProject(name: "F. Sistemas Digitales")
+        let ffi = s.addProject(name: "F. Físicos de la Informática")
+        let hoy = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 5))!
+        let l = Calendario.leer("""
+            Fundamentos Sistemas Digitales (Viernes 17 a 18h)
+            Boole: 9 y 16 octubre
+            Fundamentos Físicos de la Informática (Viernes 18 a 19h)
+            Campo eléctrico: 9 octubre
+            """, hoy: hoy)
+        #expect(Calendario.proyecto(para: l.secciones[0], en: s.projects)?.id == fsd.id)
+        #expect(Calendario.proyecto(para: l.secciones[1], en: s.projects)?.id == ffi.id)
+
+        let creadas = s.crear(l.propuestas, prefijo: "Tutoría: ") {
+            Calendario.proyecto(para: $0.seccion ?? "", en: s.projects)?.id
+        }
+        #expect(creadas.count == 3)
+        #expect(s.items(for: .project(fsd.id)).map(\.title) == ["Tutoría: Boole", "Tutoría: Boole"])
+        let campo = s.items(for: .project(ffi.id))[0]
+        #expect(campo.title == "Tutoría: Campo eléctrico")
+        #expect(campo.timeOfDay == 18 * 60 && campo.estimate == 60)
+        #expect(Calendar.current.isDate(campo.when!, inSameDayAs:
+            Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 9))!))
+    }
+
+    /// Con dos proyectos que se parecen al apartado, no se elige ninguno.
+    @Test func twoLookalikeProjectsMeansAsking() {
+        let s = Store(inMemory: true)
+        s.addProject(name: "Sistemas Digitales I")
+        s.addProject(name: "Sistemas Digitales II")
+        #expect(Calendario.proyecto(para: "Fundamentos Sistemas Digitales", en: s.projects) == nil)
+    }
+}
+
+@MainActor @Suite struct PegarDosVecesTests {
+    /// Pegar otra vez el mismo calendario no duplica: lo que ya está se marca.
+    @Test func whatIsAlreadyThereIsSpotted() {
+        let s = Store(inMemory: true)
+        let hoy = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 5))!
+        let l = Calendario.leer("Boole: 9 y 16 octubre\nMemorias: 15 enero", hoy: hoy)
+        s.crear(Array(l.propuestas.prefix(1)), prefijo: "Tutoría: ") { _ in nil }
+        let repetidas = Calendario.yaEstan(l.propuestas, en: s.items)
+        #expect(repetidas == [l.propuestas[0].id])
+    }
+}

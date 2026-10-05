@@ -775,6 +775,46 @@ limpieza exige que también la última modificación tenga más de treinta días
 mes en la carpeta, invisible, el mismo plazo que ya se daba a cualquier otra
 para que el otro aparato se enterase.
 
+## Pegar un calendario
+
+Un PDF de tutorías, un mensaje con las sesiones del curso: se copia el texto, se
+pega, y sale **una tarea por día**. En el Mac, **Archivo ▸ Pegar un
+calendario…** —si lo copiado ya tiene fechas, sale pegado—; en el teléfono, el
+**+** de Más o el menú de dentro de un proyecto.
+
+Entiende las dos formas que se usan de verdad:
+
+```
+Fundamentos Sistemas Digitales (Viernes 17 a 18h)
+Boole: 9, 16 y 23 octubre
+Combinacionales: 30 octubre; 6, 13 y 20 noviembre
+```
+
+```
+Sessiones de Youtbe Octubre L5 (bienvenida), M13, L19, L26
+Noviembre M3, L9, L16, L23, L30
+```
+
+Días antes del mes o mes antes de los días; la hora de una cabecera para todo
+lo que va debajo, o en la propia línea; la inicial del día de la semana delante,
+o no; un título partido en dos líneas. El año se deduce: lo que vendría hace más
+de dos meses es del año siguiente, y al pasar de diciembre a enero se cambia de
+año.
+
+**Nada se crea sin verlo antes.** Sale la lista de lo entendido —día, hora,
+título— con una casilla en cada una, y cada apartado propone su proyecto:
+«Fundamentos Sistemas Digitales» va a «F. Sistemas Digitales», con la misma
+regla que junta tareas y eventos. Y **no adivina**:
+
+- Lo que no tiene día —«PEC (20%): noviembre y enero»— sale aparte y no se crea.
+- Si la inicial o la cabecera dicen un día de la semana que no cuadra con la
+  fecha, se marca. No se corrige: puede estar mal la inicial o la fecha.
+- Lo que **ya está en Pauta** —mismo día, título que es el mismo— sale
+  desmarcado. Pegar dos veces el mismo PDF no duplica nada.
+
+Sin red y sin modelos de lenguaje: entiende estos formatos y no otros, pero
+siempre igual, y lo que no entiende lo dice.
+
 ## Copias de seguridad
 
 Una al día, la primera vez que se abre la app, en `copias/` dentro de la

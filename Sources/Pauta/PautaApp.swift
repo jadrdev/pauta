@@ -13,6 +13,8 @@ final class Navigation {
     var perspective: Perspective = .today
     var selectedItemID: UUID?
     var isAddingItem = false
+    /// La hoja de pegar un calendario, abierta desde el menú.
+    var pegandoCalendario = false
     /// Qué se está arrastrando ahora mismo. Una misma fila recibe cosas
     /// distintas —una tarea que se mueve dentro, o un hermano que se coloca
     /// antes— y la señal que dibuja tiene que ser distinta. Lo anota quien
@@ -541,6 +543,11 @@ struct PautaApp: App {
                     nav.go(to: .area(area.id))
                 }
                 .keyboardShortcut("n", modifiers: [.command, .option])
+                Divider()
+                Button("Pegar un calendario…") {
+                    openWindow(id: "main")
+                    nav.pegandoCalendario = true
+                }
             }
             // Deshacer, que hasta ahora no existía: borrar era lo único sin
             // vuelta atrás de toda la app. `⌘Z` devuelve lo último que se

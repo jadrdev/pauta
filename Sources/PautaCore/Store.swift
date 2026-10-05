@@ -1380,6 +1380,27 @@ public final class Store {
         projects.sort(by: Project.byPosition)
     }
 
+    /// Crea las tareas de un calendario pegado, ya revisadas.
+    ///
+    /// Una por propuesta, con su día, su hora y su duración, en el proyecto que
+    /// se eligió para su apartado —o en la bandeja si ninguno—. La hora lleva el
+    /// margen de aviso por defecto, como cualquier hora puesta a mano.
+    @discardableResult
+    public func crear(_ propuestas: [Calendario.Propuesta], prefijo: String = "",
+                      proyecto: (Calendario.Propuesta) -> UUID?,
+                      margen: Int = 0) -> [Item] {
+        propuestas.map { p in
+            let destino = proyecto(p)
+            let titulo = prefijo.isEmpty ? p.titulo : prefijo + p.titulo
+            var item = addItem(title: titulo, in: destino.map(Perspective.project) ?? .inbox)
+            schedule(item, to: p.dia)
+            if let minuto = p.minuto { setTime(item, to: minuto, margenInicial: margen) }
+            if let duracion = p.duracion { setEstimate(item, to: duracion) }
+            item = items.first { $0.id == item.id } ?? item
+            return item
+        }
+    }
+
     /// Ordena las tareas pendientes de un proyecto por fecha, una vez.
     ///
     /// Una vez y no para siempre: el orden de un proyecto es el que tú

@@ -99,6 +99,12 @@ struct ItemListView: View {
         }
         .background(Paper.bg)
         .sheet(isPresented: $vaciando) { VaciarBandejaView() }
+        .sheet(isPresented: Binding(get: { nav.pegandoCalendario },
+                                    set: { nav.pegandoCalendario = $0 })) {
+            PegarCalendarioView(proyectoInicial: {
+                if case .project(let id) = nav.perspective { id } else { nil }
+            }())
+        }
         .onTapGesture {
             nav.selectedItemID = nil
             commitDraft()
