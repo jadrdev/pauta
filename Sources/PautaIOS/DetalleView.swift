@@ -18,9 +18,13 @@ import PautaCore
 /// mentir sobre una serie que acaba, pero no se cambia.
 struct DetalleView: View {
     let item: Item
+    /// Cómo se va la ficha cuando no es una hoja. Con el iPhone Duo abierto
+    /// vive en el panel de la derecha, y ahí `dismiss` no hace nada: no hay
+    /// nada que cerrar, hay que dejar de enseñarla.
+    var alCerrar: (() -> Void)? = nil
 
     @Environment(Store.self) private var store
-    @Environment(\.dismiss) private var cerrar
+    @Environment(\.dismiss) private var dismiss
     @State private var titulo = ""
     @State private var notas = ""
 
@@ -133,6 +137,13 @@ struct DetalleView: View {
             titulo = item.title
             notas = item.notes
         }
+        // En el panel se puede pasar a otra tarea sin tocar «Listo», y lo
+        // escrito no puede irse con la ficha.
+        .onDisappear { guardar() }
+    }
+
+    private func cerrar() {
+        if let alCerrar { alCerrar() } else { dismiss() }
     }
 
     private func conFecha(_ fecha: Date?, cerrando: Bool = true) {

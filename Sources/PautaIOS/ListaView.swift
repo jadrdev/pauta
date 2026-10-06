@@ -16,7 +16,17 @@ struct ListaView: View {
 
     @Environment(Store.self) private var store
     @Environment(Agenda.self) private var agenda
+    @Environment(\.horizontalSizeClass) private var ancho
     @State private var abierta: Item?
+    /// La hoja solo existe en una columna. Al abrir el teléfono con una tarea
+    /// delante, la hoja se va y la tarea pasa al panel; al plegarlo, vuelve a
+    /// la hoja. La tarea es siempre `abierta`; esto solo dice si va en hoja.
+    ///
+    /// Estado propio y no una `Binding` calculada: esa se quedaba con la vista
+    /// de **antes** de desplegar, y cuando el sistema cerraba la hoja le
+    /// devolvía su `nil` creyendo que seguía en una columna. La tarea se
+    /// perdía justo al abrir el teléfono para verla mejor.
+    @State private var enHoja: Item?
     @State private var apuntando = false
     @State private var vaciando = false
     @State private var eligiendoEmoji = false
@@ -41,7 +51,79 @@ struct ListaView: View {
         return []
     }
 
+    /// Con el iPhone Duo abierto hay sitio para la lista **y** la tarea, y
+    /// estirar la vista de una mano a esa anchura era ponerle a cada fila un
+    /// palmo entre el texto y su botón. Abierto, la tarea va a la derecha en
+    /// vez de en una hoja; plegado —o en cualquier otro iPhone— todo sigue
+    /// igual. Lo decide el ancho y no el modelo de teléfono: es lo que cambia
+    /// al abrirlo.
+    private var enDosPaneles: Bool { ancho == .regular }
+
+
     var body: some View {
+        // La lista va siempre en el mismo sitio del árbol, con panel o sin él:
+        // si cambiara de rama al abrir el teléfono, se perdería la navegación
+        // y el desplazamiento justo en el gesto de desplegarlo.
+        GeometryReader { geo in
+            HStack(spacing: 0) {
+                lista.frame(width: enDosPaneles ? Self.bisagra(geo) : nil)
+                if enDosPaneles {
+                    Divider()
+                    panel.frame(maxWidth: .infinity)
+                }
+            }
+        }
+        .sheet(item: $enHoja) { DetalleView(item: $0) }
+        .onChange(of: abierta) { _, tarea in enHoja = enDosPaneles ? nil : tarea }
+        .onChange(of: enDosPaneles) { _, dos in enHoja = dos ? nil : abierta }
+        // La hoja se cerró. Si fue a mano —deslizando, «Listo»—, se acabó la
+        // tarea; si fue por desplegar, la tarea sigue, ahora en el panel. Aquí
+        // `enDosPaneles` ya es el de ahora, que es lo que distingue los dos.
+        .onChange(of: enHoja) { _, tarea in
+            if tarea == nil && !enDosPaneles { abierta = nil }
+        }
+        .onChange(of: pidenApuntar) { _, _ in apuntando = true }
+        .sheet(isPresented: $vaciando) { VaciarBandejaView() }
+        .task {
+            if case .today = perspectiva { await agenda.load() }
+        }
+    }
+
+    /// Dónde cae la bisagra, medido desde el borde del área segura.
+    ///
+    /// La bisagra está en el centro de la **pantalla**, no del área segura: el
+    /// sistema guarda una franja a la derecha para la hora y las pestañas, y
+    /// repartir mitad y mitad de lo que queda dejaba la división un dedo a la
+    /// izquierda del pliegue —con la lista doblada encima de él—.
+    private static func bisagra(_ geo: GeometryProxy) -> CGFloat {
+        let margen = geo.safeAreaInsets
+        return (margen.leading + geo.size.width + margen.trailing) / 2 - margen.leading
+    }
+
+    /// La mitad derecha con el teléfono abierto: la tarea elegida o, si no hay
+    /// ninguna, qué hacer para que la haya.
+    @ViewBuilder private var panel: some View {
+        // Contra el almacén y no contra `abierta` sin más: si la tarea se borra
+        // —aquí o desde el Mac—, el panel no puede seguir enseñando su ficha.
+        if let abierta, store.items.contains(where: { $0.id == abierta.id && $0.deletedAt == nil }) {
+            DetalleView(item: abierta) { self.abierta = nil }
+                // Una ficha por tarea: sin esto, al tocar otra fila se
+                // quedarían el título y las notas de la anterior.
+                .id(abierta.id)
+        } else {
+            VStack(spacing: 10) {
+                Image(systemName: "hand.point.left")
+                    .font(.system(size: 26, weight: .light))
+                Text("Toca una tarea para verla aquí.")
+                    .font(.system(size: 15))
+            }
+            .foregroundStyle(Papel.inkSoft)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Papel.bg)
+        }
+    }
+
+    private var lista: some View {
         NavigationStack {
             ZStack(alignment: .bottomTrailing) {
                 VStack(spacing: 0) {
@@ -134,12 +216,6 @@ struct ListaView: View {
                     }
                 }
             }
-        }
-        .sheet(item: $abierta) { DetalleView(item: $0) }
-        .onChange(of: pidenApuntar) { _, _ in apuntando = true }
-        .sheet(isPresented: $vaciando) { VaciarBandejaView() }
-        .task {
-            if case .today = perspectiva { await agenda.load() }
         }
     }
 
@@ -249,7 +325,16 @@ struct ListaView: View {
     private func filaDeTarea(_ item: Item, enGrupo: Bool = false,
                              evento: Evento? = nil) -> some View {
         FilaView(item: item, enGrupo: enGrupo, evento: evento) { abierta = item }
-            .listRowBackground(Papel.bg)
+            // Con dos paneles, la fila de la tarea que está a la derecha se
+            // marca: sin hoja que la tape, la lista sigue a la vista y hay que
+            // saber cuál es. La misma marca que en el Mac —un filete en el
+            // margen, sin pastillas—. En una columna no hace falta: la hoja
+            // ya dice cuál es.
+            .listRowBackground(Papel.bg.overlay(alignment: .leading) {
+                if enDosPaneles && abierta?.id == item.id {
+                    Rectangle().fill(Papel.accent).frame(width: 3)
+                }
+            })
             // Sangrada cuando cuelga de un proyecto: es lo que dice que cuelga.
             .listRowInsets(EdgeInsets(top: 9, leading: enGrupo ? 34 : 16,
                                       bottom: 9, trailing: 16))
