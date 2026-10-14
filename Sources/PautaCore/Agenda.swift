@@ -150,7 +150,8 @@ public final class Agenda {
             .filter { $0.status != .canceled }
             .map(Agenda.convertir)
             .sorted(by: Agenda.antes)
-        if leidos != eventos { eventos = leidos }
+        let unicos = Agenda.sinRepetir(leidos)
+        if unicos != eventos { eventos = unicos }
     }
 
     /// Vacía la lista, para cuando se deja de mirar el día.
@@ -181,6 +182,32 @@ public final class Agenda {
             e("Fisioterapeuta", 18 * 60 + 30, 45, "Personal",
               RGB(red: 0.36, green: 0.78, blue: 0.45)),
         ]
+    }
+
+    /// Un evento que llega repetido de varios calendarios, una sola vez.
+    ///
+    /// Pasa con los festivos: cada calendario de festivos suscrito —el de la
+    /// cuenta de iCloud, el de Google, el del trabajo— trae su «Día de la
+    /// Hispanidad», y Hoy enseñaba cuatro filas iguales con rayas de colores
+    /// distintos. Es el mismo evento si se llama igual —sin mayúsculas ni
+    /// tildes— y ocupa lo mismo: el mismo día si es de todo el día, la misma
+    /// hora de inicio y de fin si no. Se queda el primero.
+    ///
+    /// Dos eventos que coinciden en hora pero se llaman distinto siguen siendo
+    /// dos: «Fiesta Nacional de España» no se junta con «Día de la Hispanidad»
+    /// aunque sean el mismo día. Adivinar sinónimos acabaría juntando dos
+    /// reuniones distintas.
+    static func sinRepetir(_ eventos: [Evento], calendar: Calendar = .current) -> [Evento] {
+        var vistos = Set<String>()
+        return eventos.filter { e in
+            let titulo = e.title.folding(options: [.caseInsensitive, .diacriticInsensitive],
+                                         locale: Locale(identifier: "es_ES"))
+                .trimmingCharacters(in: .whitespaces)
+            let cuando = e.isAllDay
+                ? "dia:\(calendar.startOfDay(for: e.start).timeIntervalSince1970)"
+                : "\(e.start.timeIntervalSince1970)-\(e.end.timeIntervalSince1970)"
+            return vistos.insert(titulo + "|" + cuando).inserted
+        }
     }
 
     static func antes(_ a: Evento, _ b: Evento) -> Bool {

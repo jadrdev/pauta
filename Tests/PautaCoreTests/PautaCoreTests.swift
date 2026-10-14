@@ -5359,3 +5359,33 @@ struct OrdenDesdeElRelojTests {
         AvisoAcciones.alCompletar = nil
     }
 }
+
+/// El mismo evento que llega de varios calendarios sale una vez.
+@MainActor @Suite struct EventosRepetidosTests {
+    private func e(_ t: String, todoElDia: Bool = true, h: Int = 0, cal: String) -> Evento {
+        let dia = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 12))!
+        let inicio = dia.addingTimeInterval(TimeInterval(h * 3600))
+        return Evento(id: UUID().uuidString, title: t, start: inicio,
+                      end: inicio.addingTimeInterval(todoElDia ? 86_400 : 3600),
+                      isAllDay: todoElDia, calendarName: cal, color: nil)
+    }
+
+    /// El 12 de octubre: cuatro «Día de la Hispanidad» y una «Fiesta Nacional».
+    @Test func theSameHolidayFromFourCalendarsIsOneRow() {
+        let lista = [e("Día de la Hispanidad", cal: "iCloud"), e("Día de la Hispanidad", cal: "Google"),
+                     e("día de la hispanidad", cal: "Trabajo"), e("Dia de la Hispanidad ", cal: "Otro"),
+                     e("Fiesta Nacional de España", cal: "Festivos")]
+        let unicos = Agenda.sinRepetir(lista)
+        #expect(unicos.map(\.title) == ["Día de la Hispanidad", "Fiesta Nacional de España"])
+        #expect(unicos.first?.calendarName == "iCloud", "se queda el primero")
+    }
+
+    /// Con hora, solo si coinciden inicio y fin: dos reuniones con el mismo
+    /// nombre a horas distintas son dos.
+    @Test func timedEventsMustMatchStartAndEnd() {
+        let lista = [e("Reunión", todoElDia: false, h: 10, cal: "A"),
+                     e("Reunión", todoElDia: false, h: 10, cal: "B"),
+                     e("Reunión", todoElDia: false, h: 16, cal: "A")]
+        #expect(Agenda.sinRepetir(lista).count == 2)
+    }
+}
