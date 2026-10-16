@@ -5389,3 +5389,48 @@ struct OrdenDesdeElRelojTests {
         #expect(Agenda.sinRepetir(lista).count == 2)
     }
 }
+
+/// Una repetitiva tachada dos veces en días distintos no pare dos vueltas.
+@MainActor @Suite struct RepetitivaTachadaDosVecesTests {
+    private func a(_ d: Int, _ h: Int) -> Date {
+        Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: d, hour: h))!
+    }
+
+    /// El caso del 16 de octubre: tachada el 14 por la noche, destachada por
+    /// el otro aparato y vuelta a tachar el 15 por la mañana.
+    @Test func reCompletingOnAnotherDayDoesNotSpawnASecondOne() {
+        let s = Store(inMemory: true)
+        var madre = s.addItem(title: "Revisión diaria", in: .inbox)
+        madre.when = Calendar.current.startOfDay(for: a(14, 0))
+        madre.timeOfDay = 20 * 60
+        madre.recurrence = .diaria
+        s.update(madre)
+
+        s.toggleComplete(s.items.first { $0.id == madre.id }!, momento: a(14, 20))
+        #expect(s.items.filter { $0.spawnedFrom == madre.id }.count == 1)
+
+        // El otro aparato la destacha sin pasar por aquí.
+        var pisada = s.items.first { $0.id == madre.id }!
+        pisada.isCompleted = false
+        pisada.completedAt = nil
+        s.update(pisada)
+
+        s.toggleComplete(s.items.first { $0.id == madre.id }!, momento: a(15, 8))
+        let vivas = s.items.filter { $0.title == "Revisión diaria" && !$0.isCompleted }
+        #expect(vivas.count == 1, "quedaron \(vivas.count) vueltas pendientes")
+    }
+
+    /// Y destachar y volver a tachar sigue funcionando: la vuelta retirada al
+    /// destachar vuelve a nacer.
+    @Test func uncompleteThenCompleteStillSpawnsOne() {
+        let s = Store(inMemory: true)
+        var madre = s.addItem(title: "Regar", in: .inbox)
+        madre.when = Calendar.current.startOfDay(for: .now)
+        madre.recurrence = .diaria
+        s.update(madre)
+        s.toggleComplete(s.items.first { $0.id == madre.id }!)
+        s.toggleComplete(s.items.first { $0.id == madre.id }!)
+        s.toggleComplete(s.items.first { $0.id == madre.id }!)
+        #expect(s.items.filter { $0.spawnedFrom == madre.id && !$0.isCompleted }.count == 1)
+    }
+}

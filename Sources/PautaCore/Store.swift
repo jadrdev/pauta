@@ -849,7 +849,7 @@ public final class Store {
         mutateItem(item.id) { $0 = item }
     }
 
-    public func toggleComplete(_ item: Item) {
+    public func toggleComplete(_ item: Item, momento: Date = .now) {
         // Todo se lee del almacén y nada del valor que llega: quien llama puede
         // tener una copia de antes de ponerle la hora, la repetición o los
         // pasos, y la sucesora nacería sin ellos.
@@ -863,7 +863,7 @@ public final class Store {
         }
         guard let ahora = items.first(where: { $0.id == item.id }) else { return }
         if completandoAhora {
-            spawnNextOccurrence(of: ahora)
+            spawnNextOccurrence(of: ahora, momento: momento)
         } else {
             retireSpawnedSuccessor(of: ahora)
         }
@@ -888,8 +888,16 @@ public final class Store {
         return f
     }()
 
-    private func spawnNextOccurrence(of item: Item) {
+    private func spawnNextOccurrence(of item: Item, momento: Date = .now) {
         guard let recurrence = item.recurrence else { return }
+        // Si ya parió una vuelta que sigue viva, no pare otra.
+        //
+        // La identidad derivada no basta: sale del día que le toca, y ese día
+        // depende de cuándo se tacha. Tachada el 14 por la noche, la siguiente
+        // es la del 15; si un aparato la destacha y se vuelve a tachar el 15
+        // por la mañana, la siguiente pasa a ser la del 16 —otra identidad— y
+        // quedaban dos «Revisión diaria» el mismo día.
+        guard !items.contains(where: { $0.spawnedFrom == item.id }) else { return }
         // La cuenta sale de la fecha que tenía y no de hoy, para que una semanal
         // completada con un día de retraso siga cayendo en su día de la semana.
         //
@@ -898,8 +906,8 @@ public final class Store {
         // completarla tantas veces como días de retraso llevara solo para
         // ponerse al día: la app pidiendo cuentas por unos días que ya pasaron.
         let cal = Calendar.current
-        let hoy = cal.startOfDay(for: .now)
-        var proxima = recurrence.next(after: item.when ?? Store.stamped())
+        let hoy = cal.startOfDay(for: momento)
+        var proxima = recurrence.next(after: item.when ?? Store.stamped(momento))
         // El tope corta un bucle infinito si alguna vez `next` no avanzara.
         var vueltas = 0
         while cal.startOfDay(for: proxima) <= hoy, vueltas < 5000 {
