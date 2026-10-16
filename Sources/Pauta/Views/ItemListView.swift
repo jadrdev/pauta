@@ -308,7 +308,7 @@ struct ItemListView: View {
         // calendario con su motivo: dos sitios pidiendo lo mismo a la vez se
         // leen como un error.
         if case .today = nav.perspective, agenda.eventos.isEmpty,
-           !items.isEmpty, Agenda.authorization == .notDetermined {
+           !items.isEmpty, agenda.permiso == .notDetermined {
             Button {
                 Task {
                     await agenda.requestAccess()

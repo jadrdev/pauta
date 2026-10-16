@@ -385,7 +385,7 @@ struct ListaView: View {
     /// que la función está rota cuando lo que hay es un permiso a medias.
     @ViewBuilder private var avisoDelCalendario: some View {
         if case .today = perspectiva {
-            switch Agenda.authorization {
+            switch agenda.permiso {
             case .notDetermined where items.isEmpty && eventos.isEmpty:
                 // Con la lista vacía manda la tarjeta de bienvenida, que ya
                 // ofrece el calendario con su motivo: dos sitios pidiendo lo

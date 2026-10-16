@@ -81,6 +81,16 @@ public enum FilaDelDia: Identifiable, Hashable {
 @MainActor
 public final class Agenda {
     public private(set) var eventos: [Evento] = []
+    /// El permiso del calendario, **observable**.
+    ///
+    /// `Agenda.authorization` pregunta al sistema cada vez, pero una vista no
+    /// se entera de que la respuesta cambió: solo se redibujaba si cambiaba
+    /// otra cosa. Al conceder el permiso se releían los eventos, y si ese día
+    /// no había ninguno no cambiaba nada y la franja de «Mostrar los eventos del
+    /// calendario» se quedaba pegada. Esto se pone al día al pedirlo y en cada
+    /// lectura —que también se hace al volver a la app, por si se cambió en
+    /// los ajustes del sistema—.
+    public private(set) var permiso: EKAuthorizationStatus = Agenda.authorization
     /// El día que se está enseñando, para no releer sin motivo.
     private var diaCargado: Date?
 
@@ -123,6 +133,7 @@ public final class Agenda {
 
     @discardableResult
     public func requestAccess() async -> Bool {
+        defer { permiso = Agenda.authorization }
         do {
             let granted = try await ek.requestFullAccessToEvents()
             if !granted { log.notice("acceso al calendario no concedido") }
@@ -136,6 +147,7 @@ public final class Agenda {
     /// Lee los eventos de un día. Sin permiso deja la lista vacía y no insiste.
     public func load(_ day: Date = .now, force: Bool = false) async {
         let inicio = Calendar.current.startOfDay(for: day)
+        if permiso != Agenda.authorization { permiso = Agenda.authorization }
         guard force || diaCargado != inicio else { return }
         diaCargado = inicio
 
