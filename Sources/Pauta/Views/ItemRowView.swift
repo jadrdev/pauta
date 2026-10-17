@@ -81,6 +81,7 @@ struct ItemRowView: View {
     @State private var pasoNuevo = ""
     @State private var poniendoEtiqueta = false
     @State private var eligiendoHora = false
+    @State private var isAdjuntando = false
     @FocusState private var titleFocused: Bool
 
     private var isSelected: Bool { nav.selectedItemID == item.id }
@@ -234,6 +235,60 @@ struct ItemRowView: View {
         }
     }
 
+    // MARK: - Adjuntos
+
+    /// Los ficheros de la tarea y cómo poner más: con el botón o soltándolos
+    /// encima desde el Finder.
+    ///
+    /// Soltar va aquí, en la tarea abierta, y no en cualquier fila: las filas
+    /// ya reciben otras tareas arrastradas para ordenarlas, y un fichero que
+    /// cae en la fila equivocada se adjunta donde no era sin que se note.
+    @ViewBuilder private var adjuntos: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            ForEach(item.adjuntosVigentes()) { adjunto in
+                AdjuntoRow(adjunto: adjunto, url: store.url(de: adjunto)) {
+                    store.quitarAdjunto(adjunto, de: item)
+                }
+            }
+            HStack(spacing: 10) {
+                Button { elegirFicheros() } label: {
+                    Text("+ ADJUNTAR").rubricStyle()
+                }
+                .buttonStyle(.plain)
+                // En una hecha, cuánto les queda: que se vayan sin avisar
+                // sería perder algo sin haberlo decidido.
+                if let aviso = item.adjuntosSeVan() {
+                    Text(aviso.uppercased()).rubricStyle(Paper.warning)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(.vertical, 2)
+        .background(isAdjuntando ? Paper.accent.opacity(0.08) : .clear)
+        .dropDestination(for: URL.self) { urls, _ in
+            adjuntar(urls)
+        } isTargeted: { isAdjuntando = $0 }
+    }
+
+    private func elegirFicheros() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.prompt = "Adjuntar"
+        panel.message = "Se copian a la carpeta de Pauta y viajan con la tarea."
+        guard panel.runModal() == .OK else { return }
+        adjuntar(panel.urls)
+    }
+
+    @discardableResult
+    private func adjuntar(_ urls: [URL]) -> Bool {
+        var alguno = false
+        for url in urls where url.isFileURL {
+            if (try? store.adjuntar(url, a: item)) != nil { alguno = true }
+        }
+        return alguno
+    }
+
     /// Indicadores a la derecha: notas, proyecto y fecha, en texto tenue.
     @ViewBuilder private var badges: some View {
         HStack(spacing: 12) {
@@ -328,6 +383,14 @@ struct ItemRowView: View {
                 Image(systemName: "text.alignleft")
                     .font(.system(size: 9))
                     .foregroundStyle(Paper.inkFaint)
+            }
+            if !item.adjuntosVigentes().isEmpty {
+                HStack(spacing: 2) {
+                    Image(systemName: "paperclip").font(.system(size: 9, weight: .semibold))
+                    Text("\(item.adjuntosVigentes().count)")
+                        .font(.system(size: 11, weight: .medium).monospacedDigit())
+                }
+                .foregroundStyle(Paper.inkFaint)
             }
             if !item.checklist.isEmpty {
                 HStack(spacing: 3) {
@@ -432,6 +495,8 @@ struct ItemRowView: View {
             }
 
             etiquetas
+
+            adjuntos
 
             HStack(spacing: 18) {
                 Menu {
@@ -907,6 +972,51 @@ private extension Calendar {
 
 
 /// Un paso de la lista de comprobación.
+/// Un fichero adjunto: se abre con un clic, con la app que le toque.
+private struct AdjuntoRow: View {
+    let adjunto: Adjunto
+    let url: URL
+    let alQuitar: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                .resizable()
+                .frame(width: 16, height: 16)
+            Text(adjunto.nombre)
+                .font(.system(size: 12.5))
+                .foregroundStyle(Paper.ink)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Text(adjunto.tamanoLegible)
+                .font(.system(size: 11).monospacedDigit())
+                .foregroundStyle(Paper.inkFaint)
+            Spacer(minLength: 8)
+            if hovering {
+                Button(action: alQuitar) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Paper.inkFaint)
+                }
+                .buttonStyle(.plain)
+                .help("Quitar de la tarea")
+            }
+        }
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
+        .onTapGesture { NSWorkspace.shared.open(url) }
+        .contextMenu {
+            Button("Abrir") { NSWorkspace.shared.open(url) }
+            Button("Mostrar en el Finder") {
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            }
+            Divider()
+            Button("Quitar de la tarea", action: alQuitar)
+        }
+    }
+}
+
 private struct PasoRow: View {
     let paso: ChecklistStep
     let alMarcar: () -> Void

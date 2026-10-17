@@ -125,6 +125,34 @@ Preguntar por conflictos también se hace solo al releer un archivo, que era la
 parte cara de la carga: un conflicto llega siempre acompañado de un cambio en el
 archivo, así que no se pierde ninguno.
 
+## Adjuntos
+
+El contenido de un adjunto no va en el JSON de la tarea: va en
+`adjuntos/<id>/<nombre>`, y la tarea solo apunta su id, nombre y tamaño. Meterlo
+dentro haría que cambiar el título reescribiera un PDF entero y que iCloud lo
+volviera a subir.
+
+Un adjunto **no cambia nunca**: se crea, y como mucho se borra. Así no hay
+conflictos que resolver —o está o falta— y el puente del teléfono no compara
+versiones, solo copia a cada lado lo que le falta.
+
+**Lo que sobra se calcula, no se apunta.** Los ficheros de una tarea hecha hace
+siete días, o de una lápida que ya no se puede recuperar, sobran; eso sale de
+`completedAt` y `deletedAt`, así que los dos aparatos llegan a lo mismo sin
+hablarse. La limpieza de al arrancar borra **ficheros** y nunca reescribe una
+tarea, porque abrir no escribe nada.
+
+Tres detalles que evitan perder o resucitar ficheros:
+
+- **Quitar un adjunto no borra el fichero.** El otro aparato puede tener una
+  versión de la tarea que todavía lo nombra, y si gana la suya el fichero tiene
+  que estar. Se va con la limpieza cuando nadie lo nombre.
+- **Un fichero suelto espera siete días** desde que llegó antes de barrerse:
+  iCloud puede traer el fichero antes que la tarea que lo nombra.
+- **El puente solo cruza los vigentes.** Si copiara todo lo que hay en la
+  carpeta, devolvería al otro lado lo que su limpieza ya se llevó, y no se
+  acabaría de borrar nunca.
+
 ## Decodificación
 
 Las tareas y los proyectos se leen con un `init(from:)` escrito a mano que usa

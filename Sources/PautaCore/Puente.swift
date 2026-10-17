@@ -157,6 +157,78 @@ public enum Puente {
                 }
             }
         }
+        cruzarAdjuntos(aqui, alla, balance: &balance, enLocal: enLocal)
         return balance
+    }
+
+    /// Lleva a cada lado los ficheros adjuntos que le faltan.
+    ///
+    /// Va **después** de las tareas, porque son ellas las que dicen qué
+    /// ficheros hacen falta: solo cruzan los vigentes de alguna tarea. Copiar
+    /// todo lo que haya en la carpeta devolvería al otro lado lo que su
+    /// limpieza ya se llevó —una tarea hecha hace más de siete días, un adjunto
+    /// quitado— y no se acabaría de borrar nunca.
+    ///
+    /// Aquí no hay versiones que comparar: un adjunto no cambia nunca, así que
+    /// o está o falta.
+    private static func cruzarAdjuntos(_ aqui: URL, _ alla: URL, balance: inout Balance,
+                                       enLocal: (URL) -> Bool) {
+        let fm = FileManager.default
+        let decoder = ISODate.decodificador()
+
+        var vigentes: [Adjunto] = []
+        var vistos: Set<UUID> = []
+        for raiz in [aqui, alla] {
+            let dir = raiz.appendingPathComponent("items", isDirectory: true)
+            let todo = (try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
+            for url in todo where url.pathExtension == "json" && enLocal(url) {
+                guard let datos = try? Data(contentsOf: url),
+                      let item = try? decoder.decode(Item.self, from: datos) else { continue }
+                for adjunto in item.adjuntosVigentes() where vistos.insert(adjunto.id).inserted {
+                    vigentes.append(adjunto)
+                }
+            }
+        }
+
+        enum Estado { case falta, aMedias, listo(URL) }
+        func estado(_ raiz: URL, _ adjunto: Adjunto) -> Estado {
+            let carpeta = raiz.appendingPathComponent("adjuntos", isDirectory: true)
+                .appendingPathComponent(adjunto.id.uuidString, isDirectory: true)
+            let fichero = carpeta.appendingPathComponent(adjunto.nombre)
+            // El marcador de iCloud de un fichero desalojado: está, pero no aquí.
+            let marcador = carpeta.appendingPathComponent(".\(adjunto.nombre).icloud")
+            if fm.fileExists(atPath: marcador.path) {
+                try? fm.startDownloadingUbiquitousItem(at: fichero)
+                return .aMedias
+            }
+            guard fm.fileExists(atPath: fichero.path) else { return .falta }
+            guard enLocal(fichero) else {
+                try? fm.startDownloadingUbiquitousItem(at: fichero)
+                return .aMedias
+            }
+            return .listo(fichero)
+        }
+
+        func copiar(_ origen: URL, a raiz: URL, _ adjunto: Adjunto) -> Bool {
+            let carpeta = raiz.appendingPathComponent("adjuntos", isDirectory: true)
+                .appendingPathComponent(adjunto.id.uuidString, isDirectory: true)
+            try? fm.createDirectory(at: carpeta, withIntermediateDirectories: true)
+            // `copyItem` y no leer y escribir: un vídeo no tiene por qué caber
+            // en memoria.
+            return (try? fm.copyItem(at: origen, to: carpeta.appendingPathComponent(adjunto.nombre))) != nil
+        }
+
+        for adjunto in vigentes {
+            switch (estado(aqui, adjunto), estado(alla, adjunto)) {
+            case (.aMedias, _), (_, .aMedias):
+                balance.pendientesDeBajar += 1
+            case (.listo(let origen), .falta):
+                if copiar(origen, a: alla, adjunto) { balance.llevadas += 1 }
+            case (.falta, .listo(let origen)):
+                if copiar(origen, a: aqui, adjunto) { balance.traidas += 1 }
+            case (.listo, .listo), (.falta, .falta):
+                continue
+            }
+        }
     }
 }

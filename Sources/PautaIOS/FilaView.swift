@@ -138,8 +138,9 @@ struct FilaView: View {
     /// Proyecto, etiquetas y pasos. Solo si hay algo que decir.
     @ViewBuilder private var contexto: some View {
         let proyecto = enGrupo ? nil : item.projectID.flatMap(store.project)
+        let adjuntos = item.adjuntosVigentes().count
         if proyecto != nil || !item.tags.isEmpty || !item.checklist.isEmpty
-            || item.recurrence != nil {
+            || item.recurrence != nil || adjuntos > 0 {
             HStack(spacing: 8) {
                 // Solo el icono, como en el Mac: poner «Cada día» al lado del
                 // título gasta la mitad de la fila en algo que ya se sabe en
@@ -163,6 +164,12 @@ struct FilaView: View {
                     }
                     .foregroundStyle(item.checklistDone == item.checklist.count
                                      ? Papel.accentInk : Papel.inkFaint)
+                }
+                if adjuntos > 0 {
+                    HStack(spacing: 2) {
+                        Image(systemName: "paperclip").font(.system(size: 10, weight: .semibold))
+                        Text("\(adjuntos)").monospacedDigit()
+                    }
                 }
                 ForEach(item.tags, id: \.self) { tag in
                     Text(tag)

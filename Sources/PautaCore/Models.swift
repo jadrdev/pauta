@@ -28,6 +28,58 @@ public enum Recurrence: String, Codable, CaseIterable, Sendable {
     }
 }
 
+// MARK: - Adjuntos
+
+/// Un fichero que va con una tarea.
+///
+/// Es una **copia**, no un enlace al original: viaja con la tarea al teléfono
+/// y al otro Mac, y no se rompe si el original se mueve o se borra. El
+/// contenido está en `adjuntos/<id>/<nombre>` y no cambia nunca: un fichero
+/// que no se edita no puede entrar en conflicto entre dos aparatos.
+public struct Adjunto: Identifiable, Codable, Hashable, Sendable {
+    public var id = UUID()
+    /// El nombre con el que se adjuntó, extensión incluida. Es también el
+    /// nombre en disco: con él se sabe qué es y con qué se abre.
+    public var nombre: String
+    /// En bytes. Para decir cuánto ocupa sin tener que bajarlo de iCloud.
+    public var tamano: Int64 = 0
+    public var anadido = Date()
+
+    public init(id: UUID = UUID(), nombre: String, tamano: Int64 = 0, anadido: Date = Date()) {
+        self.id = id
+        self.nombre = nombre
+        self.tamano = tamano
+        self.anadido = anadido
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id      = try c.decodeIfPresent(UUID.self,   forKey: .id) ?? UUID()
+        nombre  = try c.decodeIfPresent(String.self, forKey: .nombre) ?? "Adjunto"
+        tamano  = try c.decodeIfPresent(Int64.self,  forKey: .tamano) ?? 0
+        anadido = try c.decodeIfPresent(Date.self,   forKey: .anadido) ?? Date()
+    }
+
+    /// Lo que ocupa, como lo diría el Finder.
+    public var tamanoLegible: String {
+        ByteCountFormatter.string(fromByteCount: tamano, countStyle: .file)
+    }
+
+    /// El nombre limpio para usarlo en disco.
+    ///
+    /// Una barra partiría la ruta y los dos puntos el Finder los enseña como
+    /// barras; un nombre vacío o de solo puntos no es un fichero. Lo demás se
+    /// respeta tal cual: es el nombre que eligió quien lo creó.
+    public static func nombreSeguro(_ nombre: String) -> String {
+        let limpio = nombre
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return limpio.trimmingCharacters(in: CharacterSet(charactersIn: ".")).isEmpty
+            ? "Adjunto" : limpio
+    }
+}
+
 // MARK: - Tarea
 
 /// Un paso dentro de una tarea.
@@ -139,6 +191,12 @@ public struct Item: Identifiable, Codable, Hashable {
     /// a reiniciar la app y para que la fila pueda decir que está aplazada, que
     /// si no sería estado invisible.
     public var snoozedUntil: Date?
+    /// Los ficheros que lleva, en el orden en que se adjuntaron.
+    ///
+    /// Aquí solo va **de qué fichero se trata**; el contenido vive aparte, en
+    /// `adjuntos/`. Meterlo en el JSON haría que cambiar el título reescribiera
+    /// un PDF entero, y que iCloud lo volviera a subir.
+    public var adjuntos: [Adjunto] = []
 
     public init(id: UUID = UUID(), title: String) {
         self.id = id
@@ -176,6 +234,47 @@ public struct Item: Identifiable, Codable, Hashable {
         recurrence  = try c.decodeIfPresent(Recurrence.self, forKey: .recurrence)
         recurrenceEnd = try c.decodeIfPresent(Date.self, forKey: .recurrenceEnd)
         spawnedFrom = try c.decodeIfPresent(UUID.self,   forKey: .spawnedFrom)
+        adjuntos    = try c.decodeIfPresent([Adjunto].self, forKey: .adjuntos) ?? []
+    }
+
+    /// Cuánto duran los adjuntos de una tarea hecha.
+    ///
+    /// Una tarea hecha es historial, y el historial no se borra; sus ficheros
+    /// sí, porque ocupan iCloud por algo que ya pasó. Siete días dan margen
+    /// para destacharla si se tachó por error, o para sacar el fichero antes de
+    /// que se vaya.
+    public static let vidaDeLosAdjuntos: TimeInterval = 7 * 24 * 3600
+
+    /// Si sus ficheros ya se fueron, o se van en la próxima limpieza.
+    ///
+    /// **Se calcula, no se apunta.** Apuntarlo sería escribir la tarea al
+    /// arrancar, y abrir no escribe nada: una escritura desde una copia vieja
+    /// pisa lo que el otro aparato hizo después. Así los dos aparatos llegan a
+    /// lo mismo por su cuenta, sin hablarse.
+    ///
+    /// Una tarea borrada conserva los suyos mientras se pueda recuperar de la
+    /// papelera: recuperarla sin ellos no sería recuperarla.
+    public func adjuntosCaducados(ahora: Date = .now) -> Bool {
+        if isCompleted, let completedAt,
+           ahora.timeIntervalSince(completedAt) >= Item.vidaDeLosAdjuntos { return true }
+        if let deletedAt, Retention.caducada(deletedAt, ahora: ahora) { return true }
+        return false
+    }
+
+    /// Los adjuntos que se pueden abrir: ninguno si ya caducaron.
+    public func adjuntosVigentes(ahora: Date = .now) -> [Adjunto] {
+        adjuntosCaducados(ahora: ahora) ? [] : adjuntos
+    }
+
+    /// Cuánto les queda a los adjuntos de una tarea hecha, para decirlo en la
+    /// ficha. `nil` si no está hecha o no tiene adjuntos.
+    public func adjuntosSeVan(ahora: Date = .now) -> String? {
+        guard isCompleted, let completedAt, !adjuntos.isEmpty else { return nil }
+        let segundos = Item.vidaDeLosAdjuntos - ahora.timeIntervalSince(completedAt)
+        let dias = Int((segundos / 86_400).rounded(.up))
+        if dias <= 0 { return "Los adjuntos se borran hoy" }
+        return dias == 1 ? "Los adjuntos se borran mañana"
+                         : "Los adjuntos se borran en \(dias) días"
     }
 
     /// Su fecha límite es hoy o ya pasó.

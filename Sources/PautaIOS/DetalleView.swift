@@ -1,4 +1,7 @@
 import SwiftUI
+import PhotosUI
+import QuickLook
+import UniformTypeIdentifiers
 import PautaCore
 
 /// La ficha de una tarea: lo justo para decidir sin abrir el Mac.
@@ -27,6 +30,10 @@ struct DetalleView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var titulo = ""
     @State private var notas = ""
+    @State private var importando = false
+    @State private var eligiendoFotos = false
+    @State private var fotos: [PhotosPickerItem] = []
+    @State private var vistaPrevia: URL?
 
     private var actual: Item? { store.items.first { $0.id == item.id } }
 
@@ -117,6 +124,7 @@ struct DetalleView: View {
                         }
                     }
                 }
+                seccionDeAdjuntos
                 Section {
                     Button("Eliminar", role: .destructive) {
                         store.delete(item); cerrar()
@@ -137,6 +145,32 @@ struct DetalleView: View {
             titulo = item.title
             notas = item.notes
         }
+        .fileImporter(isPresented: $importando, allowedContentTypes: [.item],
+                      allowsMultipleSelection: true) { resultado in
+            guard case .success(let urls) = resultado else { return }
+            for url in urls {
+                // Lo que da el selector de Archivos es de otra app: se pide
+                // permiso para leerlo el rato justo de copiarlo.
+                let permiso = url.startAccessingSecurityScopedResource()
+                defer { if permiso { url.stopAccessingSecurityScopedResource() } }
+                try? store.adjuntar(url, a: item)
+            }
+        }
+        .photosPicker(isPresented: $eligiendoFotos, selection: $fotos,
+                      matching: .any(of: [.images, .videos]))
+        .onChange(of: fotos) { _, elegidas in
+            guard !elegidas.isEmpty else { return }
+            fotos = []
+            Task {
+                for foto in elegidas {
+                    guard let fichero = try? await foto.loadTransferable(type: FicheroDeFotos.self)
+                    else { continue }
+                    try? store.adjuntar(fichero.url, a: item)
+                    try? FileManager.default.removeItem(at: fichero.url.deletingLastPathComponent())
+                }
+            }
+        }
+        .quickLookPreview($vistaPrevia)
         // En el panel se puede pasar a otra tarea sin tocar «Listo», y lo
         // escrito no puede irse con la ficha.
         .onDisappear { guardar() }
@@ -144,6 +178,70 @@ struct DetalleView: View {
 
     private func cerrar() {
         if let alCerrar { alCerrar() } else { dismiss() }
+    }
+
+    /// Los ficheros de la tarea. Se tocan para verlos, se deslizan para
+    /// quitarlos, y se añaden desde Archivos o desde Fotos —la foto del ticket,
+    /// el PDF que llegó por correo—.
+    @ViewBuilder private var seccionDeAdjuntos: some View {
+        let vigentes = actual?.adjuntosVigentes() ?? []
+        Section {
+            ForEach(vigentes) { adjunto in
+                Button { vistaPrevia = store.url(de: adjunto) } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: Self.icono(de: adjunto))
+                            .foregroundStyle(Papel.accentInk)
+                            .frame(width: 22)
+                        Text(adjunto.nombre)
+                            .foregroundStyle(Papel.ink)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer()
+                        Text(adjunto.tamanoLegible)
+                            .font(.system(size: 13).monospacedDigit())
+                            .foregroundStyle(Papel.inkSoft)
+                    }
+                }
+                .swipeActions {
+                    Button("Quitar", role: .destructive) {
+                        store.quitarAdjunto(adjunto, de: item)
+                    }
+                    .tint(Papel.warning)
+                }
+            }
+            Menu {
+                Button { importando = true } label: {
+                    Label("Desde Archivos", systemImage: "folder")
+                }
+                // Un botón que abre el selector, y no el selector dentro del
+                // menú: metido en un `Menu`, el menú se cerraba y el
+                // selector no llegaba a salir.
+                Button { eligiendoFotos = true } label: {
+                    Label("Desde Fotos", systemImage: "photo.on.rectangle")
+                }
+            } label: {
+                Label("Adjuntar", systemImage: "paperclip")
+            }
+        } header: {
+            Text("ADJUNTOS")
+        } footer: {
+            // En una hecha, cuánto les queda: que se vayan sin avisar sería
+            // perder algo sin haberlo decidido.
+            if let aviso = actual?.adjuntosSeVan() { Text(aviso) }
+        }
+    }
+
+    /// Un icono por familia de fichero, que es lo que se reconoce de un
+    /// vistazo; la vista previa ya enseña el resto.
+    private static func icono(de adjunto: Adjunto) -> String {
+        let tipo = UTType(filenameExtension: (adjunto.nombre as NSString).pathExtension)
+        guard let tipo else { return "doc" }
+        if tipo.conforms(to: .image) { return "photo" }
+        if tipo.conforms(to: .movie) { return "film" }
+        if tipo.conforms(to: .audio) { return "waveform" }
+        if tipo.conforms(to: .pdf) { return "doc.richtext" }
+        if tipo.conforms(to: .archive) { return "doc.zipper" }
+        return "doc"
     }
 
     private func conFecha(_ fecha: Date?, cerrando: Bool = true) {
@@ -188,5 +286,29 @@ struct DetalleView: View {
         let base = Calendar.current.startOfDay(for: .now)
         return Calendar.current.date(byAdding: .minute, value: minutos, to: base)?
             .formatted(.dateTime.hour().minute()) ?? ""
+    }
+}
+
+/// Una foto o un vídeo de la fototeca, como fichero con su nombre.
+///
+/// Pedir los datos a secas perdería el nombre y la extensión, y sin extensión
+/// el adjunto no sabría con qué abrirse. El sistema entrega una copia
+/// temporal que solo vale mientras dura la llamada, así que se copia a otra
+/// carpeta temporal antes de soltarla.
+private struct FicheroDeFotos: Transferable {
+    let url: URL
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(importedContentType: .image) { Self(url: try copiar($0.file)) }
+        FileRepresentation(importedContentType: .movie) { Self(url: try copiar($0.file)) }
+    }
+
+    private static func copiar(_ origen: URL) throws -> URL {
+        let carpeta = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: carpeta, withIntermediateDirectories: true)
+        let destino = carpeta.appendingPathComponent(origen.lastPathComponent)
+        try FileManager.default.copyItem(at: origen, to: destino)
+        return destino
     }
 }

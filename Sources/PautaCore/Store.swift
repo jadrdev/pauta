@@ -104,6 +104,8 @@ public final class Store {
     private let itemsDir: URL
     private let projectsDir: URL
     private let areasDir: URL
+    /// Los ficheros adjuntos, uno por carpeta: `adjuntos/<id>/<nombre>`.
+    private let adjuntosDir: URL
     private let encoder = ISODate.codificador()
     private let decoder = ISODate.decodificador()
 
@@ -279,6 +281,7 @@ public final class Store {
         self.itemsDir = base.appendingPathComponent("items", isDirectory: true)
         self.projectsDir = base.appendingPathComponent("projects", isDirectory: true)
         self.areasDir = base.appendingPathComponent("areas", isDirectory: true)
+        self.adjuntosDir = base.appendingPathComponent("adjuntos", isDirectory: true)
         if !inMemory {
             // Al estrenar la carpeta de iCloud, adopta lo que hubiera en local.
             if root == nil { Store.adoptData(from: Store.localRoot, to: base) }
@@ -289,6 +292,7 @@ public final class Store {
             try? fm.createDirectory(at: areasDir, withIntermediateDirectories: true)
             load()
             purgeOldTombstones()
+            purgarAdjuntos()
         }
     }
 
@@ -856,6 +860,11 @@ public final class Store {
         guard let antes = items.first(where: { $0.id == item.id }) else { return }
         let completandoAhora = !antes.isCompleted
         mutateItem(item.id) {
+            // Destacharla pasados los siete días no devuelve los ficheros: la
+            // limpieza ya se los llevó, y la lista no puede prometer lo que no
+            // está. Se quita **aquí**, que es un cambio que hiciste tú, y no al
+            // arrancar.
+            if $0.isCompleted, $0.adjuntosCaducados() { $0.adjuntos = [] }
             $0.isCompleted.toggle()
             $0.completedAt = $0.isCompleted ? Store.stamped() : nil
             // Si vuelve a abrirse, que no arrastre un «ahora no» de otro día.
@@ -951,6 +960,8 @@ public final class Store {
         siguiente.recurrence = recurrence
         siguiente.recurrenceEnd = item.recurrenceEnd
         siguiente.spawnedFrom = item.id
+        // Los adjuntos no pasan: son de esta vuelta —el justificante de este
+        // mes, la foto de hoy— y se van con ella a los siete días.
         stampCreation(&siguiente)
         siguiente.position = item.position
         items.append(siguiente)
@@ -1447,6 +1458,87 @@ public final class Store {
     /// Cambia el emoji del proyecto. Cadena vacía = quitarlo.
     public func setIcon(_ project: Project, to icon: String) {
         mutateProject(project.id) { $0.icon = icon }
+    }
+
+    // MARK: - Adjuntos
+
+    /// Dónde está el fichero de un adjunto.
+    public func url(de adjunto: Adjunto) -> URL {
+        adjuntosDir
+            .appendingPathComponent(adjunto.id.uuidString, isDirectory: true)
+            .appendingPathComponent(adjunto.nombre)
+    }
+
+    /// Copia un fichero dentro de la carpeta y lo cuelga de la tarea.
+    ///
+    /// Se copia **antes** de apuntarlo en la tarea: si la copia falla, la tarea
+    /// no queda señalando un fichero que no existe. Al revés, lo peor que pasa
+    /// es una carpeta suelta, y esa la recoge la limpieza.
+    ///
+    /// En modo memoria solo se apunta: la maqueta no tiene disco.
+    @discardableResult
+    public func adjuntar(_ origen: URL, a item: Item) throws -> Adjunto {
+        let fm = FileManager.default
+        let tamano = (try? origen.resourceValues(forKeys: [.fileSizeKey]).fileSize)
+            .flatMap { $0 }.map(Int64.init) ?? 0
+        let adjunto = Adjunto(nombre: Adjunto.nombreSeguro(origen.lastPathComponent),
+                              tamano: tamano, anadido: Store.stamped())
+        if !inMemory {
+            let destino = url(de: adjunto)
+            try fm.createDirectory(at: destino.deletingLastPathComponent(),
+                                   withIntermediateDirectories: true)
+            try fm.copyItem(at: origen, to: destino)
+        }
+        mutateItem(item.id) { $0.adjuntos.append(adjunto) }
+        return adjunto
+    }
+
+    /// Lo descuelga de la tarea. El fichero **no se borra aquí**: el otro
+    /// aparato puede tener una copia de la tarea que aún lo nombra, y si gana
+    /// su versión el adjunto tiene que seguir estando. Se va con la limpieza,
+    /// cuando nadie lo nombre y haya pasado el plazo.
+    public func quitarAdjunto(_ adjunto: Adjunto, de item: Item) {
+        mutateItem(item.id) { $0.adjuntos.removeAll { $0.id == adjunto.id } }
+    }
+
+    /// Borra los ficheros que ya no tienen por qué estar.
+    ///
+    /// Dos casos, y en ninguno se escribe una tarea —abrir no escribe nada—:
+    ///
+    /// - **Caducados**: su tarea se hizo hace siete días, o su lápida ya no se
+    ///   puede recuperar. Sale de los datos, así que los dos aparatos borran lo
+    ///   mismo por su cuenta.
+    /// - **Sueltos**: ninguna tarea los nombra. Se esperan siete días desde que
+    ///   llegaron, porque iCloud puede traer el fichero antes que la tarea que
+    ///   lo nombra, y borrarlo en ese hueco sería perderlo.
+    ///
+    /// Devuelve cuántos borró.
+    @discardableResult
+    func purgarAdjuntos(ahora: Date = .now) -> Int {
+        guard !inMemory else { return 0 }
+        let fm = FileManager.default
+        guard let carpetas = try? fm.contentsOfDirectory(
+                at: adjuntosDir, includingPropertiesForKeys: [.creationDateKey]) else { return 0 }
+        // Quién nombra a quién, mirando también la papelera: una tarea borrada
+        // se puede recuperar, y con ella sus ficheros.
+        var duenos: [UUID: Item] = [:]
+        for item in items + borradas {
+            for adjunto in item.adjuntos { duenos[adjunto.id] = item }
+        }
+        var borrados = 0
+        for carpeta in carpetas {
+            guard let id = UUID(uuidString: carpeta.lastPathComponent) else { continue }
+            let sobra: Bool
+            if let dueno = duenos[id] {
+                sobra = dueno.adjuntosCaducados(ahora: ahora)
+            } else {
+                let llego = (try? carpeta.resourceValues(forKeys: [.creationDateKey]))?
+                    .creationDate ?? ahora
+                sobra = ahora.timeIntervalSince(llego) >= Item.vidaDeLosAdjuntos
+            }
+            if sobra, (try? fm.removeItem(at: carpeta)) != nil { borrados += 1 }
+        }
+        return borrados
     }
 
     // MARK: - Listas de comprobación

@@ -5434,3 +5434,203 @@ struct OrdenDesdeElRelojTests {
         #expect(s.items.filter { $0.spawnedFrom == madre.id && !$0.isCompleted }.count == 1)
     }
 }
+
+/// Los ficheros adjuntos: se copian a la carpeta, viajan por el puente y se
+/// van a los siete días de hecha la tarea.
+@MainActor
+struct AdjuntosTests {
+    private func carpeta() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-adjuntos-\(UUID().uuidString)", isDirectory: true)
+    }
+
+    /// Un fichero cualquiera fuera de la carpeta de datos, como el que se
+    /// arrastra desde el escritorio.
+    private func fichero(_ nombre: String = "factura.pdf", en dir: URL) throws -> URL {
+        let url = dir.appendingPathComponent("fuera", isDirectory: true).appendingPathComponent(nombre)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
+        try Data("contenido".utf8).write(to: url)
+        return url
+    }
+
+    private let semana: TimeInterval = 7 * 24 * 3600
+
+    @Test func oldTasksWithoutTheFieldStillOpen() throws {
+        let json = #"{"id":"8C1A5F4E-1D2B-4C3D-9E8F-0A1B2C3D4E5F","title":"Vieja"}"#
+        let item = try ISODate.decodificador().decode(Item.self, from: Data(json.utf8))
+        #expect(item.adjuntos.isEmpty)
+    }
+
+    @Test func attachingCopiesTheFileAndSurvivesARelaunch() throws {
+        let dir = carpeta()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = Store(root: dir)
+        let item = store.addItem(title: "Pagar la luz", in: .today)
+        let original = try fichero(en: dir)
+
+        let adjunto = try store.adjuntar(original, a: item)
+        #expect(adjunto.nombre == "factura.pdf")
+        #expect(adjunto.tamano == 9)
+        #expect(FileManager.default.fileExists(atPath: store.url(de: adjunto).path))
+
+        // Es una copia: borrar el original no la toca.
+        try FileManager.default.removeItem(at: original)
+        let otra = Store(root: dir)
+        let releida = try #require(otra.items.first { $0.id == item.id })
+        #expect(releida.adjuntos.map(\.id) == [adjunto.id])
+        #expect(FileManager.default.fileExists(atPath: otra.url(de: adjunto).path))
+    }
+
+    @Test func aDoneTaskKeepsItsFilesForSevenDays() throws {
+        let dir = carpeta()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = Store(root: dir)
+        let item = store.addItem(title: "Pagar la luz", in: .today)
+        let adjunto = try store.adjuntar(try fichero(en: dir), a: item)
+        store.toggleComplete(store.items.first { $0.id == item.id }!)
+        let hecha = try #require(store.items.first { $0.id == item.id })
+
+        #expect(store.purgarAdjuntos(ahora: .now.addingTimeInterval(semana - 3600)) == 0)
+        #expect(hecha.adjuntosVigentes(ahora: .now.addingTimeInterval(semana - 3600)).count == 1)
+
+        #expect(store.purgarAdjuntos(ahora: .now.addingTimeInterval(semana + 60)) == 1)
+        #expect(!FileManager.default.fileExists(atPath: store.url(de: adjunto).path))
+        #expect(hecha.adjuntosVigentes(ahora: .now.addingTimeInterval(semana + 60)).isEmpty)
+        // La tarea sigue en el historial: lo que se va son los ficheros.
+        #expect(store.items.contains { $0.id == item.id })
+    }
+
+    /// Destacharla después del plazo no promete lo que ya no está.
+    @Test func undoingAfterTheDeadlineDropsTheList() throws {
+        let dir = carpeta()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = Store(root: dir)
+        let item = store.addItem(title: "Pagar la luz", in: .today)
+        try store.adjuntar(try fichero(en: dir), a: item)
+        var hecha = try #require(store.items.first { $0.id == item.id })
+        hecha.isCompleted = true
+        hecha.completedAt = .now.addingTimeInterval(-semana - 60)
+        store.update(hecha)
+
+        store.toggleComplete(store.items.first { $0.id == item.id }!)
+        let abierta = try #require(store.items.first { $0.id == item.id })
+        #expect(!abierta.isCompleted)
+        #expect(abierta.adjuntos.isEmpty)
+    }
+
+    @Test func undoingInTimeKeepsThem() throws {
+        let dir = carpeta()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = Store(root: dir)
+        let item = store.addItem(title: "Pagar la luz", in: .today)
+        try store.adjuntar(try fichero(en: dir), a: item)
+        store.toggleComplete(store.items.first { $0.id == item.id }!)
+        store.toggleComplete(store.items.first { $0.id == item.id }!)
+        #expect(store.items.first { $0.id == item.id }?.adjuntos.count == 1)
+    }
+
+    @Test func theNextOccurrenceStartsWithoutFiles() throws {
+        let dir = carpeta()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = Store(root: dir)
+        let item = store.addItem(title: "Pagar el alquiler", in: .today)
+        store.setRecurrence(store.items.first { $0.id == item.id }!, to: .mensual)
+        try store.adjuntar(try fichero(en: dir), a: store.items.first { $0.id == item.id }!)
+        store.toggleComplete(store.items.first { $0.id == item.id }!)
+
+        let siguiente = try #require(store.items.first { $0.spawnedFrom == item.id })
+        #expect(siguiente.adjuntos.isEmpty)
+        #expect(store.items.first { $0.id == item.id }?.adjuntos.count == 1)
+    }
+
+    /// Quitado de la tarea, el fichero espera: el otro aparato puede tener
+    /// una versión de la tarea que todavía lo nombra.
+    @Test func aRemovedFileWaitsBeforeGoing() throws {
+        let dir = carpeta()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = Store(root: dir)
+        let item = store.addItem(title: "Pagar la luz", in: .today)
+        let adjunto = try store.adjuntar(try fichero(en: dir), a: item)
+        store.quitarAdjunto(adjunto, de: store.items.first { $0.id == item.id }!)
+
+        #expect(store.items.first { $0.id == item.id }?.adjuntos.isEmpty == true)
+        #expect(store.purgarAdjuntos() == 0)
+        #expect(FileManager.default.fileExists(atPath: store.url(de: adjunto).path))
+        #expect(store.purgarAdjuntos(ahora: .now.addingTimeInterval(semana + 60)) == 1)
+    }
+
+    /// iCloud puede traer el fichero antes que la tarea que lo nombra.
+    @Test func aFileThatArrivedBeforeItsTaskIsNotSwept() throws {
+        let dir = carpeta()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let suelto = dir.appendingPathComponent("adjuntos/\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: suelto, withIntermediateDirectories: true)
+        try Data("x".utf8).write(to: suelto.appendingPathComponent("foto.jpg"))
+
+        let store = Store(root: dir)
+        #expect(FileManager.default.fileExists(atPath: suelto.path))
+        #expect(store.purgarAdjuntos() == 0)
+    }
+
+    /// En la papelera se puede recuperar, y con ella sus ficheros.
+    @Test func aDeletedTaskKeepsThemWhileItCanComeBack() throws {
+        let dir = carpeta()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = Store(root: dir)
+        let item = store.addItem(title: "Pagar la luz", in: .today)
+        try store.adjuntar(try fichero(en: dir), a: item)
+        store.delete(store.items.first { $0.id == item.id }!)
+
+        #expect(store.purgarAdjuntos(ahora: .now.addingTimeInterval(semana + 60)) == 0)
+        #expect(store.purgarAdjuntos(ahora: .now.addingTimeInterval(Retention.tombstones + 60)) == 1)
+    }
+
+    @Test func theBridgeCarriesTheFilesBothWays() throws {
+        let aqui = carpeta(), alla = carpeta()
+        defer { try? FileManager.default.removeItem(at: aqui)
+                try? FileManager.default.removeItem(at: alla) }
+        let mac = Store(root: aqui)
+        let item = mac.addItem(title: "Pagar la luz", in: .today)
+        let adjunto = try mac.adjuntar(try fichero(en: aqui), a: item)
+
+        let balance = Puente.cruzar(aqui, alla)
+        let telefono = Store(root: alla)
+        #expect(FileManager.default.fileExists(atPath: telefono.url(de: adjunto).path))
+        #expect(balance.llevadas == 2)  // la tarea y su fichero
+
+        // Y al revés: lo adjuntado en el teléfono llega al Mac.
+        let otro = try telefono.adjuntar(try fichero("foto.jpg", en: alla),
+                                         a: telefono.items.first { $0.id == item.id }!)
+        Puente.cruzar(aqui, alla)
+        #expect(FileManager.default.fileExists(atPath: mac.url(de: otro).path))
+
+        // Cruzar otra vez no mueve nada.
+        #expect(Puente.cruzar(aqui, alla) == Puente.Balance())
+    }
+
+    /// Lo caducado no cruza: si cruzara, el lado que ya lo limpió lo
+    /// recuperaría en cada cruce y no se acabaría de borrar nunca.
+    @Test func theBridgeDoesNotBringBackWhatExpired() throws {
+        let aqui = carpeta(), alla = carpeta()
+        defer { try? FileManager.default.removeItem(at: aqui)
+                try? FileManager.default.removeItem(at: alla) }
+        let mac = Store(root: aqui)
+        let item = mac.addItem(title: "Pagar la luz", in: .today)
+        let adjunto = try mac.adjuntar(try fichero(en: aqui), a: item)
+        var hecha = try #require(mac.items.first { $0.id == item.id })
+        hecha.isCompleted = true
+        hecha.completedAt = .now.addingTimeInterval(-semana - 60)
+        mac.update(hecha)
+
+        Puente.cruzar(aqui, alla)
+        let telefono = Store(root: alla)
+        #expect(!FileManager.default.fileExists(atPath: telefono.url(de: adjunto).path))
+    }
+
+    @Test func unsafeNamesAreCleaned() {
+        #expect(Adjunto.nombreSeguro("a/b:c.pdf") == "a-b-c.pdf")
+        #expect(Adjunto.nombreSeguro("  ..  ") == "Adjunto")
+        #expect(Adjunto.nombreSeguro("Informe final.docx") == "Informe final.docx")
+    }
+}

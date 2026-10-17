@@ -618,6 +618,25 @@ entidad más que mantener viva. Renombrar y quitar están en su menú.
 Cada proyecto puede llevar un emoji: se elige pulsando el círculo junto a su
 título, de una paleta corta, y sustituye a su símbolo en la barra lateral.
 
+### Ficheros adjuntos
+
+Una tarea puede llevar ficheros: la factura que hay que pagar, la foto del
+ticket, el PDF que llegó por correo. En el Mac, «+ ADJUNTAR» en la tarea abierta
+o soltándolos encima desde el Finder; en el teléfono, desde Archivos o desde
+Fotos. Se abren con un clic —o con la vista previa, en el teléfono— y la fila
+lleva un clip con cuántos tiene.
+
+Son **copias**, no enlaces: viven en la carpeta de Pauta, en `adjuntos/`, y
+viajan con la tarea al teléfono y al otro Mac. Mover o borrar el original no
+los toca.
+
+**A los siete días de hecha la tarea, sus ficheros se borran.** La tarea sigue
+en el historial; lo que se va es lo que ocupa iCloud por algo que ya pasó. La
+ficha avisa de cuánto les queda, y destacharla antes del plazo los conserva.
+Una repetitiva no se los pasa a la siguiente vuelta: el justificante de este mes
+es de este mes. Una tarea borrada los guarda mientras se pueda recuperar de la
+papelera.
+
 ### Cuánto dura cada cosa
 
 Cada tarea puede llevar una **estimación** —de 5 minutos a 4 horas—, y la
