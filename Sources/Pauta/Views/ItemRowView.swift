@@ -123,9 +123,14 @@ struct ItemRowView: View {
         // Se arrastra el identificador, no la tarea entera: quien recibe la
         // busca en el almacén, que es la única fuente de verdad.
         .draggable(cargaDeArrastre())
-        // Soltar sobre una fila coloca lo arrastrado justo antes de ella.
-        .dropDestination(for: String.self) { payload, _ in
+        // Soltar sobre una fila: una tarea se coloca justo antes de ella, y
+        // ficheros del Finder se le adjuntan. Un solo destino que mira qué le
+        // llega, porque dos en la misma fila no conviven: SwiftUI atiende uno.
+        .dropDestination(for: Soltado.self) { payload, _ in
+            let ficheros = payload.compactMap { if case .fichero(let url) = $0 { url } else { nil } }
+            if !ficheros.isEmpty { return adjuntar(ficheros) }
             let arrastradas = payload
+                .compactMap { if case .tarea(let id) = $0 { id } else { nil } }
                 .compactMap(UUID.init(uuidString:))
                 .compactMap { id in store.items.first { $0.id == id } }
                 .filter { $0.id != item.id }
@@ -140,11 +145,35 @@ struct ItemRowView: View {
                 }
             }
             return !arrastradas.isEmpty
-        } isTargeted: { isDropTarget = $0 }
+        } isTargeted: { encima in
+            // Qué se trae se mira en el portapapeles del arrastre: la línea de
+            // inserción dice «va aquí delante», y para un fichero sería
+            // mentira —no se coloca, se adjunta—.
+            let sonFicheros = encima && NSPasteboard(name: .drag).types?.contains(.fileURL) == true
+            isAdjuntando = sonFicheros
+            isDropTarget = encima && !sonFicheros
+        }
         // Línea de inserción: hace falta ver dónde va a caer, no solo que cae.
         .overlay(alignment: .top) {
             if isDropTarget {
                 Rectangle().fill(Paper.accent).frame(height: 2)
+            }
+        }
+        // Y para ficheros, la fila entera marcada con un clip: es a ella a
+        // quien se adjuntan.
+        .overlay {
+            if isAdjuntando {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Paper.accent, lineWidth: 1.5)
+                    .background(Paper.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(alignment: .trailing) {
+                        Image(systemName: "paperclip")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Paper.accentInk)
+                            .padding(.trailing, 10)
+                    }
+                    .padding(.horizontal, -6)
+                    .allowsHitTesting(false)
             }
         }
         .onHover { hovering = $0 }
@@ -237,12 +266,8 @@ struct ItemRowView: View {
 
     // MARK: - Adjuntos
 
-    /// Los ficheros de la tarea y cómo poner más: con el botón o soltándolos
-    /// encima desde el Finder.
-    ///
-    /// Soltar va aquí, en la tarea abierta, y no en cualquier fila: las filas
-    /// ya reciben otras tareas arrastradas para ordenarlas, y un fichero que
-    /// cae en la fila equivocada se adjunta donde no era sin que se note.
+    /// Los ficheros de la tarea y el botón para poner más. Soltarlos desde el
+    /// Finder se atiende en la fila entera, abierta o no.
     @ViewBuilder private var adjuntos: some View {
         VStack(alignment: .leading, spacing: 3) {
             ForEach(item.adjuntosVigentes()) { adjunto in
@@ -264,10 +289,6 @@ struct ItemRowView: View {
             }
         }
         .padding(.vertical, 2)
-        .background(isAdjuntando ? Paper.accent.opacity(0.08) : .clear)
-        .dropDestination(for: URL.self) { urls, _ in
-            adjuntar(urls)
-        } isTargeted: { isAdjuntando = $0 }
     }
 
     private func elegirFicheros() {
@@ -972,6 +993,26 @@ private extension Calendar {
 
 
 /// Un paso de la lista de comprobación.
+/// Lo que puede caer sobre una fila: una tarea arrastrada —su identificador—
+/// o un fichero del Finder.
+///
+/// El fichero va primero: un arrastre desde el Finder trae también la ruta como
+/// texto, y leída como tarea no sería ninguna y el fichero no se adjuntaría.
+private enum Soltado: Transferable {
+    case fichero(URL)
+    case tarea(String)
+
+    static var transferRepresentation: some TransferRepresentation {
+        // Solo una URL de fichero es un fichero. Si el identificador de una
+        // tarea llegara leído como URL, sigue siendo una tarea: tomarlo por
+        // fichero rompería ordenar arrastrando.
+        ProxyRepresentation(importing: { (url: URL) in
+            url.isFileURL ? Soltado.fichero(url) : Soltado.tarea(url.absoluteString)
+        })
+        ProxyRepresentation(importing: { (id: String) in Soltado.tarea(id) })
+    }
+}
+
 /// Un fichero adjunto: se abre con un clic, con la app que le toque.
 private struct AdjuntoRow: View {
     let adjunto: Adjunto
