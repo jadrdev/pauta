@@ -960,6 +960,22 @@ Esto vive en el núcleo y se engancha en `addItems(from:)`, que es por donde ent
 del teléfono, el atajo de Siri y lo que le dictas al reloj. Seis interfaces que
 entienden lo mismo porque llaman a lo mismo, no porque se hayan puesto de acuerdo.
 
+### Y el proyecto, si lo nombras
+
+**«Arreglar el editar comercios de Krondoc»** entra directamente en el proyecto
+*Krondoc*, esté en el área que esté. El título se queda entero —quitarle «de
+Krondoc» lo dejaría cojo— y la fecha se respeta: apuntada en Hoy, sigue en Hoy y
+además en su proyecto. Si la apuntas ya dentro de un proyecto, manda ese.
+
+Para no ver proyectos donde no los hay: el nombre tiene que ir como **palabra
+entera** —«Casa» no salta con «casamiento»—, sin importar mayúsculas ni tildes;
+solo cuentan los proyectos vivos y con nombres de tres letras o más. Si un nombre
+está dentro de otro, gana el de fuera: «Krondoc Web» antes que «Krondoc». Pero si
+la frase nombra **dos proyectos distintos**, no se elige ninguno y la tarea va
+donde la apuntaste: elegir a suertes es equivocarse sin que se note.
+
+Un área no recibe tareas sueltas, así que nombrar un área no hace nada.
+
 ## Fechas límite
 
 Una cosa es **cuándo pienso ponerme** (la fecha de planificación) y otra **cuándo

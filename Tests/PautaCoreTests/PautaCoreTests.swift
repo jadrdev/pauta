@@ -5634,3 +5634,66 @@ struct AdjuntosTests {
         #expect(Adjunto.nombreSeguro("Informe final.docx") == "Informe final.docx")
     }
 }
+
+/// Apuntar una tarea que nombra un proyecto la mete en él.
+@MainActor
+struct ProyectoNombradoTests {
+    private func proyecto(_ nombre: String, hecho: Bool = false) -> Project {
+        var p = Project(name: nombre)
+        p.isCompleted = hecho
+        return p
+    }
+
+    @Test func theProjectNameInTheTitleFilesIt() throws {
+        let store = Store(inMemory: true)
+        let krondoc = store.addProject(name: "Krondoc")
+        store.addProject(name: "Casa")
+        let item = try #require(store.addItems(
+            from: "Arreglar o mejorar el editar comercios de Krondoc", in: .inbox).first)
+        #expect(item.projectID == krondoc.id)
+        // El título se queda entero.
+        #expect(item.title == "Arreglar o mejorar el editar comercios de Krondoc")
+    }
+
+    /// Apuntada en Hoy sigue siendo de hoy: el proyecto se suma, no la mueve.
+    @Test func itKeepsTheDayItWasWrittenFor() throws {
+        let store = Store(inMemory: true)
+        let krondoc = store.addProject(name: "Krondoc")
+        let item = try #require(store.addItems(from: "Revisar Krondoc mañana", in: .today).first)
+        #expect(item.projectID == krondoc.id)
+        let manana = Calendar.current.startOfDay(
+            for: Calendar.current.date(byAdding: .day, value: 1, to: .now)!)
+        #expect(item.when == manana)
+    }
+
+    @Test func insideAProjectThatProjectWins() throws {
+        let store = Store(inMemory: true)
+        store.addProject(name: "Krondoc")
+        let casa = store.addProject(name: "Casa")
+        let item = try #require(store.addItems(from: "Llamar a los de Krondoc",
+                                               in: .project(casa.id)).first)
+        #expect(item.projectID == casa.id)
+    }
+
+    @Test func onlyWholeWordsIgnoringCaseAndAccents() {
+        let p = [proyecto("Casa"), proyecto("Mudanza Málaga")]
+        #expect(Store.proyectoNombrado(en: "limpiar la CASA", entre: p)?.name == "Casa")
+        #expect(Store.proyectoNombrado(en: "Preparar el casamiento", entre: p) == nil)
+        #expect(Store.proyectoNombrado(en: "cajas para la mudanza malaga", entre: p)?.name
+                == "Mudanza Málaga")
+    }
+
+    @Test func theLongestNameWinsAndATieChoosesNone() {
+        let p = [proyecto("Krondoc"), proyecto("Krondoc Web"), proyecto("Casa"), proyecto("Coche")]
+        #expect(Store.proyectoNombrado(en: "Subir la portada de Krondoc Web", entre: p)?.name
+                == "Krondoc Web")
+        // Dos nombres distintos del mismo largo: no se elige a suertes.
+        #expect(Store.proyectoNombrado(en: "Llevar la casa al coche", entre: p) == nil)
+    }
+
+    @Test func finishedProjectsAndTinyNamesDoNotCount() {
+        let p = [proyecto("Krondoc", hecho: true), proyecto("TV")]
+        #expect(Store.proyectoNombrado(en: "Arreglar Krondoc", entre: p) == nil)
+        #expect(Store.proyectoNombrado(en: "Comprar la TV", entre: p) == nil)
+    }
+}

@@ -797,11 +797,62 @@ public final class Store {
         Store.titles(from: text).map { linea in
             let leido = Cuando.leer(linea)
             let item = addItem(title: leido.titulo, in: perspective)
-            guard let dia = leido.dia else { return item }
+            // Dentro de un proyecto ya está dicho dónde va; fuera, el nombre de
+            // uno en el título lo dice. El título no se toca: «Arreglar los
+            // comercios de» no es el nombre de nada.
+            if case .project = perspective {} else if let proyecto = Store.proyectoNombrado(
+                en: leido.titulo, entre: projects) {
+                mutateItem(item.id) { $0.projectID = proyecto.id }
+            }
+            guard let dia = leido.dia else { return items.first { $0.id == item.id } ?? item }
             schedule(item, to: dia)
             if let minuto = leido.minuto { setTime(item, to: minuto) }
             return items.first { $0.id == item.id } ?? item
         }
+    }
+
+    /// El proyecto que nombra un título, si nombra alguno.
+    ///
+    /// «Arreglar el editar comercios de Krondoc» es de Krondoc, y apuntarla en
+    /// la bandeja para luego arrastrarla allí es hacer dos veces lo mismo.
+    ///
+    /// Con cuidado de no ver proyectos donde no los hay:
+    /// - **Palabra entera**, sin mayúsculas ni tildes: «krondoc» sí, pero
+    ///   «Casa» no dentro de «casamiento».
+    /// - Solo los vivos: lo completado o borrado ya no recibe trabajo.
+    /// - Nombres de tres letras o más: con dos, «TV» o «UX» saldrían en
+    ///   cualquier frase.
+    /// - Si uno está dentro de otro, el de fuera: «Subir la portada de Krondoc
+    ///   Web» es de «Krondoc Web» aunque diga también «Krondoc». Pero dos
+    ///   proyectos distintos en la misma frase —«llevar la casa al coche»— no
+    ///   dicen cuál: ahí no se elige ninguno, que elegir a suertes es
+    ///   equivocarse la mitad de las veces sin que se note.
+    nonisolated static func proyectoNombrado(en titulo: String,
+                                             entre proyectos: [Project]) -> Project? {
+        func plano(_ t: String) -> String {
+            t.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+        }
+        func patron(_ nombre: String) -> String {
+            #"(?<![\p{L}\p{N}])"# + NSRegularExpression.escapedPattern(for: nombre)
+                + #"(?![\p{L}\p{N}])"#
+        }
+        let texto = plano(titulo)
+        let encajan: [(proyecto: Project, nombre: String)] = proyectos.compactMap { proyecto in
+            guard proyecto.deletedAt == nil, !proyecto.isCompleted else { return nil }
+            let nombre = plano(proyecto.name).trimmingCharacters(in: .whitespaces)
+            guard nombre.count >= 3,
+                  texto.range(of: patron(nombre), options: .regularExpression) != nil
+            else { return nil }
+            return (proyecto, nombre)
+        }
+        // Fuera los que solo encajan por estar dentro de otro que también encaja.
+        let quedan = encajan.filter { uno in
+            !encajan.contains { otro in
+                otro.nombre != uno.nombre
+                    && otro.nombre.range(of: patron(uno.nombre), options: .regularExpression) != nil
+            }
+        }
+        return quedan.count == 1 ? quedan[0].proyecto : nil
     }
 
     /// La otra lectura del mismo texto: una sola tarea, y el resto de líneas
