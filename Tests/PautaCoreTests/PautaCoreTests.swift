@@ -5675,12 +5675,24 @@ struct ProyectoNombradoTests {
         #expect(item.projectID == casa.id)
     }
 
-    @Test func onlyWholeWordsIgnoringCaseAndAccents() {
+    @Test func onlyWholeWordsIgnoringAccents() {
         let p = [proyecto("Casa"), proyecto("Mudanza Málaga")]
         #expect(Store.proyectoNombrado(en: "limpiar la CASA", entre: p)?.name == "Casa")
-        #expect(Store.proyectoNombrado(en: "Preparar el casamiento", entre: p) == nil)
-        #expect(Store.proyectoNombrado(en: "cajas para la mudanza malaga", entre: p)?.name
+        #expect(Store.proyectoNombrado(en: "Preparar el Casamiento", entre: p) == nil)
+        #expect(Store.proyectoNombrado(en: "cajas para la Mudanza malaga", entre: p)?.name
                 == "Mudanza Málaga")
+    }
+
+    /// Con la mayúscula del nombre: en minúscula es una palabra corriente, no
+    /// el proyecto. Los dos casos que lo trajeron, con los proyectos de verdad.
+    @Test func aCommonWordInLowercaseIsNotTheProject() {
+        let p = [proyecto("Pauta"), proyecto("Redes"), proyecto("YouTube"), proyecto("iHerro")]
+        #expect(Store.proyectoNombrado(en: "Mirar la pauta de la medicación", entre: p) == nil)
+        #expect(Store.proyectoNombrado(en: "Revisar redes del router", entre: p) == nil)
+        #expect(Store.proyectoNombrado(en: "Probar la beta de Pauta", entre: p)?.name == "Pauta")
+        #expect(Store.proyectoNombrado(en: "Subir el vídeo a Youtube", entre: p)?.name == "YouTube")
+        // Un nombre que empieza en minúscula se escribe en minúscula.
+        #expect(Store.proyectoNombrado(en: "Revisar el carrito de iHerro", entre: p)?.name == "iHerro")
     }
 
     @Test func theLongestNameWinsAndATieChoosesNone() {
@@ -5688,7 +5700,7 @@ struct ProyectoNombradoTests {
         #expect(Store.proyectoNombrado(en: "Subir la portada de Krondoc Web", entre: p)?.name
                 == "Krondoc Web")
         // Dos nombres distintos del mismo largo: no se elige a suertes.
-        #expect(Store.proyectoNombrado(en: "Llevar la casa al coche", entre: p) == nil)
+        #expect(Store.proyectoNombrado(en: "Llevar la Casa al Coche", entre: p) == nil)
     }
 
     @Test func finishedProjectsAndTinyNamesDoNotCount() {

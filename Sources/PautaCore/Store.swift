@@ -817,8 +817,13 @@ public final class Store {
     /// la bandeja para luego arrastrarla allí es hacer dos veces lo mismo.
     ///
     /// Con cuidado de no ver proyectos donde no los hay:
-    /// - **Palabra entera**, sin mayúsculas ni tildes: «krondoc» sí, pero
-    ///   «Casa» no dentro de «casamiento».
+    /// - **Palabra entera**, sin tildes: «Casa» no dentro de «casamiento».
+    /// - **Con la mayúscula del nombre**: la primera letra tiene que ir como en
+    ///   el proyecto. Sin esto, los proyectos con nombre de palabra corriente
+    ///   se llevaban cualquier frase: «Mirar la pauta de la medicación» acababa
+    ///   en Pauta y «Revisar redes del router» en Redes. Escrito con mayúscula
+    ///   es un nombre propio; en minúscula, una palabra. El resto de letras da
+    ///   igual: «Youtube» es YouTube y «CASA» es Casa.
     /// - Solo los vivos: lo completado o borrado ya no recibe trabajo.
     /// - Nombres de tres letras o más: con dos, «TV» o «UX» saldrían en
     ///   cualquier frase.
@@ -832,18 +837,30 @@ public final class Store {
         func plano(_ t: String) -> String {
             t.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
         }
+        /// Sin tildes pero con sus mayúsculas, para poder mirar la primera.
+        func sinTildes(_ t: String) -> String {
+            t.precomposedStringWithCanonicalMapping
+                .folding(options: [.diacriticInsensitive], locale: nil)
+        }
         func patron(_ nombre: String) -> String {
             #"(?<![\p{L}\p{N}])"# + NSRegularExpression.escapedPattern(for: nombre)
                 + #"(?![\p{L}\p{N}])"#
         }
-        let texto = plano(titulo)
+        let texto = sinTildes(titulo)
+        let ns = texto as NSString
         let encajan: [(proyecto: Project, nombre: String)] = proyectos.compactMap { proyecto in
             guard proyecto.deletedAt == nil, !proyecto.isCompleted else { return nil }
-            let nombre = plano(proyecto.name).trimmingCharacters(in: .whitespaces)
-            guard nombre.count >= 3,
-                  texto.range(of: patron(nombre), options: .regularExpression) != nil
+            let nombre = sinTildes(proyecto.name).trimmingCharacters(in: .whitespaces)
+            guard nombre.count >= 3, let primera = nombre.first,
+                  let re = try? NSRegularExpression(pattern: patron(nombre),
+                                                    options: [.caseInsensitive])
             else { return nil }
-            return (proyecto, nombre)
+            let comoElNombre = re.matches(in: texto, range: NSRange(location: 0, length: ns.length))
+                .contains { m in
+                    ns.substring(with: m.range).first.map { $0.isUppercase == primera.isUppercase } ?? false
+                }
+            guard comoElNombre else { return nil }
+            return (proyecto, plano(nombre))
         }
         // Fuera los que solo encajan por estar dentro de otro que también encaja.
         let quedan = encajan.filter { uno in

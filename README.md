@@ -968,8 +968,12 @@ Krondoc» lo dejaría cojo— y la fecha se respeta: apuntada en Hoy, sigue en H
 además en su proyecto. Si la apuntas ya dentro de un proyecto, manda ese.
 
 Para no ver proyectos donde no los hay: el nombre tiene que ir como **palabra
-entera** —«Casa» no salta con «casamiento»—, sin importar mayúsculas ni tildes;
-solo cuentan los proyectos vivos y con nombres de tres letras o más. Si un nombre
+entera** —«Casa» no salta con «casamiento»—, sin importar las tildes, y **con la
+mayúscula del nombre**: «Probar la beta de Pauta» va a Pauta, pero «Mirar la pauta
+de la medicación» no. Sin eso, un proyecto con nombre de palabra corriente —Pauta,
+Redes, Familia— se llevaba cualquier frase que la usara. El resto de letras da
+igual: «Youtube» es YouTube. Solo cuentan los proyectos vivos y con nombres de
+tres letras o más. Si un nombre
 está dentro de otro, gana el de fuera: «Krondoc Web» antes que «Krondoc». Pero si
 la frase nombra **dos proyectos distintos**, no se elige ninguno y la tarea va
 donde la apuntaste: elegir a suertes es equivocarse sin que se note.
