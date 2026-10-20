@@ -78,13 +78,17 @@ public enum Copias {
     }
 
     /// Una copia vista desde fuera: lo justo para reconocerla en una lista.
-    public struct Guardada: Identifiable, Equatable {
+    public struct Guardada: Identifiable, Equatable, Sendable {
         public let url: URL
         public var id: URL { url }
         public let hecha: Date
         public let antesDeRestaurar: Bool
-        public let pendientes: Int
-        public let proyectos: Int
+        /// `nil` si la copia está en iCloud sin bajar: no se sabe qué hay
+        /// dentro sin leerla, y leerla es esperar a que baje.
+        public let pendientes: Int?
+        public let proyectos: Int?
+
+        public var enLaNube: Bool { pendientes == nil }
 
         /// «Domingo, 28 de septiembre», y si es la de antes de restaurar, con
         /// la hora: puede haber varias el mismo día.
@@ -97,7 +101,8 @@ public enum Copias {
         }
 
         public var detalle: String {
-            "\(pendientes) \(pendientes == 1 ? "pendiente" : "pendientes") · "
+            guard let pendientes, let proyectos else { return "En iCloud, bajando…" }
+            return "\(pendientes) \(pendientes == 1 ? "pendiente" : "pendientes") · "
                 + "\(proyectos) \(proyectos == 1 ? "proyecto" : "proyectos")"
         }
     }
@@ -105,13 +110,53 @@ public enum Copias {
     /// Las copias que se pueden restaurar, de la más nueva a la más vieja. Las
     /// que no se abren no salen: ofrecer algo que luego falla es peor que no
     /// ofrecerlo.
+    ///
+    /// Las que iCloud tiene sin bajar salen **sin abrirlas**, con la fecha de
+    /// su nombre, y se pide que bajen. Abrirlas era esperar a la descarga, y
+    /// como esto se pedía al arrancar, la app del Mac se quedaba colgada sin
+    /// llegar a enseñar nada: iCloud había desalojado las copias viejas para
+    /// ahorrar sitio, y cada una era una espera.
     public static func resumenes(en raiz: URL) -> [Guardada] {
         guardadas(en: raiz).compactMap { url in
+            let antes = url.lastPathComponent.contains("antes-de-restaurar")
+            guard bajada(url) else {
+                guard let fecha = fecha(delNombre: url.lastPathComponent) else { return nil }
+                return Guardada(url: url, hecha: fecha, antesDeRestaurar: antes,
+                                pendientes: nil, proyectos: nil)
+            }
             guard let copia = leer(url) else { return nil }
-            return Guardada(url: url, hecha: copia.hecha,
-                            antesDeRestaurar: url.lastPathComponent.contains("antes-de-restaurar"),
+            return Guardada(url: url, hecha: copia.hecha, antesDeRestaurar: antes,
                             pendientes: copia.pendientes, proyectos: copia.proyectosVivos)
         }
+    }
+
+    /// Si el archivo se puede leer sin esperar. Un archivo de iCloud sin
+    /// bajar no: leerlo bloquea hasta que baja. Entonces se pide la descarga y
+    /// se contesta que no, para mirarlo la próxima vez.
+    public static func bajada(_ url: URL) -> Bool {
+        guard let valores = try? url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]),
+              let estado = valores.ubiquitousItemDownloadingStatus else { return true }
+        guard estado == .notDownloaded else { return true }
+        try? FileManager.default.startDownloadingUbiquitousItem(at: url)
+        return false
+    }
+
+    /// La fecha que lleva el nombre: el día, y la hora si es la de antes de
+    /// restaurar.
+    static func fecha(delNombre nombre: String) -> Date? {
+        var resto = nombre
+        guard resto.hasPrefix(prefijo), resto.hasSuffix(extension_) else { return nil }
+        resto = String(resto.dropFirst(prefijo.count).dropLast(extension_.count))
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        if let corte = resto.range(of: "-antes-de-restaurar-") {
+            f.dateFormat = "yyyy-MM-dd HHmmss"
+            return f.date(from: resto[..<corte.lowerBound] + " " + resto[corte.upperBound...])
+        }
+        f.dateFormat = "yyyy-MM-dd"
+        return f.date(from: resto)
     }
 
     public static func escribir(_ copia: Copia, en url: URL) throws {
@@ -122,8 +167,10 @@ public enum Copias {
         try comprimido.write(to: url, options: .atomic)
     }
 
+    /// `nil` también si está en iCloud sin bajar: no se espera a la descarga.
     public static func leer(_ url: URL) -> Copia? {
-        guard let datos = try? Data(contentsOf: url), let json = gunzip(datos) else { return nil }
+        guard bajada(url), let datos = try? Data(contentsOf: url),
+              let json = gunzip(datos) else { return nil }
         return try? ISODate.decodificador().decode(Copia.self, from: json)
     }
 

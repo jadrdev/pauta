@@ -40,7 +40,8 @@ struct CopiasView: View {
         }
         .navigationTitle("Copias de seguridad")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { copias = store.copias }
+        // Fuera del hilo principal: en el Mac, leerlas en él colgó la app.
+        .task { await leerCopias() }
         .confirmationDialog(
             "¿Dejar todo como estaba el \(aRestaurar?.titulo.lowercased() ?? "")?",
             isPresented: Binding(get: { aRestaurar != nil },
@@ -48,14 +49,23 @@ struct CopiasView: View {
             titleVisibility: .visible
         ) {
             Button("Volver a esa copia", role: .destructive) {
-                guard let elegida = aRestaurar, let copia = Copias.leer(elegida.url) else { return }
+                guard let elegida = aRestaurar else { return }
+                guard let copia = Copias.leer(elegida.url) else {
+                    restaurada = "Esa copia aún está bajando. Prueba en un momento."
+                    return
+                }
                 store.restaurar(copia)
                 restaurada = "Hecho: todo está como el \(elegida.titulo.lowercased())."
-                copias = store.copias
+                Task { await leerCopias() }
             }
         } message: {
             Text("Lo que hayas apuntado después irá a la papelera. Antes se guarda una "
                  + "copia de cómo está ahora, por si quieres volver.")
         }
+    }
+
+    private func leerCopias() async {
+        let raiz = store.storageURL
+        copias = await Task.detached(priority: .utility) { Copias.resumenes(en: raiz) }.value
     }
 }

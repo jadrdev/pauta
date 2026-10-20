@@ -46,7 +46,6 @@ struct AjustesView: View {
     init(ajustes: Ajustes, store: Store) {
         self.ajustes = ajustes
         self.store = store
-        _copias = State(initialValue: store.copias)
     }
 
     /// Qué contar del último vistazo a las versiones. «No se pudo comprobar» no
@@ -211,10 +210,15 @@ struct AjustesView: View {
                 titleVisibility: .visible
             ) {
                 Button("Volver a esa copia", role: .destructive) {
-                    guard let elegida = aRestaurar, let copia = Copias.leer(elegida.url) else { return }
+                    guard let elegida = aRestaurar else { return }
+                    // Sin bajar no se espera: se pide y se dice.
+                    guard let copia = Copias.leer(elegida.url) else {
+                        restaurada = "Esa copia aún está bajando de iCloud. Prueba en un momento."
+                        return
+                    }
                     store.restaurar(copia)
                     restaurada = "Hecho: todo está como el \(elegida.titulo.lowercased())."
-                    copias = store.copias
+                    Task { await leerCopias() }
                 }
             } message: {
                 Text("Lo que hayas apuntado después irá a la papelera. Antes se guarda "
@@ -240,10 +244,17 @@ struct AjustesView: View {
         .onChange(of: ajustes.minutosAplazados) { Avisos.actualizarCategorias() }
         // Un permiso concedido o revocado en los ajustes del sistema mientras
         // esto estaba cerrado.
-        .onAppear {
-            alArrancar = Arranque.activo
-            copias = store.copias
-        }
+        .onAppear { alArrancar = Arranque.activo }
+        // Las copias, fuera del hilo principal y solo al abrir los ajustes.
+        // Esta vista se construye al arrancar la app —es la escena de
+        // Ajustes—, y leerlas ahí colgó la app: iCloud las tenía sin bajar y
+        // cada lectura esperaba a la descarga.
+        .task { await leerCopias() }
+    }
+
+    private func leerCopias() async {
+        let raiz = store.storageURL
+        copias = await Task.detached(priority: .utility) { Copias.resumenes(en: raiz) }.value
     }
 
     @ViewBuilder

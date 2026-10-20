@@ -460,6 +460,15 @@ public final class Store {
                 fresh[nombre] = conocido
                 continue
             }
+            // Lo que iCloud tiene sin bajar no se lee: leerlo **espera** a la
+            // descarga, y con muchos archivos desalojados la app se colgaba al
+            // arrancar. Se pide que baje y se deja lo que ya se sabía de él,
+            // sin sello, para mirarlo de nuevo en la próxima recarga —que
+            // llega sola: la descarga cambia el archivo y el vigilante salta—.
+            guard Copias.bajada(file) else {
+                if let conocido = cache[nombre] { fresh[nombre] = Cached(stamp: nil, value: conocido.value) }
+                continue
+            }
             // Preguntar por conflictos solo al releer. Hacerlo por cada archivo
             // en cada recarga era la parte cara, y un conflicto llega siempre
             // acompañado de un cambio en el archivo.
@@ -2058,18 +2067,26 @@ extension Store {
     /// Todo lo que hay en la carpeta, tal como está en el disco: lo vivo y lo
     /// de la papelera. Del disco y no de memoria, porque la memoria no guarda
     /// las lápidas caducadas y la copia tiene que ser completa.
-    public func instantanea(ahora: Date = .now) -> Copia {
+    public func instantanea(ahora: Date = .now) -> Copia { foto(ahora: ahora).copia }
+
+    /// La foto y cuántos archivos se quedaron fuera por estar en iCloud sin
+    /// bajar. Esos no se leen —sería esperar a la descarga—, así que la foto
+    /// puede salir incompleta, y quien la use tiene que saberlo.
+    private func foto(ahora: Date) -> (copia: Copia, faltan: Int) {
+        var faltan = 0
         func todos<T: Decodable>(_ dir: URL, _: T.Type) -> [T] {
             let archivos = (try? FileManager.default.contentsOfDirectory(
-                at: dir, includingPropertiesForKeys: nil)) ?? []
+                at: dir, includingPropertiesForKeys: [.ubiquitousItemDownloadingStatusKey])) ?? []
             return archivos.filter { $0.pathExtension == "json" }.compactMap {
-                (try? Data(contentsOf: $0)).flatMap { try? decoder.decode(T.self, from: $0) }
+                guard Copias.bajada($0) else { faltan += 1; return nil }
+                return (try? Data(contentsOf: $0)).flatMap { try? decoder.decode(T.self, from: $0) }
             }
         }
-        return Copia(hecha: Store.stamped(ahora),
+        let copia = Copia(hecha: Store.stamped(ahora),
                      items: todos(itemsDir, Item.self).sorted { $0.id.uuidString < $1.id.uuidString },
                      projects: todos(projectsDir, Project.self).sorted { $0.id.uuidString < $1.id.uuidString },
                      areas: todos(areasDir, Area.self).sorted { $0.id.uuidString < $1.id.uuidString })
+        return (copia, faltan)
     }
 
     /// La copia del día, si todavía no está hecha. Devuelve dónde la dejó.
@@ -2084,8 +2101,10 @@ extension Store {
         let destino = carpetaDeCopias.appendingPathComponent(
             Copias.nombre(para: ahora, calendar: calendar))
         guard !FileManager.default.fileExists(atPath: destino.path) else { return nil }
-        let copia = instantanea(ahora: ahora)
-        guard !copia.items.isEmpty else { return nil }
+        // Incompleta no: al restaurarla, lo que faltara iría a la papelera.
+        // Mejor ninguna hoy que una que miente; se intenta en la próxima.
+        let (copia, faltan) = foto(ahora: ahora)
+        guard faltan == 0, !copia.items.isEmpty else { return nil }
         guard (try? Copias.escribir(copia, en: destino)) != nil else { return nil }
         Copias.podar(en: root)
         return destino

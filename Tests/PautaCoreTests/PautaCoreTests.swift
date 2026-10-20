@@ -5709,3 +5709,17 @@ struct ProyectoNombradoTests {
         #expect(Store.proyectoNombrado(en: "Comprar la TV", entre: p) == nil)
     }
 }
+
+/// Una copia sin bajar se enseña con la fecha de su nombre, sin abrirla.
+@Suite struct CopiaSinBajarTests {
+    @Test func theDateComesFromTheName() {
+        let cal = Calendar.current
+        let dia = Copias.fecha(delNombre: "Pauta-2026-10-04.json.gz")
+        #expect(dia.map { cal.dateComponents([.year, .month, .day], from: $0) }
+                == DateComponents(year: 2026, month: 10, day: 4))
+        let antes = Copias.fecha(delNombre: "Pauta-2026-10-04-antes-de-restaurar-083015.json.gz")
+        #expect(antes.map { cal.dateComponents([.hour, .minute, .second], from: $0) }
+                == DateComponents(hour: 8, minute: 30, second: 15))
+        #expect(Copias.fecha(delNombre: "otra-cosa.json.gz") == nil)
+    }
+}
