@@ -2106,7 +2106,7 @@ extension Store {
         let (copia, faltan) = foto(ahora: ahora)
         guard faltan == 0, !copia.items.isEmpty else { return nil }
         guard (try? Copias.escribir(copia, en: destino)) != nil else { return nil }
-        Copias.podar(en: root)
+        Copias.podar(en: root, ahora: ahora, calendar: calendar)
         return destino
     }
 
@@ -2178,7 +2178,7 @@ extension Store {
             persist(sobra)
         }
 
-        Copias.podar(en: root)
+        Copias.podar(en: root, ahora: ahora, calendar: calendar)
         reload()
         return respaldo
     }

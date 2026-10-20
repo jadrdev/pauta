@@ -34,6 +34,8 @@ public struct Copia: Codable, Equatable {
 /// rompió no es una copia.
 public enum Copias {
     /// Cuántas se guardan. Un mes da para darse cuenta de que algo falta.
+    /// Cuántos días se guardan. Pasado un mes, una copia ya no es a donde se
+    /// quiere volver, y solo ocupa sitio.
     public static let cuantas = 30
 
     static let prefijo = "Pauta-"
@@ -174,9 +176,20 @@ public enum Copias {
         return try? ISODate.decodificador().decode(Copia.self, from: json)
     }
 
-    /// Deja las `cuantas` más nuevas y quita el resto.
-    static func podar(en raiz: URL, quedan: Int = cuantas) {
-        for url in guardadas(en: raiz).dropFirst(quedan) {
+    /// Quita las de más de `dias` días, por la fecha de su nombre.
+    ///
+    /// Por antigüedad y no por cuántas hay: guardar «las treinta últimas»
+    /// estiraba el mes si la app no se abría algún día, y las de antes de
+    /// restaurar contaban como una más. **La más reciente se queda siempre**,
+    /// aunque sea vieja: quien no abre la app en dos meses no tiene que
+    /// encontrarse sin ninguna.
+    static func podar(en raiz: URL, dias: Int = cuantas, ahora: Date = .now,
+                      calendar: Calendar = .current) {
+        let limite = calendar.date(byAdding: .day, value: -dias,
+                                   to: calendar.startOfDay(for: ahora))!
+        for url in guardadas(en: raiz).dropFirst() {
+            guard let fecha = fecha(delNombre: url.lastPathComponent),
+                  calendar.startOfDay(for: fecha) < limite else { continue }
             try? FileManager.default.removeItem(at: url)
         }
     }

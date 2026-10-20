@@ -4986,15 +4986,34 @@ struct OrdenDesdeElRelojTests {
                 == ["Pauta-2026-09-29.json.gz", "Pauta-2026-09-28.json.gz"])
     }
 
-    @Test func onlyTheLastThirtyAreKept() {
+    /// Se van las de más de un mes, por fecha y no por cuántas hay.
+    @Test func copiesOlderThanAMonthGo() {
         let raiz = carpeta()
         defer { try? FileManager.default.removeItem(at: raiz) }
         let s = Store(root: raiz)
         s.addItem(title: "Una", in: .inbox)
         let cal = Calendar.current
-        for n in 0..<35 { s.copiaDelDia(ahora: cal.date(byAdding: .day, value: n, to: dia(1))!) }
-        #expect(s.copiasGuardadas.count == Copias.cuantas)
-        #expect(s.copiasGuardadas.last?.lastPathComponent == "Pauta-2026-09-06.json.gz")
+        // Un día sí y otro no durante dos meses: por cuántas, se habrían
+        // quedado treinta y abarcarían sesenta días.
+        for n in stride(from: 0, to: 60, by: 2) {
+            s.copiaDelDia(ahora: cal.date(byAdding: .day, value: n, to: dia(1))!)
+        }
+        let nombres = s.copiasGuardadas.map(\.lastPathComponent)
+        #expect(nombres.first == "Pauta-2026-10-29.json.gz")
+        #expect(nombres.last == "Pauta-2026-09-29.json.gz", "quedó una de hace más de un mes")
+        #expect(nombres.count == 16)
+    }
+
+    /// Quien no abre la app en dos meses no se queda sin ninguna.
+    @Test func theNewestStaysEvenIfOld() {
+        let raiz = carpeta()
+        defer { try? FileManager.default.removeItem(at: raiz) }
+        let s = Store(root: raiz)
+        s.addItem(title: "Una", in: .inbox)
+        s.copiaDelDia(ahora: dia(1))
+        s.copiaDelDia(ahora: dia(2))
+        Copias.podar(en: s.storageURL, ahora: dia(1).addingTimeInterval(90 * 86_400))
+        #expect(s.copiasGuardadas.map(\.lastPathComponent) == ["Pauta-2026-09-02.json.gz"])
     }
 
     /// Restaurar deja todo como estaba: lo cambiado vuelve, lo borrado vuelve,
