@@ -1427,10 +1427,10 @@ esta app; al lado está `Informar de un problema`, que va a las incidencias del
 repositorio.
 ## La app de iOS
 
-Existe, se instala en un iPhone y comparte con el Mac **todo el núcleo y ninguna
+Existe, se instala en un iPhone o un iPad y comparte con el Mac **todo el núcleo y ninguna
 vista**. Las listas son las mismas —calculadas por el mismo código—; la forma de
 andar por ellas, no: pestañas abajo, título grande y un botón flotante para
-apuntar.
+apuntar. En el iPad, la lista y la tarea van lado a lado.
 
 Y trae **un widget**, que es la única parte de la app que se ve sin abrirla:
 «3 para hoy», las atrasadas aparte y en rojo, las primeras tareas con su hora y

@@ -1,5 +1,6 @@
 #!/bin/zsh
-# Instala la app en un iPhone conectado por cable.
+# Instala la app en un iPhone conectado por cable —o en un iPad:
+# `tools/iphone.sh ipad`—.
 #
 # A diferencia del simulador, un dispositivo exige firma: certificado de
 # desarrollo, un perfil de aprovisionamiento con el UDID del teléfono dentro, y
@@ -20,11 +21,17 @@ cd "$(dirname "$0")/.."
 command -v xcodegen >/dev/null || {
     echo "hace falta xcodegen:  brew install xcodegen" >&2; exit 1; }
 
-# El primer iPhone físico y conectado. El UDID no se escribe a mano: cambia de
-# teléfono y de cable, y un UDID pegado en un guion caduca sin avisar.
+# El primer iPhone físico y conectado, o el primer iPad si se pide. El UDID no
+# se escribe a mano: cambia de teléfono y de cable, y un UDID pegado en un
+# guion caduca sin avisar.
+case "${1:-iphone}" in
+    iphone|iPhone) TIPO=iPhone ;;
+    ipad|iPad)     TIPO=iPad ;;
+    *) echo "uso: tools/iphone.sh [iphone|ipad]" >&2; exit 1 ;;
+esac
 INFO=$(xcrun devicectl list devices --json-output /dev/stdout --quiet 2>/dev/null \
-    | /usr/bin/python3 -c '
-import json, sys
+    | TIPO=$TIPO /usr/bin/python3 -c '
+import json, os, sys
 
 # Vale **cualquier iPhone físico emparejado**, y esta es la tercera versión de
 # este filtro. Las dos anteriores intentaban adivinar si estaba alcanzable a
@@ -45,18 +52,18 @@ def puntos(x):
             + (1 if c.get("tunnelState") == "connected" else 0))
 
 candidatos = [x for x in json.load(sys.stdin)["result"]["devices"]
-              if x.get("hardwareProperties", {}).get("deviceType") == "iPhone"
+              if x.get("hardwareProperties", {}).get("deviceType") == os.environ["TIPO"]
               and x.get("hardwareProperties", {}).get("reality") == "physical"
               and x.get("connectionProperties", {}).get("pairingState") == "paired"]
 if candidatos:
     mejor = max(candidatos, key=puntos)
     print(mejor["hardwareProperties"]["udid"],
-          mejor.get("deviceProperties", {}).get("name", "iPhone"),
+          mejor.get("deviceProperties", {}).get("name", os.environ["TIPO"]),
           mejor.get("connectionProperties", {}).get("transportType", "?"))
 ')
 UDID=${INFO%% *}
 [[ -n "$UDID" ]] || {
-    echo "no hay ningún iPhone emparejado con este Mac" >&2
+    echo "no hay ningún $TIPO emparejado con este Mac" >&2
     echo "  (enchúfalo, o compruébalo con: xcrun devicectl list devices)" >&2
     exit 1
 }

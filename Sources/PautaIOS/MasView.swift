@@ -82,7 +82,7 @@ struct MasView: View {
                         }
                         ForEach(store.areas) { area in
                             NavigationLink {
-                                ListaView(perspectiva: .area(area.id))
+                                ListaView(perspectiva: .area(area.id), empujada: true)
                             } label: {
                                 Label {
                                     Text(area.name).foregroundStyle(Papel.ink)
@@ -110,7 +110,7 @@ struct MasView: View {
                     Section("ETIQUETAS") {
                         ForEach(store.allTags, id: \.self) { tag in
                             NavigationLink {
-                                ListaView(perspectiva: .tag(tag))
+                                ListaView(perspectiva: .tag(tag), empujada: true)
                             } label: {
                                 Label(tag, systemImage: "tag")
                             }
@@ -205,7 +205,7 @@ struct MasView: View {
 
     private func fila(_ perspectiva: Perspective, _ icono: String) -> some View {
         NavigationLink {
-            ListaView(perspectiva: perspectiva)
+            ListaView(perspectiva: perspectiva, empujada: true)
         } label: {
             HStack {
                 Label(store.title(for: perspectiva), systemImage: icono)
@@ -228,7 +228,7 @@ struct MasView: View {
     /// es un diálogo que se aprende a pulsar sin leer.
     private func filaProyecto(_ proyecto: Project, sangrado: Bool = false) -> some View {
         NavigationLink {
-            ListaView(perspectiva: .project(proyecto.id))
+            ListaView(perspectiva: .project(proyecto.id), empujada: true)
         } label: {
             HStack {
                 if sangrado { Spacer().frame(width: 14) }

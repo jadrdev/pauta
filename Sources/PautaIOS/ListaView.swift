@@ -13,6 +13,11 @@ struct ListaView: View {
     /// llamar a esta vista: solo pedirle al sistema que abra la app con una
     /// dirección.
     var pidenApuntar: Int = 0
+    /// Si se llega empujada desde otra navegación —un proyecto abierto desde
+    /// «Más»—. Entonces no monta la suya: una `NavigationStack` dentro de otra
+    /// no navega, y con la tarea al lado se notaba —el título y los botones de
+    /// la ficha acababan en la barra de arriba del todo—.
+    var empujada = false
 
     @Environment(Store.self) private var store
     @Environment(Agenda.self) private var agenda
@@ -51,12 +56,12 @@ struct ListaView: View {
         return []
     }
 
-    /// Con el iPhone Duo abierto hay sitio para la lista **y** la tarea, y
-    /// estirar la vista de una mano a esa anchura era ponerle a cada fila un
-    /// palmo entre el texto y su botón. Abierto, la tarea va a la derecha en
-    /// vez de en una hoja; plegado —o en cualquier otro iPhone— todo sigue
-    /// igual. Lo decide el ancho y no el modelo de teléfono: es lo que cambia
-    /// al abrirlo.
+    /// Con el iPhone Duo abierto —o en un iPad— hay sitio para la lista **y**
+    /// la tarea, y estirar la vista de una mano a esa anchura era ponerle a
+    /// cada fila un palmo entre el texto y su botón. Con pantalla ancha, la
+    /// tarea va a la derecha en vez de en una hoja; plegado, en cualquier otro
+    /// iPhone o en un iPad partido en Split View estrecho, todo sigue igual. Lo
+    /// decide el ancho y no el modelo: es lo que cambia al abrirlo.
     private var enDosPaneles: Bool { ancho == .regular }
 
 
@@ -66,7 +71,7 @@ struct ListaView: View {
         // y el desplazamiento justo en el gesto de desplegarlo.
         GeometryReader { geo in
             HStack(spacing: 0) {
-                lista.frame(width: enDosPaneles ? Self.bisagra(geo) : nil)
+                lista.frame(width: enDosPaneles ? Self.anchoDeLista(geo) : nil)
                 if enDosPaneles {
                     Divider()
                     panel.frame(maxWidth: .infinity)
@@ -89,6 +94,18 @@ struct ListaView: View {
         }
     }
 
+    /// Cuánto ocupa la lista cuando la tarea va al lado.
+    ///
+    /// En el Duo la parte el pliegue, y no hay nada que elegir. En el iPad no
+    /// hay pliegue, y la mitad exacta tampoco sirve: en uno grande apaisado
+    /// son casi setecientos puntos de lista y una ficha que no los necesita.
+    /// Ahí la lista lleva algo más de un tercio, ni menos de lo que mide un
+    /// iPhone pequeño ni más de lo que se lee de un vistazo.
+    private static func anchoDeLista(_ geo: GeometryProxy) -> CGFloat {
+        guard UIDevice.current.userInterfaceIdiom == .pad else { return bisagra(geo) }
+        return min(max(geo.size.width * 0.42, 340), 460)
+    }
+
     /// Dónde cae la bisagra, medido desde el borde del área segura.
     ///
     /// La bisagra está en el centro de la **pantalla**, no del área segura: el
@@ -106,7 +123,7 @@ struct ListaView: View {
         // Contra el almacén y no contra `abierta` sin más: si la tarea se borra
         // —aquí o desde el Mac—, el panel no puede seguir enseñando su ficha.
         if let abierta, store.items.contains(where: { $0.id == abierta.id && $0.deletedAt == nil }) {
-            DetalleView(item: abierta) { self.abierta = nil }
+            DetalleView(item: abierta, alCerrar: { self.abierta = nil }, enOtraNavegacion: empujada)
                 // Una ficha por tarea: sin esto, al tocar otra fila se
                 // quedarían el título y las notas de la anterior.
                 .id(abierta.id)
@@ -123,97 +140,103 @@ struct ListaView: View {
         }
     }
 
-    private var lista: some View {
-        NavigationStack {
-            ZStack(alignment: .bottomTrailing) {
-                VStack(spacing: 0) {
-                    // Fuera de la lista y no dentro: con cero tareas y cero
-                    // eventos se dibuja el estado vacío, y ahí dentro la
-                    // invitación no llegaba a existir. En un teléfono recién
-                    // instalado —que es justo cuando hace falta— era
-                    // inalcanzable.
-                    avisoDelCalendario
-                    contenido
-                }
-                if !apuntando { BotonDeApuntar { apuntando = true } }
+    @ViewBuilder private var lista: some View {
+        if empujada {
+            contenidoDeLista
+        } else {
+            NavigationStack { contenidoDeLista }
+        }
+    }
+
+    private var contenidoDeLista: some View {
+        ZStack(alignment: .bottomTrailing) {
+            VStack(spacing: 0) {
+                // Fuera de la lista y no dentro: con cero tareas y cero
+                // eventos se dibuja el estado vacío, y ahí dentro la
+                // invitación no llegaba a existir. En un teléfono recién
+                // instalado —que es justo cuando hace falta— era
+                // inalcanzable.
+                avisoDelCalendario
+                contenido
             }
-            .background(Papel.bg)
-            .navigationTitle(store.title(for: perspectiva))
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                // El emoji de un proyecto o un área, arriba y a mano: es donde
-                // se mira cuando se está dentro.
-                if let emoji = emojiEditable {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { eligiendoEmoji = true } label: {
-                            if emoji.isEmpty {
-                                Image(systemName: "face.smiling")
-                            } else {
-                                Text(emoji).font(.system(size: 20))
-                            }
-                        }
-                        .accessibilityLabel("Cambiar emoji")
-                    }
-                }
-                // Lo que se hace con un proyecto entero: ordenarlo por fecha
-                // —una vez; el orden sigue siendo tuyo— y llenarlo pegando un
-                // calendario, que tiene sentido también cuando está vacío.
-                if case .project(let id) = perspectiva,
-                   let proyecto = store.projects.first(where: { $0.id == id }) {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Menu {
-                            if items.count > 1 {
-                                Button {
-                                    withAnimation { store.ordenarPorFecha(proyecto) }
-                                } label: {
-                                    Label("Ordenar por fecha", systemImage: "calendar")
-                                }
-                            }
-                            Button { pegando = true } label: {
-                                Label("Pegar un calendario", systemImage: "calendar.badge.plus")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                        }
-                        .accessibilityLabel("Más acciones del proyecto")
-                    }
-                }
-                // Solo en la bandeja y solo si hay algo: es la única lista que
-                // se supone que se vacía.
-                if case .inbox = perspectiva, !items.isEmpty {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { vaciando = true } label: {
-                            Label("Vaciar", systemImage: "tray.and.arrow.down")
+            if !apuntando { BotonDeApuntar { apuntando = true } }
+        }
+        .background(Papel.bg)
+        .navigationTitle(store.title(for: perspectiva))
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            // El emoji de un proyecto o un área, arriba y a mano: es donde
+            // se mira cuando se está dentro.
+            if let emoji = emojiEditable {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { eligiendoEmoji = true } label: {
+                        if emoji.isEmpty {
+                            Image(systemName: "face.smiling")
+                        } else {
+                            Text(emoji).font(.system(size: 20))
                         }
                     }
+                    .accessibilityLabel("Cambiar emoji")
                 }
             }
-            // Como franja del área segura y no como superposición: una
-            // superposición se queda **debajo** de la barra de pestañas, y el
-            // teclado la tapa. Así el sistema la coloca sobre el teclado él.
-            .safeAreaInset(edge: .bottom) {
-                if apuntando {
-                    CapturaView(perspectiva: perspectiva) { apuntando = false }
-                }
-            }
-            // Mientras se apunta, las pestañas se van: no se cambia de sección
-            // con el teclado abierto, y su barra flotante robaba el sitio justo
-            // donde hay que escribir.
-            .toolbar(apuntando ? .hidden : .visible, for: .tabBar)
-            .sheet(isPresented: $pegando) {
-                PegarCalendarioView(proyectoInicial: {
-                    if case .project(let id) = perspectiva { id } else { nil }
-                }())
-            }
-            .sheet(isPresented: $eligiendoEmoji) {
-                ElegirEmojiView(actual: emojiEditable ?? "") { emoji in
-                    switch perspectiva {
-                    case .project(let id):
-                        if let p = store.projects.first(where: { $0.id == id }) { store.setIcon(p, to: emoji) }
-                    case .area(let id):
-                        if let a = store.area(id) { store.setIcon(a, to: emoji) }
-                    default: break
+            // Lo que se hace con un proyecto entero: ordenarlo por fecha
+            // —una vez; el orden sigue siendo tuyo— y llenarlo pegando un
+            // calendario, que tiene sentido también cuando está vacío.
+            if case .project(let id) = perspectiva,
+               let proyecto = store.projects.first(where: { $0.id == id }) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        if items.count > 1 {
+                            Button {
+                                withAnimation { store.ordenarPorFecha(proyecto) }
+                            } label: {
+                                Label("Ordenar por fecha", systemImage: "calendar")
+                            }
+                        }
+                        Button { pegando = true } label: {
+                            Label("Pegar un calendario", systemImage: "calendar.badge.plus")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                     }
+                    .accessibilityLabel("Más acciones del proyecto")
+                }
+            }
+            // Solo en la bandeja y solo si hay algo: es la única lista que
+            // se supone que se vacía.
+            if case .inbox = perspectiva, !items.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { vaciando = true } label: {
+                        Label("Vaciar", systemImage: "tray.and.arrow.down")
+                    }
+                }
+            }
+        }
+        // Como franja del área segura y no como superposición: una
+        // superposición se queda **debajo** de la barra de pestañas, y el
+        // teclado la tapa. Así el sistema la coloca sobre el teclado él.
+        .safeAreaInset(edge: .bottom) {
+            if apuntando {
+                CapturaView(perspectiva: perspectiva) { apuntando = false }
+            }
+        }
+        // Mientras se apunta, las pestañas se van: no se cambia de sección
+        // con el teclado abierto, y su barra flotante robaba el sitio justo
+        // donde hay que escribir.
+        .toolbar(apuntando ? .hidden : .visible, for: .tabBar)
+        .sheet(isPresented: $pegando) {
+            PegarCalendarioView(proyectoInicial: {
+                if case .project(let id) = perspectiva { id } else { nil }
+            }())
+        }
+        .sheet(isPresented: $eligiendoEmoji) {
+            ElegirEmojiView(actual: emojiEditable ?? "") { emoji in
+                switch perspectiva {
+                case .project(let id):
+                    if let p = store.projects.first(where: { $0.id == id }) { store.setIcon(p, to: emoji) }
+                case .area(let id):
+                    if let a = store.area(id) { store.setIcon(a, to: emoji) }
+                default: break
                 }
             }
         }

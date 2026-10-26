@@ -1,6 +1,6 @@
 # La app de iOS
 
-Existe, arranca y se instala en un iPhone. Comparte con el Mac **todo el núcleo y
+Existe, arranca y se instala en un iPhone o un iPad. Comparte con el Mac **todo el núcleo y
 ninguna vista**:
 
 ```
@@ -446,6 +446,26 @@ haría parecer eterna una serie que caduca— pero no lo cambia.
 En la lista, una repetitiva lleva **solo la flecha** de repetición, como en el
 Mac: poner «Cada día» al lado del título gasta media fila en algo que ya se sabe
 en cuanto se reconoce el icono.
+
+### Con pantalla ancha: el iPad y el iPhone Duo abierto
+
+Con sitio para dos cosas, la lista va a la izquierda y la tarea a la derecha,
+en vez de en una hoja. Lo decide **el ancho**, no el modelo: el mismo iPad en
+Split View estrecho vuelve a ser la vista del iPhone, y el Duo plegado también.
+
+Lo que cambia entre los dos es **dónde se parte**. En el Duo lo marca la
+bisagra, medida sobre la pantalla entera. En el iPad no hay bisagra y la mitad
+exacta tampoco sirve —en uno grande apaisado son casi setecientos puntos de
+lista—, así que la lista lleva algo más de un tercio, entre 340 y 460 puntos.
+
+Un proyecto abierto desde «Más» ya está dentro de una navegación, y una
+`NavigationStack` dentro de otra no navega: el título de la ficha se perdía y
+su «Listo» acababa en la barra de arriba del todo, junto a los botones del
+proyecto. Ahí la lista usa la navegación de «Más» y la ficha dibuja su propia
+cabecera.
+
+El iPad no es la interfaz del Mac: son las mismas pestañas del teléfono. Una
+barra lateral con todo, como en el Mac, es otra interfaz y se haría aparte.
 
 ## El puente con el Mac
 

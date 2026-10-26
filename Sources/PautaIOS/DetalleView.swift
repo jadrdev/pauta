@@ -25,6 +25,11 @@ struct DetalleView: View {
     /// vive en el panel de la derecha, y ahí `dismiss` no hace nada: no hay
     /// nada que cerrar, hay que dejar de enseñarla.
     var alCerrar: (() -> Void)? = nil
+    /// Si la ficha está dentro de una navegación que no es suya —el panel de
+    /// un proyecto abierto desde «Más»—. Ahí una `NavigationStack` propia no
+    /// cuenta: el título se pierde y «Listo» se va a la barra de arriba del
+    /// todo, lejos de la tarea. Así que la cabecera la dibuja ella.
+    var enOtraNavegacion = false
 
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -38,7 +43,7 @@ struct DetalleView: View {
     private var actual: Item? { store.items.first { $0.id == item.id } }
 
     var body: some View {
-        NavigationStack {
+        marco {
             Form {
                 Section {
                     TextField("Título", text: $titulo, axis: .vertical)
@@ -133,13 +138,6 @@ struct DetalleView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Papel.bg)
-            .navigationTitle("Tarea")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Listo") { guardar(); cerrar() }
-                }
-            }
         }
         .onAppear {
             titulo = item.title
@@ -178,6 +176,38 @@ struct DetalleView: View {
 
     private func cerrar() {
         if let alCerrar { alCerrar() } else { dismiss() }
+    }
+
+    /// El título y «Listo»: en la barra de su propia navegación o, si está
+    /// dentro de otra, en una cabecera que se parece a esa barra.
+    @ViewBuilder private func marco(@ViewBuilder _ ficha: () -> some View) -> some View {
+        if enOtraNavegacion {
+            VStack(spacing: 0) {
+                ZStack {
+                    Text("Tarea").font(.headline)
+                    HStack {
+                        Spacer()
+                        Button("Listo") { guardar(); cerrar() }
+                            .fontWeight(.semibold)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .frame(height: 44)
+                ficha()
+            }
+            .background(Papel.bg)
+        } else {
+            NavigationStack {
+                ficha()
+                    .navigationTitle("Tarea")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Listo") { guardar(); cerrar() }
+                        }
+                    }
+            }
+        }
     }
 
     /// Los ficheros de la tarea. Se tocan para verlos, se deslizan para
