@@ -1653,6 +1653,13 @@ azulado. Sigue el tema claro/oscuro del sistema.
   sin necesitar dos versiones.
 - **Liquid Glass** en lo que se levanta de la página: el editor desplegado de una
   tarea. En macOS anterior a 26 cae a fondo sólido con filete.
+- **Una columna de lectura de 700 puntos, centrada.** A todo lo ancho, la hora y
+  el proyecto de cada fila quedarían a un palmo de su título. Con la ventana
+  ancha —a pantalla completa, por ejemplo— la tarea elegida se edita en una
+  **ficha a la derecha**, como en el iPad, y su fila se marca; con la ventana
+  estrecha se despliega en su sitio, como siempre. Es el mismo editor en los
+  dos sitios: en la ficha, los menús de cuándo, límite, duración, repetición y
+  proyecto van uno debajo de otro porque a lo ancho no caben.
 
 ### Contraste
 

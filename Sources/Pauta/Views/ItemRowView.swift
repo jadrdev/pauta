@@ -70,6 +70,13 @@ struct ItemRowView: View {
     /// enseña una vez, con el horario del evento: dos filas para la misma
     /// cosa se leían como dos compromisos.
     var evento: Evento?
+    /// La misma tarea dibujada como ficha, en el panel de la derecha que sale
+    /// con la ventana ancha: siempre abierta, sin arrastrar ni menú.
+    var enPanel = false
+
+    /// Si la lista tiene la ficha al lado. Entonces la fila elegida se marca
+    /// y no se despliega: abrirla en los dos sitios sería editarla dos veces.
+    @Environment(\.fichaAlLado) private var fichaAlLado
 
     @State private var title = ""
     @State private var notes = ""
@@ -85,8 +92,28 @@ struct ItemRowView: View {
     @FocusState private var titleFocused: Bool
 
     private var isSelected: Bool { nav.selectedItemID == item.id }
+    /// Si el editor se enseña aquí: siempre en la ficha, y en la fila solo
+    /// cuando no hay ficha al lado.
+    private var abiertaAqui: Bool { enPanel || (isSelected && !fichaAlLado) }
 
     var body: some View {
+        if enPanel { ficha } else { fila }
+    }
+
+    /// La ficha del panel: el mismo contenido que la fila abierta, sin lo que
+    /// en una ficha no significa nada —arrastrarla, soltar otra tarea delante—.
+    /// Soltar ficheros sí: es adjuntárselos.
+    private var ficha: some View {
+        contenido
+            .padding(.horizontal, 22)
+            .padding(.vertical, 18)
+            .dropDestination(for: URL.self) { urls, _ in adjuntar(urls) }
+            .onAppear { hydrate() }
+            .onChange(of: title) { commitText() }
+            .onChange(of: notes) { commitText() }
+    }
+
+    private var contenido: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 13) {
                 Checkbox(isCompleted: item.isCompleted) {
@@ -95,7 +122,7 @@ struct ItemRowView: View {
                 }
                 .offset(y: 2)
 
-                if isSelected {
+                if abiertaAqui {
                     TextField("Título", text: $title)
                         .textFieldStyle(.plain)
                         .font(.system(size: 13.5, weight: .medium))
@@ -112,13 +139,26 @@ struct ItemRowView: View {
                 }
             }
 
-            if isSelected { editor }
+            if abiertaAqui { editor }
         }
+    }
+
+    private var fila: some View {
+        contenido
         .padding(.vertical, 9)
-        .padding(.horizontal, isSelected ? 14 : 0)
-        .padding(.vertical, isSelected ? 5 : 0)
-        .modifier(SelectedPanel(isSelected: isSelected))
-        .padding(.horizontal, isSelected ? -14 : 0)
+        .padding(.horizontal, abiertaAqui ? 14 : 0)
+        .padding(.vertical, abiertaAqui ? 5 : 0)
+        .modifier(SelectedPanel(isSelected: abiertaAqui))
+        .padding(.horizontal, abiertaAqui ? -14 : 0)
+        // Con la ficha al lado, la elegida se marca: hay que ver de cuál es
+        // la ficha sin leerse el título dos veces.
+        .background {
+            if isSelected && !abiertaAqui {
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(Paper.accent.opacity(0.13))
+                    .padding(.horizontal, -10)
+            }
+        }
         .contentShape(Rectangle())
         // Se arrastra el identificador, no la tarea entera: quien recibe la
         // busca en el almacén, que es la única fuente de verdad.
@@ -180,10 +220,10 @@ struct ItemRowView: View {
         .onTapGesture { select() }
         // El estado de edición se rellena desde el item en cuanto la fila se
         // abre, venga la selección de un clic o de cualquier otro sitio.
-        .onAppear { if isSelected { hydrate() } }
-        .onChange(of: isSelected) { _, nowSelected in if nowSelected { hydrate() } }
-        .onChange(of: title) { guard isSelected else { return }; commitText() }
-        .onChange(of: notes) { guard isSelected else { return }; commitText() }
+        .onAppear { if abiertaAqui { hydrate() } }
+        .onChange(of: abiertaAqui) { _, abierta in if abierta { hydrate() } }
+        .onChange(of: title) { guard abiertaAqui else { return }; commitText() }
+        .onChange(of: notes) { guard abiertaAqui else { return }; commitText() }
         .contextMenu {
             // Primero lo que más se hace. Hasta ahora completar solo se podía
             // por el círculo, que mide dieciséis puntos: la acción más
@@ -519,186 +559,234 @@ struct ItemRowView: View {
 
             adjuntos
 
-            HStack(spacing: 18) {
-                Menu {
-                    Button("Hoy") { store.schedule(item, to: .now) }
-                    Button("Mañana") {
-                        store.schedule(item, to: Calendar.current.date(byAdding: .day, value: 1, to: .now))
-                    }
-                    Button("Próxima semana") {
-                        store.schedule(item, to: Calendar.current.date(byAdding: .day, value: 7, to: .now))
-                    }
-                    Button("Otra fecha…") { eligiendoFecha = true }
-                    Divider()
-                    // La hora cuelga de la fecha y no es un control aparte:
-                    // una hora sin día no significa nada, y la fila de
-                    // controles ya iba llena.
-                    Menu("Hora") {
-                        ForEach([8 * 60, 9 * 60, 12 * 60, 15 * 60, 18 * 60, 21 * 60], id: \.self) { m in
-                            Button(Self.hora(m)) {
-                                store.setTime(item, to: m,
-                                              margenInicial: Ajustes.shared.margenPorDefecto)
-                            }
-                        }
-                        Button("Otra hora…") { eligiendoHora = true }
-                        if item.timeOfDay != nil {
-                            Divider()
-                            // El margen cuelga de la hora porque sin hora no
-                            // cuenta desde ninguna parte.
-                            Menu("Avisar antes") {
-                                ForEach([5, 10, 15, 30, 60], id: \.self) { m in
-                                    Button(m % 60 == 0 ? "\(m / 60) h antes" : "\(m) min antes") {
-                                        store.setWarnBefore(item, to: m)
-                                    }
-                                }
-                                if item.warnBefore != nil {
-                                    Divider()
-                                    Button("A la hora") { store.setWarnBefore(item, to: nil) }
-                                }
-                            }
-                            Button("Sin hora") { store.setTime(item, to: nil) }
-                        }
-                    }
-                    Divider()
-                    Button("Algún día") { store.park(item) }
-                    Button("Sin fecha") { store.schedule(item, to: nil) }
-                } label: {
-                    Text(whenLabel.uppercased()).rubricStyle(Paper.accentInk)
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                // Sin esto no había forma de programar nada más allá de la
-                // semana que viene: los atajos cubren lo frecuente, no todo.
-                .popover(isPresented: $eligiendoFecha, arrowEdge: .bottom) {
-                    SelectorDeFecha(inicial: item.when ?? Date()) { fecha in
-                        store.schedule(item, to: fecha)
-                        eligiendoFecha = false
-                    }
-                }
-                .popover(isPresented: $eligiendoHora, arrowEdge: .bottom) {
-                    SelectorDeHora(inicial: item.timeOfDay ?? 9 * 60) { minutos in
-                        store.setTime(item, to: minutos,
-                                      margenInicial: Ajustes.shared.margenPorDefecto)
-                        eligiendoHora = false
-                    }
-                }
-
-                Menu {
-                    Button("Sin fecha límite") { store.setDeadline(item, to: nil) }
-                    Divider()
-                    Button("Hoy") { store.setDeadline(item, to: .now) }
-                    Button("Mañana") {
-                        store.setDeadline(item, to: Calendar.current.date(byAdding: .day, value: 1, to: .now))
-                    }
-                    Button("En una semana") {
-                        store.setDeadline(item, to: Calendar.current.date(byAdding: .day, value: 7, to: .now))
-                    }
-                    Button("Otra fecha…") { eligiendoLimite = true }
-                } label: {
-                    Text(limiteLabel.uppercased()).rubricStyle()
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                // En rojo solo cuando ya aprieta: si todas las fechas límite
-                // gritaran, ninguna diría nada.
-                .tint(item.deadlineIsDue ? Paper.warning : Paper.inkSoft)
-                .popover(isPresented: $eligiendoLimite, arrowEdge: .bottom) {
-                    SelectorDeFecha(inicial: item.deadline ?? Date()) { fecha in
-                        store.setDeadline(item, to: fecha)
-                        eligiendoLimite = false
-                    }
-                }
-
-                // La duración se dice con un icono cuando no está puesta y con la
-                // cifra cuando sí. Un rótulo «SIN ESTIMAR» en cada fila pesaría
-                // más que el dato que falta, y la tira ya iba llena.
-                Menu {
-                    ForEach([5, 15, 30, 45, 60, 90, 120, 240], id: \.self) { m in
-                        Button(Duracion.etiqueta(m)) { store.setEstimate(item, to: m) }
-                    }
-                    if item.estimate != nil {
-                        Divider()
-                        Button("Sin estimar") { store.setEstimate(item, to: nil) }
-                    }
-                } label: {
-                    if let minutos = item.estimate {
-                        Text(Duracion.etiqueta(minutos).uppercased()).rubricStyle()
-                    } else {
-                        Image(systemName: "timer").font(.system(size: 11, weight: .semibold))
-                    }
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .tint(item.estimate == nil ? Paper.inkSoft : Paper.accentInk)
-                .help(item.estimate == nil ? "Cuánto crees que va a costar" : "Duración estimada")
-
-                Menu {
-                    Button("No se repite") { store.setRecurrence(item, to: nil) }
-                    Divider()
-                    ForEach(Recurrence.allCases, id: \.self) { cada in
-                        Button(cada.title) { store.setRecurrence(item, to: cada) }
-                    }
-                    if item.recurrence != nil {
-                        Divider()
-                        Button("No acaba nunca") { store.setRecurrenceEnd(item, to: nil) }
-                        Button("Acabar en una fecha…") { eligiendoFin = true }
-                    }
-                } label: {
-                    Text(repeticionLabel.uppercased())
-                        .rubricStyle()
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                // Con `tint` y no con `foregroundStyle`: los Menu sin borde
-                // colorean su etiqueta con el tint e ignoran el estilo de primer
-                // plano. Sin repetición va apagado; con ella, en verde.
-                .tint(item.recurrence == nil ? Paper.inkSoft : Paper.accentInk)
-                .popover(isPresented: $eligiendoFin, arrowEdge: .bottom) {
-                    SelectorDeFecha(inicial: item.recurrenceEnd ?? item.when ?? Date(),
-                                    accion: "Acabar aquí") { fecha in
-                        store.setRecurrenceEnd(item, to: fecha)
-                        eligiendoFin = false
-                    }
-                }
-
-                Menu {
-                    Button("Bandeja") { move(to: nil) }
-                    if !store.projects.isEmpty { Divider() }
-                    ForEach(store.projects) { project in
-                        Button(project.name.isEmpty ? "Sin título" : project.name) { move(to: project.id) }
-                    }
-                } label: {
-                    Text(projectLabel.uppercased()).rubricStyle()
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                // El proyecto es contexto, no acción: apagado.
-                .tint(Paper.inkSoft)
-
-                Spacer()
-
-                Button {
-                    nav.selectedItemID = nil
-                    store.delete(item)
-                } label: {
-                    // Icono y no texto: con cinco controles en fila, «ELIMINAR»
-                    // partía la línea en dos. Y una papelera dice «destructivo»
-                    // mejor que una palabra del color del acento.
-                    Image(systemName: "trash")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Paper.inkSoft)
-                }
-                .buttonStyle(.plain)
-                .help("Eliminar tarea")
-            }
+            controles
         }
         .padding(.leading, 29)
         .padding(.top, 11)
+    }
+
+    /// En la fila, todos en una tira; en la ficha de al lado no caben a lo
+    /// ancho, y van uno debajo de otro con lo que son delante.
+    @ViewBuilder private var controles: some View {
+        if enPanel {
+            VStack(alignment: .leading, spacing: 11) {
+                filaDeControl("Cuándo") { menuCuando }
+                filaDeControl("Límite") { menuLimite }
+                filaDeControl("Duración") { menuDuracion }
+                filaDeControl("Repetición") { menuRepeticion }
+                filaDeControl("Proyecto") { menuProyecto }
+                HStack {
+                    Spacer()
+                    botonEliminar
+                }
+                .padding(.top, 4)
+            }
+        } else {
+            HStack(spacing: 18) {
+                menuCuando
+                menuLimite
+                menuDuracion
+                menuRepeticion
+                menuProyecto
+                Spacer()
+                botonEliminar
+            }
+        }
+    }
+
+    private func filaDeControl(_ nombre: String, @ViewBuilder _ control: () -> some View) -> some View {
+        HStack(spacing: 12) {
+            Text(nombre.uppercased()).rubricStyle(Paper.inkFaint)
+                .frame(width: 92, alignment: .leading)
+            control()
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var menuCuando: some View {
+        Menu {
+            Button("Hoy") { store.schedule(item, to: .now) }
+            Button("Mañana") {
+                store.schedule(item, to: Calendar.current.date(byAdding: .day, value: 1, to: .now))
+            }
+            Button("Próxima semana") {
+                store.schedule(item, to: Calendar.current.date(byAdding: .day, value: 7, to: .now))
+            }
+            Button("Otra fecha…") { eligiendoFecha = true }
+            Divider()
+            // La hora cuelga de la fecha y no es un control aparte:
+            // una hora sin día no significa nada, y la fila de
+            // controles ya iba llena.
+            Menu("Hora") {
+                ForEach([8 * 60, 9 * 60, 12 * 60, 15 * 60, 18 * 60, 21 * 60], id: \.self) { m in
+                    Button(Self.hora(m)) {
+                        store.setTime(item, to: m,
+                                      margenInicial: Ajustes.shared.margenPorDefecto)
+                    }
+                }
+                Button("Otra hora…") { eligiendoHora = true }
+                if item.timeOfDay != nil {
+                    Divider()
+                    // El margen cuelga de la hora porque sin hora no
+                    // cuenta desde ninguna parte.
+                    Menu("Avisar antes") {
+                        ForEach([5, 10, 15, 30, 60], id: \.self) { m in
+                            Button(m % 60 == 0 ? "\(m / 60) h antes" : "\(m) min antes") {
+                                store.setWarnBefore(item, to: m)
+                            }
+                        }
+                        if item.warnBefore != nil {
+                            Divider()
+                            Button("A la hora") { store.setWarnBefore(item, to: nil) }
+                        }
+                    }
+                    Button("Sin hora") { store.setTime(item, to: nil) }
+                }
+            }
+            Divider()
+            Button("Algún día") { store.park(item) }
+            Button("Sin fecha") { store.schedule(item, to: nil) }
+        } label: {
+            Text(whenLabel.uppercased()).rubricStyle(Paper.accentInk)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        // Sin esto no había forma de programar nada más allá de la
+        // semana que viene: los atajos cubren lo frecuente, no todo.
+        .popover(isPresented: $eligiendoFecha, arrowEdge: .bottom) {
+            SelectorDeFecha(inicial: item.when ?? Date()) { fecha in
+                store.schedule(item, to: fecha)
+                eligiendoFecha = false
+            }
+        }
+        .popover(isPresented: $eligiendoHora, arrowEdge: .bottom) {
+            SelectorDeHora(inicial: item.timeOfDay ?? 9 * 60) { minutos in
+                store.setTime(item, to: minutos,
+                              margenInicial: Ajustes.shared.margenPorDefecto)
+                eligiendoHora = false
+            }
+        }
+    }
+
+    private var menuLimite: some View {
+        Menu {
+            Button("Sin fecha límite") { store.setDeadline(item, to: nil) }
+            Divider()
+            Button("Hoy") { store.setDeadline(item, to: .now) }
+            Button("Mañana") {
+                store.setDeadline(item, to: Calendar.current.date(byAdding: .day, value: 1, to: .now))
+            }
+            Button("En una semana") {
+                store.setDeadline(item, to: Calendar.current.date(byAdding: .day, value: 7, to: .now))
+            }
+            Button("Otra fecha…") { eligiendoLimite = true }
+        } label: {
+            Text(limiteLabel.uppercased()).rubricStyle()
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        // En rojo solo cuando ya aprieta: si todas las fechas límite
+        // gritaran, ninguna diría nada.
+        .tint(item.deadlineIsDue ? Paper.warning : Paper.inkSoft)
+        .popover(isPresented: $eligiendoLimite, arrowEdge: .bottom) {
+            SelectorDeFecha(inicial: item.deadline ?? Date()) { fecha in
+                store.setDeadline(item, to: fecha)
+                eligiendoLimite = false
+            }
+        }
+    }
+
+    private var menuDuracion: some View {
+        // La duración se dice con un icono cuando no está puesta y con la
+        // cifra cuando sí. Un rótulo «SIN ESTIMAR» en cada fila pesaría
+        // más que el dato que falta, y la tira ya iba llena.
+        Menu {
+            ForEach([5, 15, 30, 45, 60, 90, 120, 240], id: \.self) { m in
+                Button(Duracion.etiqueta(m)) { store.setEstimate(item, to: m) }
+            }
+            if item.estimate != nil {
+                Divider()
+                Button("Sin estimar") { store.setEstimate(item, to: nil) }
+            }
+        } label: {
+            if let minutos = item.estimate {
+                Text(Duracion.etiqueta(minutos).uppercased()).rubricStyle()
+            } else {
+                Image(systemName: "timer").font(.system(size: 11, weight: .semibold))
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .tint(item.estimate == nil ? Paper.inkSoft : Paper.accentInk)
+        .help(item.estimate == nil ? "Cuánto crees que va a costar" : "Duración estimada")
+    }
+
+    private var menuRepeticion: some View {
+        Menu {
+            Button("No se repite") { store.setRecurrence(item, to: nil) }
+            Divider()
+            ForEach(Recurrence.allCases, id: \.self) { cada in
+                Button(cada.title) { store.setRecurrence(item, to: cada) }
+            }
+            if item.recurrence != nil {
+                Divider()
+                Button("No acaba nunca") { store.setRecurrenceEnd(item, to: nil) }
+                Button("Acabar en una fecha…") { eligiendoFin = true }
+            }
+        } label: {
+            Text(repeticionLabel.uppercased())
+                .rubricStyle()
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        // Con `tint` y no con `foregroundStyle`: los Menu sin borde
+        // colorean su etiqueta con el tint e ignoran el estilo de primer
+        // plano. Sin repetición va apagado; con ella, en verde.
+        .tint(item.recurrence == nil ? Paper.inkSoft : Paper.accentInk)
+        .popover(isPresented: $eligiendoFin, arrowEdge: .bottom) {
+            SelectorDeFecha(inicial: item.recurrenceEnd ?? item.when ?? Date(),
+                            accion: "Acabar aquí") { fecha in
+                store.setRecurrenceEnd(item, to: fecha)
+                eligiendoFin = false
+            }
+        }
+    }
+
+    private var menuProyecto: some View {
+        Menu {
+            Button("Bandeja") { move(to: nil) }
+            if !store.projects.isEmpty { Divider() }
+            ForEach(store.projects) { project in
+                Button(project.name.isEmpty ? "Sin título" : project.name) { move(to: project.id) }
+            }
+        } label: {
+            Text(projectLabel.uppercased()).rubricStyle()
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        // El proyecto es contexto, no acción: apagado.
+        .tint(Paper.inkSoft)
+    }
+
+    private var botonEliminar: some View {
+        Button {
+            nav.selectedItemID = nil
+            store.delete(item)
+        } label: {
+            // Icono y no texto: con cinco controles en fila, «ELIMINAR»
+            // partía la línea en dos. Y una papelera dice «destructivo»
+            // mejor que una palabra del color del acento.
+            Image(systemName: "trash")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Paper.inkSoft)
+        }
+        .buttonStyle(.plain)
+        .help("Eliminar tarea")
     }
 
     /// En una tarea repetitiva la fecha **es** el inicio de la serie, así que se
@@ -783,6 +871,19 @@ struct ItemRowView: View {
         updated.notes = notes
         guard updated != item else { return }
         store.update(updated)
+    }
+}
+
+private struct FichaAlLadoKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// Si la lista tiene la ficha de la tarea al lado. Lo pone la lista, que es
+    /// la que sabe cuánto mide; lo leen las filas.
+    var fichaAlLado: Bool {
+        get { self[FichaAlLadoKey.self] }
+        set { self[FichaAlLadoKey.self] = newValue }
     }
 }
 

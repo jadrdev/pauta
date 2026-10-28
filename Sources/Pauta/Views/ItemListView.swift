@@ -16,6 +16,61 @@ struct ItemListView: View {
     private var items: [Item] { store.items(for: nav.perspective) }
 
     var body: some View {
+        // Con sitio para la columna de lectura y una ficha, la tarea elegida
+        // se edita a la derecha, como en el iPad; con menos, se despliega en
+        // su fila como siempre.
+        GeometryReader { medida in
+            let alLado = medida.size.width >= Self.anchoParaFicha
+            HStack(spacing: 0) {
+                lista
+                    .environment(\.fichaAlLado, alLado)
+                if alLado {
+                    Rectangle().fill(Paper.hairline).frame(width: 1)
+                    fichaDeLaTarea
+                        .frame(width: min(max(medida.size.width * 0.3, 360), 460))
+                }
+            }
+        }
+        .background(Paper.bg)
+        .sheet(isPresented: $vaciando) { VaciarBandejaView() }
+        .sheet(isPresented: Binding(get: { nav.pegandoCalendario },
+                                    set: { nav.pegandoCalendario = $0 })) {
+            PegarCalendarioView(proyectoInicial: {
+                if case .project(let id) = nav.perspective { id } else { nil }
+            }())
+        }
+    }
+
+    /// La columna de 700 con sus márgenes y una ficha de 360 al lado.
+    private static let anchoParaFicha: CGFloat = 1100
+
+    /// La tarea elegida o, si no hay ninguna, qué hacer para que la haya.
+    @ViewBuilder private var fichaDeLaTarea: some View {
+        // Contra el almacén y no la selección sin más: si la tarea se borra
+        // —aquí o desde otro aparato—, la ficha no puede seguir enseñándola.
+        if let id = nav.selectedItemID,
+           let tarea = store.items.first(where: { $0.id == id && $0.deletedAt == nil }) {
+            ScrollView {
+                ItemRowView(item: tarea, enPanel: true)
+                    // Una ficha por tarea: sin esto, al elegir otra se
+                    // quedarían el título y las notas de la anterior.
+                    .id(tarea.id)
+            }
+            .background(Paper.bgSide.ignoresSafeArea())
+        } else {
+            VStack(spacing: 10) {
+                Image(systemName: "hand.point.left")
+                    .font(.system(size: 24, weight: .light))
+                Text("Haz clic en una tarea para verla aquí.")
+                    .font(.system(size: 13))
+            }
+            .foregroundStyle(Paper.inkFaint)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Paper.bgSide.ignoresSafeArea())
+        }
+    }
+
+    private var lista: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 header
@@ -102,13 +157,6 @@ struct ItemListView: View {
             .frame(maxWidth: .infinity, alignment: .top)
         }
         .background(Paper.bg)
-        .sheet(isPresented: $vaciando) { VaciarBandejaView() }
-        .sheet(isPresented: Binding(get: { nav.pegandoCalendario },
-                                    set: { nav.pegandoCalendario = $0 })) {
-            PegarCalendarioView(proyectoInicial: {
-                if case .project(let id) = nav.perspective { id } else { nil }
-            }())
-        }
         .onTapGesture {
             nav.selectedItemID = nil
             commitDraft()
