@@ -62,8 +62,9 @@ struct PapeleraView: View {
                 }
             }
             .padding(.horizontal, 46).padding(.top, 46).padding(.bottom, 60)
+            // Centrada, como las listas.
             .frame(maxWidth: 700, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .top)
         }
         .background(Paper.bg)
         .confirmationDialog("¿Vaciar la papelera?", isPresented: $vaciando) {

@@ -94,8 +94,12 @@ struct ItemListView: View {
             .padding(.horizontal, 46)
             .padding(.top, 46)
             .padding(.bottom, 60)
+            // Una columna de lectura y no la ventana entera: a todo lo ancho, la
+            // hora y el proyecto de cada fila quedan a un palmo de su título.
+            // Centrada, para que a pantalla completa el sitio sobrante se
+            // reparta a los dos lados en vez de ser un hueco a la derecha.
             .frame(maxWidth: 700, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .top)
         }
         .background(Paper.bg)
         .sheet(isPresented: $vaciando) { VaciarBandejaView() }
