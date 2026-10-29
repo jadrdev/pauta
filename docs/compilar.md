@@ -269,16 +269,89 @@ en memoria, que no se escriben en disco, y permite forzar la apariencia.
 `--view 1…6` elige la lista de arranque, en el orden de la barra lateral.
 Combinado con `--dump` inspecciona la maqueta en vez de los datos reales.
 
-`--vistazo` dice qué le ha dejado escrito la app al widget: la carpeta del
-grupo, de qué día es la instantánea y qué filas lleva. Existe porque desde fuera
-no se puede mirar —la carpeta de un grupo está protegida por el sistema y un
-terminal no entra ahí—, y sin él la única forma de saber si el widget tiene algo
-que enseñar sería mirar el widget.
-
 `--alta-rapida` abre el panel del atajo al arrancar. Está para poder mirarlo y
 comprobar que el foco cae en el campo sin inyectar el atajo por debajo: un
 ⌃Espacio sintético obliga a que el foco salte entre apps, y eso ni prueba lo que
 hay que probar ni sale gratis.
+
+## Mirar por dentro
+
+La app contesta desde el terminal a unas cuantas preguntas y se cierra, sin
+abrir ventana. Van contra la copia instalada:
+
+```bash
+/Applications/Pauta.app/Contents/MacOS/Pauta --dump
+```
+
+Recién compilada, y antes de instalarla, también vale `./build/Pauta.app/…`. Pero
+no las dos a la vez: ver [Una sola copia](#una-sola-copia).
+
+Las salidas de aquí abajo son de ejemplo. Las de verdad llevan tus tareas, y
+por eso no se pegan en un documento público.
+
+### `--dump`: lo guardado
+
+El estado entero, tal como está en la carpeta, sin abrir la interfaz. Con
+`--demo` enseña la maqueta en vez de los datos reales.
+
+### `--avisos`: lo programado y lo entregado
+
+```
+permiso de avisos: authorized
+avisos programados: 3
+repaso del día: a las 8:30 (programado)
+botones de «tarea»: Completar, Aplazar 10 min
+avisos entregados y sin descartar: 1
+```
+
+Dice lo **programado** y lo **entregado**, que no es lo mismo: lo primero es lo
+que va a pasar y lo segundo lo que pasó. Sin lo segundo, «probar los avisos» era
+mirar el código y confiar. Los botones se leen del sistema, porque que estén
+escritos en el código no significa que estén registrados. Y si el globo del
+icono no tiene permiso, lo dice: `globo en el icono: no permitido`.
+
+### `--seed-alarm`: hacer sonar uno
+
+```
+$ Pauta --seed-alarm 12 10
+tarea: CF52FCCE-…
+hora: 13:46  ·  aviso 10 min antes
+suena: 13:36:00
+para borrarla: rm '…/Pauta/items/CF52FCCE-….json'
+```
+
+Crea una tarea con hora dentro de esos minutos, con el margen que se le diga.
+Escribe en los datos de verdad a propósito —un aviso solo se puede probar
+sonando— y dice el comando para borrarla, porque una tarea de prueba que se
+queda es basura.
+
+### `--vistazo`: lo que ve el widget
+
+```
+grupo: 26W4G92PSS.dev.jadrdev.pauta
+archivo: …/Group Containers/26W4G92PSS.dev.jadrdev.pauta/vistazo.json
+día: 29 oct 2026  (es de hoy)
+titular: 2 para hoy  ·  1 atrasada
+  · Revisión diaria  20:00
+  · Llamar al taller  (atrasada 1 d)  [Casa]
+```
+
+Lo que la app le ha dejado escrito al widget y a la esfera del reloj: la
+carpeta del grupo, de qué día es la instantánea y qué filas lleva. Existe
+porque desde fuera no se puede mirar —la carpeta de un grupo está protegida por
+el sistema y un terminal no entra ahí—, y sin él la única forma de saber si el
+widget tiene algo que enseñar sería mirar el widget.
+
+### `--eventos`, y cuidado con los permisos
+
+`--eventos` lista los eventos de hoy que lee la app. Pero el permiso que
+enseña **miente cuando se lanza a mano**, y lo dice. TCC no
+atribuye el permiso al binario que pregunta sino al *proceso responsable*, que
+ejecutando el ejecutable desde una shell es el terminal: lo que sale es el
+permiso del terminal, no el de Pauta. Pueden discrepar —y discrepan— sin que
+ninguno esté roto. El estado de verdad se ve en `Ayuda ▸ Permisos`, que corre
+dentro de la app. Los avisos no van por TCC y sí se leen bien desde cualquier
+sitio.
 
 ---
 

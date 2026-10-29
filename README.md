@@ -230,18 +230,14 @@ no, no se vuelve a preguntar desde ahí; queda el comando *Eventos del
 calendario…*, que lleva a los ajustes del sistema. Y no se cuentan como tareas:
 el rótulo dice «4 EVENTOS · 7 ABIERTAS», porque un evento no es algo que hacer.
 
-```bash
-./build/Pauta.app/Contents/MacOS/Pauta --eventos
-```
-
 ### Si la tarea y el evento son lo mismo
 
 Pasa sin querer: se crea el evento en el calendario y se apunta la tarea para no
 olvidarla, y Hoy enseñaba las dos:
 
 ```
-▌ Sesión Inicio UNED                       18:00 – 19:00
-○ Sección de Inicio de Uned                18:00   Universidad
+▌ Revisión del coche                       18:00 – 19:00
+○ Llevar el coche a la revisión            18:00   Casa
 ```
 
 Ahora salen en **una fila**: la de la tarea, que es la que se tacha, con el
@@ -251,8 +247,9 @@ calendario y la tarea en Pauta. Al tachar la tarea, el evento vuelve a salir sol
 La regla es estricta, porque juntar dos cosas distintas es peor que enseñar dos
 veces la misma: **la misma hora de inicio** y **al menos dos palabras del
 título en común** —o la única, si uno solo tiene una—, sin mayúsculas, sin
-tildes y sin las palabras que no dicen nada. «Sesión» y «Sección» no son la
-misma palabra; «inicio» y «uned» bastan.
+tildes y sin las palabras que no dicen nada. «Llevar» sobra: «revisión» y
+«coche» bastan. «Revisión del coche» y «Revisión de la caldera» a la misma hora,
+en cambio, no se juntan: solo comparten una.
 
 ### Varias del mismo proyecto
 
@@ -502,10 +499,6 @@ disparador que vigila los cambios: ese vive en la ventana principal, y un aviso
 se atiende con la ventana cerrada. Sin eso, completar dejaría la insistencia
 sonando y aplazar no volvería nunca.
 
-```bash
-./build/Pauta.app/Contents/MacOS/Pauta --avisos
-```
-
 #### El repaso del día
 
 Un aviso a hora fija —**8:30** por defecto— que dice qué quedó sin hacer:
@@ -521,7 +514,7 @@ son una o dos **se nombran**, porque contarlas sin decir cuáles dejaba un
 acertijo:
 
 ```
-«Comprar licencia de Developer iOS» lleva 4 semanas sin fecha
+«Renovar el pasaporte» lleva 4 semanas sin fecha
 ```
 
 Existe porque nada te lo cuenta si no abres la app, y antes, si no te acuerdas
@@ -546,44 +539,8 @@ La hora se elige en los [ajustes](#ajustes) —de 7:00 a 10:00— y se puede
 a ignorar. Apagarlo se guarda como decisión y no como ausencia de dato, porque si
 no, duraría hasta el siguiente arranque.
 
-```bash
-./build/Pauta.app/Contents/MacOS/Pauta --avisos
-# permiso de avisos: authorized
-# avisos programados: 3
-# repaso del día: a las 8:30 (programado)
-# botones de «tarea»: Completar, Aplazar 10 min
-# avisos entregados y sin descartar: 1
-```
-
-Y para comprobarlo de punta a punta hay que hacer sonar uno:
-
-```bash
-./build/Pauta.app/Contents/MacOS/Pauta --seed-alarm 12 10
-# tarea: CF52FCCE-…
-# hora: 13:46  ·  aviso 10 min antes
-# suena: 13:36:00
-# para borrarla: rm '…/Pauta/items/CF52FCCE-….json'
-```
-
-Crea una tarea con hora dentro de esos minutos, con el margen que se le diga.
-Escribe en los datos de verdad a propósito —un aviso solo se puede probar
-sonando— y dice el comando para borrarla, porque una tarea de prueba que se
-queda es basura.
-
-Dice lo **programado** y lo **entregado**, que no es lo mismo: lo primero es lo
-que va a pasar y lo segundo lo que pasó. Sin lo segundo, «probar los avisos» era
-mirar el código y confiar. Y los botones se leen del sistema, porque que estén
-escritos en el código no significa que estén registrados.
-
-### Cuidado con leer permisos desde el terminal
-
-`--eventos` y `--reminders-status` **mienten cuando se lanzan a mano**, y lo
-dicen. TCC no atribuye el permiso al binario que pregunta sino al *proceso
-responsable*, que ejecutando el ejecutable desde una shell es el terminal: lo que
-sale es el permiso del terminal, no el de Pauta. Pueden discrepar —y discrepan—
-sin que ninguno esté roto. El estado de verdad se ve en `Ayuda ▸ Permisos`, que
-corre dentro de la app. Los avisos no van por TCC y sí se leen bien desde
-cualquier sitio.
+Para ver desde el terminal qué hay programado, y para hacer sonar uno de prueba
+de punta a punta: [Mirar por dentro](docs/compilar.md#mirar-por-dentro).
 
 ### Listas de comprobación
 
@@ -804,13 +761,13 @@ calendario…** —si lo copiado ya tiene fechas, sale pegado—; en el teléfon
 Entiende las dos formas que se usan de verdad:
 
 ```
-Fundamentos Sistemas Digitales (Viernes 17 a 18h)
-Boole: 9, 16 y 23 octubre
-Combinacionales: 30 octubre; 6, 13 y 20 noviembre
+Taller de Fotografía (Viernes 17 a 18h)
+Luz: 9, 16 y 23 octubre
+Composición: 30 octubre; 6, 13 y 20 noviembre
 ```
 
 ```
-Sessiones de Youtbe Octubre L5 (bienvenida), M13, L19, L26
+Clases de guitarra Octubre L5 (presentación), M13, L19, L26
 Noviembre M3, L9, L16, L23, L30
 ```
 
@@ -822,10 +779,10 @@ año.
 
 **Nada se crea sin verlo antes.** Sale la lista de lo entendido —día, hora,
 título— con una casilla en cada una, y cada apartado propone su proyecto:
-«Fundamentos Sistemas Digitales» va a «F. Sistemas Digitales», con la misma
+«Taller de Fotografía» va al proyecto «Fotografía», con la misma
 regla que junta tareas y eventos. Y **no adivina**:
 
-- Lo que no tiene día —«PEC (20%): noviembre y enero»— sale aparte y no se crea.
+- Lo que no tiene día —«Exposición final: enero»— sale aparte y no se crea.
 - Si la inicial o la cabecera dicen un día de la semana que no cuadra con la
   fecha, se marca. No se corrige: puede estar mal la inicial o la fecha.
 - Lo que **ya está en Pauta** —mismo día, título que es el mismo— sale
@@ -944,13 +901,13 @@ preposiciones sueltas —«Cita con el dentista **el**»— que no son título d
 **Y se juntan los trozos.** Este es el caso que lo motivó:
 
 ```
-«28 de Septiembre de Sección de Inicio de Uned a las 18:00»
+«28 de Septiembre de Revisión del coche a las 18:00»
 ```
 
 Con el título metido **entre** la fecha y la hora, el detector saca dos trozos
 sueltos: «28 de septiembre», que se inventa las doce, y «18:00», que se inventa
 hoy. Ninguno acierta solo. Se combinan —el día del que trae día, la hora del que
-trae hora— y sale *Sección de Inicio de Uned*, el 28 a las 18:00.
+trae hora— y sale *Revisión del coche*, el 28 a las 18:00.
 
 Si al quitar la fecha no queda título, no se toca nada: escribir «mañana a las
 10» crea una tarea que se llama así, no una tarea en blanco con fecha.
@@ -962,9 +919,9 @@ entienden lo mismo porque llaman a lo mismo, no porque se hayan puesto de acuerd
 
 ### Y el proyecto, si lo nombras
 
-**«Arreglar el editar comercios de Krondoc»** entra directamente en el proyecto
-*Krondoc*, esté en el área que esté. El título se queda entero —quitarle «de
-Krondoc» lo dejaría cojo— y la fecha se respeta: apuntada en Hoy, sigue en Hoy y
+**«Cambiar el buscador de Bitácora»** entra directamente en el proyecto
+*Bitácora*, esté en el área que esté. El título se queda entero —quitarle «de
+Bitácora» lo dejaría cojo— y la fecha se respeta: apuntada en Hoy, sigue en Hoy y
 además en su proyecto. Si la apuntas ya dentro de un proyecto, manda ese.
 
 Para no ver proyectos donde no los hay: el nombre tiene que ir como **palabra
@@ -974,7 +931,7 @@ de la medicación» no. Sin eso, un proyecto con nombre de palabra corriente —
 Redes, Familia— se llevaba cualquier frase que la usara. El resto de letras da
 igual: «Youtube» es YouTube. Solo cuentan los proyectos vivos y con nombres de
 tres letras o más. Si un nombre
-está dentro de otro, gana el de fuera: «Krondoc Web» antes que «Krondoc». Pero si
+está dentro de otro, gana el de fuera: «Bitácora Web» antes que «Bitácora». Pero si
 la frase nombra **dos proyectos distintos**, no se elige ninguno y la tarea va
 donde la apuntaste: elegir a suertes es equivocarse sin que se note.
 
@@ -1158,20 +1115,8 @@ escribe el vistazo en la carpeta del grupo y la esfera lo lee. La regla de
 descartar lo que no es de hoy vive en el núcleo y la usan las dos. Está contado
 en [El reloj](docs/ios.md#la-complicación).
 
-Para ver qué tiene escrito, sin adivinar:
-
-```bash
-./build/Pauta.app/Contents/MacOS/Pauta --vistazo
-# grupo: 26W4G92PSS.dev.jadrdev.pauta
-# día: 9 sept 2026  (es de hoy)
-# titular: 2 para hoy  ·  1 atrasada
-#   · Revisión diaria  20:00
-#   · Video  (atrasada 1 d)  [Aguere Games]
-```
-
-Existe porque **desde fuera no se puede mirar**: la carpeta de un grupo está
-protegida por el sistema y un terminal no entra ahí. La app sí, porque el grupo
-es suyo.
+Para ver qué tiene escrito sin adivinar, la app lo cuenta desde el terminal:
+[Mirar por dentro](docs/compilar.md#mirar-por-dentro).
 
 ## Ajustes
 
@@ -1325,13 +1270,8 @@ tamaño que cada uno tenga puesto.
 **En el teléfono lo pone el sistema** y sobrevive a cerrar la app, que es justo
 cuando sirve. El precio es que `.badge` es un permiso aparte, y Pauta pedía solo
 `.alert` y `.sound` hasta la 0.3.8. A quien ya había concedido los avisos **el
-sistema no le vuelve a preguntar**: se comprueba con
-
-```bash
-/Applications/Pauta.app/Contents/MacOS/Pauta --avisos
-```
-
-que dice `globo en el icono: no permitido` en ese caso. Por eso la app **lee el
+sistema no le vuelve a preguntar** —`--avisos` lo dice como `globo en el icono:
+no permitido`, ver [Mirar por dentro](docs/compilar.md#mirar-por-dentro)—. Por eso la app **lee el
 estado en vez de suponerlo**, y cuando está apagado la pantalla de ajustes del
 teléfono enseña una fila que lleva a encenderlo. Instalando de cero no hace falta:
 el permiso se pide con los avisos.
@@ -1610,12 +1550,9 @@ Y una regla para entonces: **sin servidor, se cobra por versión mayor y no por
 mes**. Es lo único que paga el mantenimiento sin pedirle a nadie que alquile algo
 que no cuesta nada.
 
-Copiar la carpeta es la copia de seguridad; borrarla deja la app a cero. Para ver
-el estado guardado sin abrir la interfaz:
+Copiar la carpeta es la copia de seguridad; borrarla deja la app a cero. El estado
+guardado se puede ver sin abrir la interfaz: [Mirar por dentro](docs/compilar.md#mirar-por-dentro).
 
-```bash
-./build/Pauta.app/Contents/MacOS/Pauta --dump
-```
 ### Cómo funciona por dentro
 
 Por qué un archivo por objeto, cómo se ordena la lista sin reescribirla entera,
