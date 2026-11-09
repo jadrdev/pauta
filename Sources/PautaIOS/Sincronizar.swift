@@ -2,17 +2,29 @@ import Foundation
 import UIKit
 import PautaCore
 
-/// Cruzar con la carpeta del Mac, cuando se pueda.
+/// Cruzar con iCloud, cuando se pueda.
 ///
-/// Vive aparte de la pantalla que lo ofrece porque se llama desde dos sitios: al
-/// volver del fondo —que es cuando de verdad hace falta, después de haber estado
-/// en el Mac— y a mano desde los ajustes.
+/// Vive aparte de la pantalla que lo ofrece porque se llama desde varios
+/// sitios: al volver del fondo, al irse, cuando el vigilante ve llegar algo, en
+/// segundo plano y a mano desde los ajustes.
 ///
-/// Y siempre **puede no hacer nada**: sin carpeta elegida, o con el permiso
-/// caducado, devuelve `nil` y la app sigue con sus datos como si nada. Eso es lo
-/// que hace que esto sea un puente y no un cordón umbilical.
+/// El teléfono guarda en su carpeta, que es local, y cruza con **el
+/// contenedor de iCloud de la app** —el mismo que usa el Mac—. Antes cruzaba
+/// con una carpeta del Mac que había que elegir a mano, y eso era lo frágil: el
+/// permiso caducaba, el marcador se rompía, y el iPad había que prepararlo
+/// aparte. El cruce es el de siempre; lo que cambia es con quién.
+///
+/// Mientras dure la mudanza (docs/plan-contenedor-icloud.md), si había una
+/// carpeta elegida se cruza **también** con ella: así lo que haga un Mac todavía
+/// en la versión anterior llega aunque el Mac ya mudado esté apagado.
+///
+/// Y siempre **puede no hacer nada**: sin iCloud devuelve `nil` y la app sigue
+/// con sus datos como si nada. Eso es lo que hace que esto sea un puente y no
+/// un cordón umbilical.
 @MainActor
 enum Sincronizar {
+    private static let claveCopia = "contenedor.copiaDeAntes"
+
     /// Cruza **fuera del hilo principal**.
     ///
     /// Esto se escribió primero en el hilo principal y con una carpeta de
@@ -20,12 +32,30 @@ enum Sincronizar {
     /// app congelada hasta que hubo que cerrarla. Leer archivos es trabajo de
     /// disco y de red: no se hace donde se dibuja.
     @discardableResult
-    static func conElMac(_ store: Store, vez: Int = 0) async -> Puente.Balance? {
-        let carpeta = CarpetaElegida.shared
-        guard let destino = carpeta.url ?? carpeta.abrir() else { return nil }
+    static func conICloud(_ store: Store, vez: Int = 0) async -> Puente.Balance? {
         let origen = store.storageURL
+        // Bloquea la primera vez: fuera del hilo principal.
+        let contenedor = await Task.detached(priority: .utility) { Contenedor.documentos() }.value
+        let carpeta = CarpetaElegida.shared
+        let vieja = carpeta.url ?? carpeta.abrir()
+        guard contenedor != nil || vieja != nil else { return nil }
+
+        // Antes del primer cruce con el contenedor, una copia de cómo estaba
+        // el teléfono. Si no sale, no se cruza con él.
+        var conContenedor = contenedor
+        if contenedor != nil, !UserDefaults.standard.bool(forKey: claveCopia) {
+            if (try? store.copiaAntesDeLaMudanza()) != nil {
+                UserDefaults.standard.set(true, forKey: claveCopia)
+            } else {
+                conContenedor = nil
+            }
+        }
+
         let balance = await Task.detached(priority: .utility) {
-            Puente.cruzar(origen, destino)
+            var total = Puente.Balance()
+            if let conContenedor { total.sumar(Puente.cruzar(origen, conContenedor)) }
+            if let vieja { total.sumar(Puente.cruzar(origen, vieja)) }
+            return total
         }.value
         // Solo se relee si algo llegó: recargar por costumbre agita las fechas
         // de todo y da trabajo a iCloud por nada.
@@ -51,7 +81,7 @@ enum Sincronizar {
             try? await Task.sleep(for: .seconds(5))
             guard !Task.isCancelled,
                   UIApplication.shared.applicationState == .active else { return }
-            await conElMac(store, vez: vez + 1)
+            await conICloud(store, vez: vez + 1)
         }
     }
 }

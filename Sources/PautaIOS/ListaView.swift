@@ -264,9 +264,7 @@ struct ListaView: View {
                             case .calendario: await agenda.load(force: true)
                             }
                         }
-                    }, alElegirCarpeta: {
-                        Task { await Sincronizar.conElMac(store) }
-                    }, estrenando: store.items.isEmpty)
+                    })
                 }
                 Spacer(minLength: 90)
             }

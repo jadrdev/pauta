@@ -5917,3 +5917,23 @@ struct ProyectoNombradoTests {
         #expect(Mudanza.raiz(mudado: true, contenedor: contenedor, vieja: vieja) == contenedor)
     }
 }
+
+/// La copia que hace el teléfono antes de su primer cruce con el contenedor.
+@MainActor
+@Suite struct CopiaAntesDeLaMudanzaTests {
+    @Test func itIsCompleteAndThePruningNeverTakesIt() throws {
+        let raiz = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaCopiaMudanza-\(UUID().uuidString)", isDirectory: true)
+        let store = Store(root: raiz)
+        store.addItem(title: "Renovar el pasaporte", in: .inbox)
+        store.addProject(name: "Casa")
+        let hoy = Date(timeIntervalSince1970: 1_794_000_000)
+        let url = try store.copiaAntesDeLaMudanza(ahora: hoy)
+        let copia = try #require(Copias.leer(url))
+        #expect(copia.items.map(\.title) == ["Renovar el pasaporte"])
+        #expect(copia.projects.map(\.name) == ["Casa"])
+        // Un año después, la poda se lleva las copias diarias viejas, no esta.
+        Copias.podar(en: raiz, ahora: hoy.addingTimeInterval(365 * 86_400))
+        #expect(FileManager.default.fileExists(atPath: url.path))
+    }
+}

@@ -2091,6 +2091,19 @@ extension Store {
         return destino
     }
 
+    /// La copia de antes del primer cruce con el contenedor de iCloud.
+    ///
+    /// Entera o ninguna: si falta algo por bajar, falla, y quien la pide no
+    /// cruza. En el teléfono los datos son locales y no pasa, pero si pasara,
+    /// una copia incompleta sería creer que hay red cuando no la hay.
+    public func copiaAntesDeLaMudanza(ahora: Date = .now) throws -> URL {
+        let (copia, faltan) = foto(ahora: ahora)
+        guard faltan == 0 else { throw Mudanza.Fallo.sinBajar(["\(faltan) archivos"]) }
+        let destino = carpetaDeCopias.appendingPathComponent(Copias.nombreAntesDeLaMudanza(ahora))
+        try Copias.escribir(copia, en: destino)
+        return destino
+    }
+
     /// Deja todo como estaba en la copia.
     ///
     /// Primero guarda una copia de ahora, para que restaurar se pueda deshacer

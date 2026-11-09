@@ -45,7 +45,7 @@ enum RefrescoEnSegundoPlano {
     /// no hay ninguna interfaz montada de la que sacarlo.
     static func cruzarYAvisar() async {
         let almacen = Store()
-        await Sincronizar.conElMac(almacen)
+        await Sincronizar.conICloud(almacen)
         almacen.reload()
         let vistazo = Vistazo.de(almacen.items, proyectos: almacen.projects,
                                  limite: Vistazo.limitePublicado)

@@ -60,6 +60,13 @@ public enum Copias {
         prefijo + clave(dia, calendar) + extension_
     }
 
+    /// La que se hace antes del primer cruce con el contenedor de iCloud. Sin
+    /// fecha que se pueda leer en el nombre a propósito: así la poda, que va
+    /// por la fecha del nombre, no la toca nunca.
+    public static func nombreAntesDeLaMudanza(_ ahora: Date, calendar: Calendar = .current) -> String {
+        prefijo + clave(ahora, calendar) + "-antes-de-la-mudanza" + extension_
+    }
+
     /// La que se hace antes de restaurar, para poder deshacerlo. Lleva la hora
     /// porque puede haber varias el mismo día.
     static func nombreAntesDeRestaurar(_ ahora: Date, calendar: Calendar = .current) -> String {

@@ -172,11 +172,13 @@ public enum Mudanza {
     /// No en Documentos: con «Escritorio y Documentos» en iCloud —como en el Mac
     /// donde se escribió esto—, Documentos **es** iCloud, y una copia de
     /// seguridad en el mismo sitio que lo que protege no protege nada.
+    #if os(macOS)
     public static func carpetaDelResguardo(ahora: Date = .now) -> URL {
         let dia = ahora.formatted(.iso8601.year().month().day())
         return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Pauta antes de la mudanza \(dia)", isDirectory: true)
     }
+    #endif
 
     /// Copia **todo** `origen` en `destino`, esperando antes a que iCloud baje
     /// lo que tenga desalojado, y comprobando cada archivo.

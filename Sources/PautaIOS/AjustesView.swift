@@ -20,7 +20,9 @@ struct AjustesView: View {
     @Bindable private var ajustes = Ajustes.shared
 
     @State private var carpeta = CarpetaElegida.shared
-    @State private var eligiendo = false
+    /// Si este aparato tiene iCloud para la app. `nil` mientras se pregunta:
+    /// la primera vez el sistema prepara el contenedor y tarda.
+    @State private var hayICloud: Bool?
     /// Lo que movió el último cruce, para poder decirlo en vez de dejar al
     /// usuario adivinando si sirvió de algo.
     @State private var balance: Puente.Balance?
@@ -39,7 +41,7 @@ struct AjustesView: View {
         guard !cruzando else { return }
         cruzando = true
         Task {
-            balance = await Sincronizar.conElMac(store)
+            balance = await Sincronizar.conICloud(store)
             cruzando = false
         }
     }
@@ -51,8 +53,8 @@ struct AjustesView: View {
                 : "Nada que cruzar: ya estaban iguales"
         }
         var partes: [String] = []
-        if b.traidas > 0 { partes.append("\(b.traidas) del Mac") }
-        if b.llevadas > 0 { partes.append("\(b.llevadas) al Mac") }
+        if b.traidas > 0 { partes.append("\(b.traidas) de iCloud") }
+        if b.llevadas > 0 { partes.append("\(b.llevadas) a iCloud") }
         if b.pendientesDeBajar > 0 {
             partes.append("\(b.pendientesDeBajar) sin bajar de iCloud")
         }
@@ -138,20 +140,13 @@ struct AjustesView: View {
             }
 
             Section {
-                if carpeta.caducada {
-                    // El fallo del que se avisa al ofrecer esto, dicho en su
-                    // sitio: sin esta línea la sincronización se pararía en
-                    // silencio, que es la peor forma de fallar.
-                    Label("La carpeta que elegiste ya no está", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(Papel.warning)
+                HStack {
+                    Text("iCloud")
+                    Spacer()
+                    Text(hayICloud == nil ? "Mirando…" : hayICloud == true ? "Sincroniza" : "No disponible")
+                        .foregroundStyle(hayICloud == false ? Papel.warning : Papel.inkSoft)
                 }
-                if let elegida = carpeta.url {
-                    HStack {
-                        Text("Carpeta")
-                        Spacer()
-                        Text(elegida.lastPathComponent)
-                            .foregroundStyle(Papel.inkSoft)
-                    }
+                if hayICloud == true {
                     Button {
                         cruzar()
                     } label: {
@@ -169,34 +164,34 @@ struct AjustesView: View {
                             .font(.system(size: 12.5))
                             .foregroundStyle(Papel.inkFaint)
                     }
-                    Button("Olvidar la carpeta", role: .destructive) {
+                }
+                // La carpeta del Mac que se elegía antes de la mudanza. Se
+                // sigue cruzando mientras dure, por si hay un Mac sin
+                // actualizar; ya no se ofrece elegir una nueva.
+                if let elegida = carpeta.url {
+                    HStack {
+                        Text("Carpeta de antes")
+                        Spacer()
+                        Text(elegida.lastPathComponent)
+                            .foregroundStyle(Papel.inkSoft)
+                    }
+                    Button("Olvidar la carpeta de antes", role: .destructive) {
                         carpeta.olvidar()
                         balance = nil
                     }
-                } else {
-                    Button {
-                        eligiendo = true
-                    } label: {
-                        Label(carpeta.caducada ? "Volver a elegirla" : "Elegir la carpeta de Pauta…",
-                              systemImage: "folder.badge.plus")
-                    }
                 }
             } header: {
-                Text("LA CARPETA DEL MAC")
+                Text("ICLOUD")
             } footer: {
-                // Un literal de varias líneas y no trozos sumados: `Text` solo
-                // interpreta el **negrita** cuando lo que recibe es un literal.
-                // Con `+` llega un `String` ya hecho y los asteriscos se
-                // dibujan tal cual — visto en pantalla.
-                Text("""
-                     Elige la carpeta **Pauta** de tu iCloud Drive y el teléfono \
-                     cruzará sus tareas con las del Mac al volver a la app. Cada \
-                     lado guarda las suyas, así que esto funciona aunque la \
-                     carpeta no esté; y de cada tarea gana la versión más reciente.
-
-                     Si mueves o renombras esa carpeta, el permiso deja de valer y \
-                     habrá que elegirla otra vez — se avisa aquí.
-                     """)
+                if hayICloud == false {
+                    Text("Sin iCloud, las tareas se quedan en este aparato. Se "
+                         + "activa en Ajustes del sistema ▸ tu nombre ▸ iCloud ▸ iCloud Drive.")
+                } else {
+                    Text("Tus tareas se cruzan con las de iCloud, que son las mismas del "
+                         + "Mac y del iPad, sin elegir nada. Cada aparato guarda las "
+                         + "suyas, así que funciona también sin red; y de cada tarea "
+                         + "gana la versión más reciente.")
+                }
             }
 
             Section {
@@ -220,7 +215,7 @@ struct AjustesView: View {
                 Text("TUS DATOS")
             } footer: {
                 Text("En este teléfono, en la carpeta que comparte con el widget. "
-                     + "Con el Mac se cruzan arriba.")
+                     + "Con iCloud se cruzan arriba.")
             }
 
             Section {
@@ -236,19 +231,13 @@ struct AjustesView: View {
                      + "los derechos reservados")
             }
         }
-        // Solo carpetas: lo que hace falta es el permiso sobre el directorio
-        // entero, no sobre un archivo.
-        .fileImporter(isPresented: $eligiendo, allowedContentTypes: [.folder]) { resultado in
-            guard case .success(let elegida) = resultado else { return }
-            guard carpeta.elegir(elegida) else { return }
-            // Se cruza en el momento: elegir la carpeta y no ver pasar nada
-            // dejaría la duda de si sirvió.
-            cruzar()
-        }
         .scrollContentBackground(.hidden)
         .background(Papel.bg)
         .navigationTitle("Ajustes")
         .task {
+            hayICloud = await Task.detached(priority: .utility) {
+                Contenedor.documentos() != nil
+            }.value
             avisos = await Avisos.authorization()
             calendario = Agenda.authorization
             globo = await Avisos.puedeGlobo()

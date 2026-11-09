@@ -130,7 +130,7 @@ struct RaizView: View {
             }
             vigilante.empezar {
                 Task {
-                    await Sincronizar.conElMac(store)
+                    await Sincronizar.conICloud(store)
                     store.reload()
                 }
             }
@@ -143,7 +143,7 @@ struct RaizView: View {
             // delante del otro aparato. Sin carpeta elegida no hace nada, y
             // nunca en el hilo principal: son archivos, y algunos hay que
             // bajarlos.
-            Task { await Sincronizar.conElMac(store) }
+            Task { await Sincronizar.conICloud(store) }
             // Los eventos se releen a la fuerza: pudo aceptarse una invitación
             // o moverse una reunión mientras la app dormía, y el día que se
             // enseña ya no sería el de verdad.
@@ -164,14 +164,14 @@ struct RaizView: View {
             // se quedaba en el teléfono hasta entonces, y en el Mac parecía
             // que no se había guardado. Si el cruce trae algo, recarga y este
             // bloque vuelve a correr, pero el segundo cruce ya no mueve nada.
-            await Sincronizar.conElMac(store)
+            await Sincronizar.conICloud(store)
         }
         .task {
             // También al arrancar en frío: apoyarse solo en el cambio de fase
             // deja el primer cruce a merced de si el sistema pasa por
             // «inactiva» antes de «activa». Cruzar dos veces no hace nada, así
             // que sobra pedirlo dos veces y falta no pedirlo ninguna.
-            await Sincronizar.conElMac(store)
+            await Sincronizar.conICloud(store)
             // La copia de seguridad del día, si aún no está.
             store.copiaDelDia()
             // Se avisa a fuera **aquí también**, no solo en el bloque de
@@ -189,7 +189,7 @@ struct RaizView: View {
             // la primera sesión sin vigilante.
             vigilante.empezar {
                 Task {
-                    await Sincronizar.conElMac(store)
+                    await Sincronizar.conICloud(store)
                     store.reload()
                 }
             }
@@ -250,7 +250,7 @@ struct RaizView: View {
     private func cruzarAntesDeDormir() {
         let permiso = UIApplication.shared.beginBackgroundTask(withName: "cruzar")
         Task {
-            await Sincronizar.conElMac(store)
+            await Sincronizar.conICloud(store)
             UIApplication.shared.endBackgroundTask(permiso)
         }
     }

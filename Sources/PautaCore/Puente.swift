@@ -30,6 +30,13 @@ public enum Puente {
         public var pendientesDeBajar = 0
 
         public init() {}
+
+        /// Los dos cruces de un mismo turno, contados como uno.
+        public mutating func sumar(_ otro: Balance) {
+            traidas += otro.traidas
+            llevadas += otro.llevadas
+            pendientesDeBajar += otro.pendientesDeBajar
+        }
     }
 
     /// Solo hace falta la fecha para decidir quién gana, así que no se decodifica

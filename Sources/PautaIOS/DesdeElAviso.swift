@@ -30,7 +30,7 @@ enum DesdeElAviso {
 
     private static func terminar(_ almacen: Store) async {
         await Avisos.reschedule(almacen.items)
-        await Sincronizar.conElMac(almacen)
+        await Sincronizar.conICloud(almacen)
         let vistazo = Vistazo.de(almacen.items, proyectos: almacen.projects,
                                  limite: Vistazo.limitePublicado)
         WidgetCenter.shared.reloadAllTimelines()
