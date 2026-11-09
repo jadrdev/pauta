@@ -178,6 +178,22 @@ Pendiente: el otro Mac, cuando se abra con esta versión.
   Si iCloud está apagado en el aparato, Ajustes lo dice y la app sigue en
   local, como hoy sin carpeta elegida.
 
+### Resultado (9 de noviembre de 2026): el iPhone, mudado
+
+`Sincronizar.conICloud` cruza el almacén local con el contenedor y, mientras
+dure la transición, también con la carpeta elegida si la hay. Antes del primer
+cruce con el contenedor hace `copiaAntesDeLaMudanza`, que la poda no toca
+nunca. Si no sale, no cruza. `NSMetadataQuery` avisa de lo que llega con la
+app delante.
+
+En el iPhone, el primer cruce al abrir hizo la mudanza: «Cruzar ahora» dijo
+justo después «Nada que cruzar: ya estaban iguales». La copia de antes salió en
+Copias de seguridad. Con la app delante, lo tachado en el Mac se tachó en el
+iPhone en segundos sin salir de la app, y lo apuntado en el iPhone salió en el
+Mac en segundos.
+
+Pendientes: el iPad y el otro Mac, cuando tengan la versión nueva.
+
 ## Fase 4 — Limpieza (una versión más tarde, cuando tú lo digas)
 
 Cuando todos los aparatos lleven la versión nueva:
