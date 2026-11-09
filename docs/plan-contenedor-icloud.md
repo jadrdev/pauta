@@ -156,6 +156,13 @@ vivas que antes.
 Se adelantó un trozo de la fase 4: ya no se adopta la carpeta local al estrenar
 iCloud. Con el cambio de carpeta, ese peligro latente se habría vuelto posible.
 
+La primera prueba con el iPhone en la versión anterior salió mitad y mitad. Lo
+apuntado en el iPhone llegó al Mac, pero lo tachado en el Mac «no llegaba»: el
+cruce de la transición era cada minuto, y un minuto es lo que se tarda en tachar
+y mirar el teléfono. Ahora vigila las dos carpetas con FSEvents y cruza en
+cuanto una cambia: un cambio en la carpeta vieja estaba en el contenedor en 1,7
+segundos. Queda además una vuelta cada cinco minutos, por si se pierde un aviso.
+
 Pendiente: el otro Mac, cuando se abra con esta versión.
 
 ## Fase 3 — El iPhone y el iPad se mudan (misma versión, por TestFlight)

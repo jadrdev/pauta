@@ -16,11 +16,14 @@ import PautaCore
 ///    es justo el momento en que más fácil sería perder algo.
 ///
 /// Y mientras dure la transición —hasta que todos los aparatos estén en la
-/// versión nueva—, la carpeta vieja y el contenedor se cruzan al arrancar,
-/// cada minuto y al salir. Así lo que toque un aparato todavía en la versión
-/// anterior llega al contenedor, y lo de aquí le llega a él. Si algo de esto
-/// falla, se vuelve a intentar en la vuelta siguiente: la mudanza es un cruce
-/// y repetirlo no estropea nada.
+/// versión nueva—, la carpeta vieja y el contenedor se cruzan **en cuanto
+/// cambia cualquiera de las dos**, además de al arrancar, al salir y cada cinco
+/// minutos por si acaso. Así lo que toque un aparato todavía en la versión
+/// anterior llega al contenedor en segundos, y lo de aquí le llega a él. Al
+/// principio era cada minuto, y un minuto es lo que se tarda en tachar algo en
+/// el Mac y mirar el iPhone: la prueba salió «no llega». Si algo falla, se
+/// vuelve a intentar en la vuelta siguiente: la mudanza es un cruce y
+/// repetirlo no estropea nada.
 enum MudanzaDelMac {
     /// Qué pasó la última vez, para `Pauta --mudanza` y para quien pregunte.
     private static let claveEstado = "mudanza.estado"
@@ -39,35 +42,72 @@ enum MudanzaDelMac {
         // carpeta tiene que estar en la otra antes del siguiente arranque.
         NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: nil
-        ) { _ in
-            if let vieja = Store.iCloudRoot, let contenedor = Contenedor.rutaEnElMac,
-               FileManager.default.fileExists(atPath: contenedor.path) {
-                Puente.cruzar(contenedor, vieja)
-            }
-        }
+        ) { _ in cruzarLaTransicion() }
         Task.detached(priority: .utility) {
             while true {
-                await vuelta()
-                try? await Task.sleep(for: .seconds(60))
+                let mudado = await vuelta()
+                if mudado { await vigilar() }
+                // Sin mudar, se reintenta cada minuto; mudado, lo normal es que
+                // cruce el vigilante, y esto es solo la red por si un aviso se
+                // pierde.
+                try? await Task.sleep(for: .seconds(mudado ? 300 : 60))
             }
         }
     }
 
-    private static func vuelta() async {
+    // MARK: - La transición
+
+    /// Los vigilantes de las dos carpetas, una vez mudado.
+    @MainActor private static var vigilantes: [FolderWatcher] = []
+    @MainActor private static var pendiente: Task<Void, Never>?
+    /// Un cruce a la vez: el del vigilante, el de la vuelta y el de salir
+    /// podrían coincidir, y dos cruces escribiendo lo mismo a la vez se pisan.
+    private static let cerrojo = NSLock()
+
+    @MainActor private static func vigilar() {
+        guard vigilantes.isEmpty, let vieja = Store.iCloudRoot,
+              let contenedor = Contenedor.rutaEnElMac else { return }
+        vigilantes = [vieja, contenedor].compactMap { carpeta in
+            FolderWatcher(url: carpeta) { cruzarPronto() }
+        }
+    }
+
+    /// Cruza en cuanto se calman los avisos. Cada cruce escribe en las carpetas
+    /// y eso despierta a los vigilantes otra vez, pero el cruce siguiente ya no
+    /// encuentra nada que mover y no escribe nada: ahí se acaba.
+    @MainActor private static func cruzarPronto() {
+        pendiente?.cancel()
+        pendiente = Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            await Task.detached(priority: .utility) { cruzarLaTransicion() }.value
+        }
+    }
+
+    private static func cruzarLaTransicion() {
+        guard Mudanza.mudadoDesde() != nil, let vieja = Store.iCloudRoot,
+              let contenedor = Contenedor.rutaEnElMac,
+              FileManager.default.fileExists(atPath: contenedor.path),
+              FileManager.default.fileExists(atPath: vieja.path) else { return }
+        cerrojo.withLock { _ = Puente.cruzar(contenedor, vieja) }
+    }
+
+    /// Una vuelta: la mudanza si aún no está hecha, o un cruce si ya lo está.
+    /// Devuelve si este Mac está mudado.
+    private static func vuelta() async -> Bool {
         // Sin iCloud Drive no hay de dónde mudarse ni adónde.
         guard let vieja = Store.iCloudRoot,
-              FileManager.default.fileExists(atPath: vieja.path) else { return }
+              FileManager.default.fileExists(atPath: vieja.path) else { return false }
         // Bloquea la primera vez, y por eso va aquí y no al arrancar el
         // almacén. `nil` es iCloud apagado o una firma sin el contenedor.
         guard let contenedor = Contenedor.documentos() else {
             apuntar("sin contenedor de iCloud")
-            return
+            return false
         }
 
         if Mudanza.mudadoDesde() != nil {
-            // Transición: las dos carpetas, cruzadas.
-            Puente.cruzar(contenedor, vieja)
-            return
+            cruzarLaTransicion()
+            return true
         }
 
         // 1. La copia de antes, una sola vez por Mac: la carpeta vieja no se
@@ -79,7 +119,7 @@ enum MudanzaDelMac {
                 UserDefaults.standard.set(r.carpeta.path, forKey: claveResguardo)
             } catch {
                 apuntar("sin copia de antes, no se muda: \(error)")
-                return
+                return false
             }
         }
 
@@ -88,7 +128,7 @@ enum MudanzaDelMac {
         guard resultado.cuadra else {
             let muestra = resultado.discrepancias.prefix(3).joined(separator: ", ")
             apuntar("aún no cuadra (\(resultado.discrepancias.count)): \(muestra)")
-            return
+            return false
         }
 
         // 3. Apuntado: el almacén lo usará desde el siguiente arranque.
@@ -96,6 +136,7 @@ enum MudanzaDelMac {
         dejarAviso(en: vieja)
         apuntar("mudado: \(resultado.balance.llevadas) archivos llevados, "
                 + "\(resultado.copias) copias; se usa al volver a abrir Pauta")
+        return true
     }
 
     /// Una nota en la carpeta vieja para quien la abra en el Finder.
