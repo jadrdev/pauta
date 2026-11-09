@@ -5742,3 +5742,96 @@ struct ProyectoNombradoTests {
         #expect(Copias.fecha(delNombre: "otra-cosa.json.gz") == nil)
     }
 }
+
+/// La copia de antes de la mudanza: o entera y comprobada, o nada.
+@Suite struct ResguardoTests {
+    private func tempDir(_ nombre: String) -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaResguardo-\(nombre)-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    /// Una carpeta de datos con un poco de todo: tareas, proyectos, un adjunto
+    /// en su subcarpeta, una copia diaria y la basura que deja el Finder.
+    private func carpetaDeDatos() throws -> URL {
+        let raiz = tempDir("origen")
+        let fm = FileManager.default
+        for (ruta, texto) in [("items/a.json", "{\"t\":1}"), ("projects/p.json", "{\"p\":1}"),
+                              ("adjuntos/X/factura.pdf", "%PDF-falso"),
+                              ("copias/Pauta-2026-11-08.json.gz", "gz"), (".DS_Store", "basura")] {
+            let url = raiz.appendingPathComponent(ruta)
+            try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try texto.write(to: url, atomically: true, encoding: .utf8)
+        }
+        return raiz
+    }
+
+    /// Pedir una descarga, como iCloud: lo pedido acaba estando.
+    private final class Nube: @unchecked Sendable {
+        private let cerrojo = NSLock()
+        private var bajados: Set<String> = []
+        let nuncaBaja: Set<String>
+        init(nuncaBaja: Set<String> = []) { self.nuncaBaja = nuncaBaja }
+        func pedir(_ url: URL) {
+            cerrojo.withLock { _ = bajados.insert(url.lastPathComponent) }
+        }
+        func enLocal(_ url: URL) -> Bool {
+            let nombre = url.lastPathComponent
+            if nuncaBaja.contains(nombre) { return false }
+            if nombre == "a.json" { return cerrojo.withLock { bajados.contains(nombre) } }
+            return true
+        }
+    }
+
+    @Test func copiesEverythingAndLeavesAReadme() async throws {
+        let origen = try carpetaDeDatos()
+        let destino = tempDir("destino").appendingPathComponent("Pauta antes de la mudanza")
+        let r = try await Mudanza.resguardar(origen, en: destino, enLocal: { _ in true })
+        #expect(r.carpeta == destino)
+        #expect(r.archivos == 4)
+        let fm = FileManager.default
+        #expect(try String(contentsOf: destino.appendingPathComponent("adjuntos/X/factura.pdf"),
+                           encoding: .utf8) == "%PDF-falso")
+        #expect(fm.fileExists(atPath: destino.appendingPathComponent("LEEME.txt").path))
+        // Lo oculto no se lleva, y no queda la carpeta provisional.
+        #expect(!fm.fileExists(atPath: destino.appendingPathComponent(".DS_Store").path))
+        let hermanos = try fm.contentsOfDirectory(atPath: destino.deletingLastPathComponent().path)
+        #expect(hermanos == ["Pauta antes de la mudanza"])
+    }
+
+    @Test func waitsForWhatICloudHadNotDownloaded() async throws {
+        let origen = try carpetaDeDatos()
+        let destino = tempDir("destino").appendingPathComponent("copia")
+        let nube = Nube()
+        let r = try await Mudanza.resguardar(origen, en: destino, espera: .seconds(5),
+                                             enLocal: nube.enLocal, pedirBajada: nube.pedir)
+        #expect(r.archivos == 4)
+        #expect(FileManager.default.fileExists(atPath: destino.appendingPathComponent("items/a.json").path))
+    }
+
+    /// Si algo no baja, no hay copia: ni a medias ni con el nombre bueno. Y dice
+    /// qué faltó, para que se sepa qué esperar.
+    @Test func givesUpSayingWhatDidNotDownload() async throws {
+        let origen = try carpetaDeDatos()
+        let padre = tempDir("destino")
+        let destino = padre.appendingPathComponent("copia")
+        let nube = Nube(nuncaBaja: ["p.json"])
+        await #expect(throws: Mudanza.Fallo.sinBajar(["projects/p.json"])) {
+            try await Mudanza.resguardar(origen, en: destino, espera: .milliseconds(700),
+                                         enLocal: nube.enLocal, pedirBajada: nube.pedir)
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: padre.path).isEmpty)
+    }
+
+    /// Una copia anterior no se pisa: la nueva va al lado, con número.
+    @Test func neverOverwritesAnEarlierCopy() async throws {
+        let origen = try carpetaDeDatos()
+        let destino = tempDir("destino").appendingPathComponent("copia")
+        try FileManager.default.createDirectory(at: destino, withIntermediateDirectories: true)
+        try "la de ayer".write(to: destino.appendingPathComponent("ayer.txt"), atomically: true, encoding: .utf8)
+        let r = try await Mudanza.resguardar(origen, en: destino, enLocal: { _ in true })
+        #expect(r.carpeta.lastPathComponent == "copia 2")
+        #expect(try String(contentsOf: destino.appendingPathComponent("ayer.txt"), encoding: .utf8) == "la de ayer")
+    }
+}

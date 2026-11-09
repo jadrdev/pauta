@@ -236,6 +236,28 @@ struct Entry {
             }
             return
         }
+        // La copia completa de antes de la mudanza, a la carpeta de usuario.
+        // La mudanza la hará sola antes de mover nada; esto es para poder
+        // hacerla y mirarla a mano.
+        if CommandLine.arguments.contains("--resguardo") {
+            runOnMainLoop {
+                let origen = Store.defaultRoot
+                let destino = Mudanza.carpetaDelResguardo()
+                print("desde: \(origen.path)")
+                print("a:     \(destino.path)")
+                print("esperando a que iCloud baje lo que falte…")
+                do {
+                    let r = try await Mudanza.resguardar(origen, en: destino)
+                    print("✓ \(r.archivos) archivos, "
+                          + ByteCountFormatter.string(fromByteCount: r.bytes, countStyle: .file)
+                          + ", comprobados uno a uno")
+                    print("  en \(r.carpeta.path)")
+                } catch let fallo as Mudanza.Fallo {
+                    print("✗ \(fallo)")
+                }
+            }
+            return
+        }
         // Fase 0 del contenedor de iCloud: deja una marca y cuenta las de los
         // demás aparatos. Temporal, como `Contenedor.prueba`.
         if CommandLine.arguments.contains("--contenedor") {

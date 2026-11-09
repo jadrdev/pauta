@@ -93,10 +93,27 @@ Si algo de esto falla, se para aquí y no se ha movido nada.
 ## Fase 1 — La red de seguridad, antes de cualquier mudanza
 
 - Una copia completa del estado de antes, fuera de iCloud: la carpeta entera,
-  incluidos los adjuntos, copiada a `~/Documents/Pauta antes de la mudanza`.
-  Las copias diarias en gzip siguen existiendo, pero esta se puede abrir con el
-  Finder.
+  incluidos los adjuntos, copiada a `~/Pauta antes de la mudanza <fecha>`. No en
+  Documentos: con «Escritorio y Documentos» en iCloud, Documentos **es**
+  iCloud. Las copias diarias en gzip siguen existiendo, pero esta se puede
+  abrir con el Finder.
 - La copia la hace la propia versión nueva, y **no sigue si la copia falla**.
+
+### Resultado (9 de noviembre de 2026): hecha
+
+`Mudanza.resguardar` pide a iCloud lo desalojado y espera a que baje. Copia a
+una carpeta provisional, compara cada archivo byte a byte y solo entonces le
+pone el nombre definitivo. Si algo no baja a tiempo, para y dice cuáles. Nunca
+pisa una copia anterior. A mano: `Pauta --resguardo`.
+
+Con los datos de verdad dio 384 archivos y 999 KB, idénticos al original
+(`diff -r`). La copia está en `~/Pauta antes de la mudanza 2026-11-09`.
+
+Lo que enseñó el primer intento: esperó tres minutos a treinta copias diarias
+que ya estaban bajadas. Foundation guarda el estado de iCloud **en la propia
+URL**, y preguntar a la misma devolvía «sin bajar» para siempre. Ahora pregunta
+con una URL nueva cada vez. Comprobado desalojando dos copias con
+`brctl evict`: esperó 1,7 segundos y las copió bien.
 
 ## Fase 2 — Los Mac se mudan (la versión 0.5.0, por ejemplo)
 
