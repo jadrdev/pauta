@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  El manifiesto de privacidad que Apple pide a todo lo que sube a App Store
+  Connect. Uno solo para la app del teléfono, su widget, la del reloj y su
+  complicación: el núcleo es el mismo en las cuatro, y lo que declara es del
+  núcleo.
+
+  Ni rastreo ni datos recogidos: no hay servidor, y lo único que sale de la
+  app es lo que tú mueves a tu iCloud. Lo que sí hay son dos familias de API
+  que Apple obliga a justificar:
+
+  · Fechas de archivos —modificación, creación—: el almacén las mira para
+    saber si un archivo cambió desde la última lectura (C617.1, en la carpeta
+    del grupo) y para cruzar con la carpeta del Mac que eliges en el selector
+    del sistema (3B52.1, la que tú le diste).
+  · UserDefaults: los ajustes de la propia app (CA92.1).
+-->
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>C617.1</string>
+                <string>3B52.1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

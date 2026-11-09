@@ -319,6 +319,41 @@ existe. Lo que ya pasó se apaga, y no admite deslizar: no es tuyo, se lee y
 punto. El permiso se pide desde la propia lista de Hoy, con la misma invitación
 que el Mac, y solo mientras no se haya contestado.
 
+## Por TestFlight
+
+```bash
+tools/testflight.sh              # archiva, firma para la App Store y sube
+tools/testflight.sh --sin-subir  # lo mismo, pero se queda en el .ipa
+```
+
+Es el relevo de `iphone.sh` para todo lo que no sea probar en el momento. Por
+cable, el perfil de desarrollo caduca al año y el teléfono tiene que estar a
+mano y desbloqueado; por TestFlight la compilación llega al iPhone y al iPad
+desde la nube, se actualiza sola, y el reloj la recibe del teléfono como
+siempre. Las pruebas internas no pasan revisión: en cuanto Apple termina de
+procesar la compilación —entre cinco y treinta minutos—, está disponible.
+
+Sube con la cuenta de Xcode, firmando con el certificado *Apple Distribution*;
+los perfiles de tienda de las cuatro piezas —app, widget, app del reloj y
+complicación— los pide Xcode al exportar. Cada subida necesita un
+`CURRENT_PROJECT_VERSION` que no se haya subido antes: Apple lo rechaza si se
+repite, y lo dice en la subida, no antes.
+
+Lo que App Store Connect exige y una compilación por cable no:
+
+- **El manifiesto de privacidad** (`Resources/privacidad/PrivacyInfo.xcprivacy`),
+  el mismo archivo en los cuatro paquetes porque declara lo del núcleo. Ni
+  rastreo ni datos recogidos; sí dos familias de API que hay que justificar: las
+  fechas de archivos, con las que el almacén sabe si algo cambió (en la carpeta
+  del grupo y en la del Mac que eliges tú), y `UserDefaults`, para los ajustes.
+- **`ITSAppUsesNonExemptEncryption: false`** en la app y en la del reloj: sin
+  cifrado propio, y dicho en el paquete para que no lo pregunte en cada subida.
+- **Ningún producto de Apple en los textos de los atajos de Siri.** La primera
+  subida volvió con «*ITMS-90626: Invalid Siri Support — App Intent description
+  … cannot contain 'iphone'*»: la descripción del atajo del reloj decía «Manda
+  al iPhone…». Ahora dice «teléfono». La subida en sí había ido bien; el
+  rechazo llega después, por correo, y la compilación no aparece en TestFlight.
+
 ## El widget
 
 Es la única parte de la app que se ve **sin abrirla**, y por eso existe: apuntar

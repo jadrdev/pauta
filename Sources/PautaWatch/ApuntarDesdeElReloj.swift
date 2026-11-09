@@ -19,8 +19,11 @@ import PautaCore
 /// el teléfono en otra habitación.
 struct ApuntarEnPautaDesdeElReloj: AppIntent {
     static var title: LocalizedStringResource = "Apuntar en la bandeja"
+    // «teléfono» y no «iPhone»: App Store Connect rechaza la compilación entera
+    // si la descripción de un atajo de Siri nombra un producto de Apple
+    // (ITMS-90626).
     static var description = IntentDescription(
-        "Manda al iPhone lo que le digas, y entra en la bandeja de Pauta.")
+        "Manda al teléfono lo que le digas, y entra en la bandeja de Pauta.")
 
     /// Sin abrir la app: apuntar algo en el reloj es lo que haces sin parar lo
     /// que estabas haciendo. Si además hubiera que mirar una pantalla, valdría
@@ -48,7 +51,7 @@ struct ApuntarEnPautaDesdeElReloj: AppIntent {
         // teléfono y esto solo lo ha pedido. Decir «hecho» cuando aún puede
         // estar en la cola es la clase de mentira pequeña que hace que dejes de
         // fiarte de dictar.
-        return .result(dialog: "Mandado al iPhone")
+        return .result(dialog: "Mandado al teléfono")
     }
 }
 

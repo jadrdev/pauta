@@ -20,7 +20,7 @@ name: Pauta
 settings:
   base:
     MARKETING_VERSION: "0.4.16"
-    CURRENT_PROJECT_VERSION: "31"
+    CURRENT_PROJECT_VERSION: "32"
 
 options:
   bundleIdPrefix: dev.jadrdev
@@ -48,6 +48,10 @@ targets:
     sources:
       - Sources/PautaIOS
       - Resources/ios/Assets.xcassets
+      # El manifiesto de privacidad, que App Store Connect exige: el mismo
+      # archivo en los cuatro paquetes que suben, porque declara lo del núcleo.
+      - path: Resources/privacidad/PrivacyInfo.xcprivacy
+        buildPhase: resources
     dependencies:
       - target: PautaCore
       - target: PautaWidget
@@ -89,6 +93,9 @@ targets:
           - CFBundleURLName: dev.jadrdev.pauta
             CFBundleTypeRole: Editor
             CFBundleURLSchemes: [pauta]
+        # Sin cifrado propio —solo el HTTPS del sistema—, dicho aquí para que
+        # App Store Connect no lo pregunte en cada compilación que se sube.
+        ITSAppUsesNonExemptEncryption: false
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
@@ -126,6 +133,8 @@ targets:
       # La paleta y las versalitas del teléfono, compartidas y no copiadas: un
       # widget que no se parece a su app parece de otra app.
       - path: Sources/PautaIOS/Tema.swift
+      - path: Resources/privacidad/PrivacyInfo.xcprivacy
+        buildPhase: resources
     dependencies:
       - target: PautaCore
       - sdk: WidgetKit.framework
@@ -324,6 +333,8 @@ targets:
       # monograma va más pequeño que en el iPhone. Se genera con
       # `python3 tools/make-icon.py reloj`.
       - Resources/watch/Assets.xcassets
+      - path: Resources/privacidad/PrivacyInfo.xcprivacy
+        buildPhase: resources
     dependencies:
       - target: PautaCoreWatch
       - target: PautaWatchWidget
@@ -343,6 +354,7 @@ targets:
         CFBundleLocalizations: [es]
         WKApplication: true
         WKCompanionAppBundleIdentifier: dev.jadrdev.pauta
+        ITSAppUsesNonExemptEncryption: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jadrdev.pauta.watchkitapp
@@ -359,6 +371,8 @@ targets:
     platform: watchOS
     sources:
       - Sources/PautaWatchWidget
+      - path: Resources/privacidad/PrivacyInfo.xcprivacy
+        buildPhase: resources
     dependencies:
       - target: PautaCoreWatch
       - sdk: WidgetKit.framework
