@@ -140,6 +140,24 @@ aparato todavía en la versión anterior (el otro Mac, o el iPhone con su Puente
 a la carpeta vieja) llega al contenedor, y al revés. No hace falta actualizar
 todo a la vez.
 
+### Resultado (9 de noviembre de 2026): este Mac, mudado
+
+`MudanzaDelMac` arranca con la app, en segundo plano. Hace la copia de antes,
+`Mudanza.mudar` (el cruce, las copias diarias y la comprobación) y, si cuadra,
+lo apunta en las preferencias de ese Mac. El almacén usa el contenedor desde el
+arranque siguiente. Durante la transición cruza las dos carpetas al arrancar,
+cada minuto y al salir. `Pauta --mudanza` dice en qué punto está.
+
+En el MacBook Air tardó tres segundos: 354 archivos y 30 copias diarias
+llevados, y cuadra. Las dos carpetas tienen 332 tareas, 19 proyectos y 3 áreas.
+Al volver a abrir, el almacén lee del contenedor, con las mismas 305 tareas
+vivas que antes.
+
+Se adelantó un trozo de la fase 4: ya no se adopta la carpeta local al estrenar
+iCloud. Con el cambio de carpeta, ese peligro latente se habría vuelto posible.
+
+Pendiente: el otro Mac, cuando se abra con esta versión.
+
 ## Fase 3 — El iPhone y el iPad se mudan (misma versión, por TestFlight)
 
 - El Puente cruza con el contenedor en vez de con la carpeta elegida.

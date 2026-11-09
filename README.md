@@ -1435,23 +1435,30 @@ sin tocar los tuyos— tienen su propio capítulo:
 
 ## Dónde se guardan los datos
 
-**Un archivo JSON por objeto**, con escritura atómica, en iCloud Drive:
+**Un archivo JSON por objeto**, con escritura atómica, en **el contenedor de
+iCloud de la app** —`iCloud.dev.jadrdev.pauta`—, que el Mac, el iPhone y el iPad
+ven sin elegir nada:
 
 ```
-~/Library/Mobile Documents/com~apple~CloudDocs/Pauta/
+~/Library/Mobile Documents/iCloud~dev~jadrdev~pauta/Documents/
   items/<uuid>.json
   projects/<uuid>.json
+  areas/<uuid>.json
+  adjuntos/<uuid>/<nombre>
+  copias/Pauta-<día>.json.gz
 ```
 
-Si iCloud Drive no está activo, la app usa `~/Library/Application Support/Pauta/`
-con la misma estructura y funciona igual, solo sin sincronizar. Al estrenar la
-carpeta de iCloud adopta lo que hubiera en la local, y deja el original intacto
-como respaldo.
+Hasta noviembre de 2026 vivían en una carpeta normal de iCloud Drive,
+`iCloud Drive/Pauta`, que el Mac leía por ruta porque no va en sandbox: el
+contenedor propio lo cerraba la cuenta, que era un equipo personal. Con la
+cuenta de pago, cada Mac se **muda** solo al arrancar: hace una copia completa
+de antes en `~/Pauta antes de la mudanza <fecha>`, cruza la carpeta vieja con el
+contenedor y comprueba que cuadra antes de cambiar. Mientras haya aparatos en
+una versión anterior, las dos carpetas se siguen cruzando; la vieja no se borra
+nunca sola. Los detalles, en el [plan de la mudanza](docs/plan-contenedor-icloud.md).
 
-No se usa `url(forUbiquityContainerIdentifier:)`: esa vía exige entitlements y un
-perfil de aprovisionamiento embebido, que no encajan con un bundle montado a
-mano. iCloud Drive es una carpeta normal y la app no está en sandbox, así que
-escribe en ella directamente.
+Si iCloud no está activo, la app usa `~/Library/Application Support/Pauta/` con
+la misma estructura y funciona igual, solo sin sincronizar.
 
 ### Por qué no hay cuentas
 
@@ -1480,19 +1487,13 @@ la app tiene que seguir abriéndose y funcionando entera sin identificarse.
 
 ### Lo que sí costaría publicarla
 
-El trabajo de llevarla a la App Store no son las cuentas, es el **sandbox**: allí
-es obligatorio, y bajo sandbox la ruta de ahora
-—`~/Library/Mobile Documents/com~apple~CloudDocs/Pauta/`— deja de ser accesible.
-Habría que pasar al contenedor de iCloud de verdad, con sus entitlements y su
-perfil, que es exactamente lo que este montaje evitaba. Con `NSUbiquitousContainers`
-la carpeta sigue viéndose en iCloud Drive, así que no se pierde nada de cara al
-usuario, pero **la ruta cambia** y los datos hay que mudarlos.
-
-Lo bueno es que esa mudanza ya está resuelta: `adoptData(from:to:)` es lo que hace
-hoy al estrenar la carpeta de iCloud —copia lo que hubiera en la local y deja el
-original como respaldo—, y sirve igual para el salto al contenedor. Lo demás es
-fontanería conocida: proyecto de Xcode en vez del bundle a mano, firma de
-distribución, notarización y las etiquetas de privacidad.
+El trabajo de llevar el Mac a la App Store no son las cuentas, es el
+**sandbox**: allí es obligatorio, y bajo sandbox una carpeta normal de iCloud
+Drive deja de ser accesible por ruta. Por eso la mudanza al contenedor de iCloud
+de la app iba primero: el contenedor funciona igual dentro y fuera del sandbox.
+Lo demás ya está hecho —proyecto de Xcode, firma de distribución, notarización y
+el manifiesto de privacidad—, y el iPhone ya sube a App Store Connect por
+TestFlight.
 
 ### Y si algún día se cobrara
 
