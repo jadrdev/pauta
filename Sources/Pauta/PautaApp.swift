@@ -236,6 +236,12 @@ struct Entry {
             }
             return
         }
+        // Fase 0 del contenedor de iCloud: deja una marca y cuenta las de los
+        // demás aparatos. Temporal, como `Contenedor.prueba`.
+        if CommandLine.arguments.contains("--contenedor") {
+            print(Contenedor.prueba(aparato: Host.current().localizedName ?? "Mac"))
+            return
+        }
         if CommandLine.arguments.contains("--dump") {
             let store = Launch.demo ? Store.demo() : Store()
             if Launch.demo {

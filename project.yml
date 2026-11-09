@@ -96,6 +96,13 @@ targets:
         # Sin cifrado propio —solo el HTTPS del sistema—, dicho aquí para que
         # App Store Connect no lo pregunte en cada compilación que se sube.
         ITSAppUsesNonExemptEncryption: false
+        # El contenedor de iCloud, visible en iCloud Drive como «Pauta»: es tuyo,
+        # y copiar la carpeta tiene que seguir siendo la copia de seguridad.
+        NSUbiquitousContainers:
+          iCloud.dev.jadrdev.pauta:
+            NSUbiquitousContainerIsDocumentScopePublic: true
+            NSUbiquitousContainerName: Pauta
+            NSUbiquitousContainerSupportedFolderLevels: Any
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
@@ -221,6 +228,13 @@ targets:
             CFBundleTypeRole: Editor
             CFBundleURLSchemes: [pauta]
         NSHumanReadableCopyright: © 2026 Joshua A. Díaz Robayna · Todos los derechos reservados
+        # El contenedor de iCloud, visible en iCloud Drive como «Pauta»: es tuyo,
+        # y copiar la carpeta tiene que seguir siendo la copia de seguridad.
+        NSUbiquitousContainers:
+          iCloud.dev.jadrdev.pauta:
+            NSUbiquitousContainerIsDocumentScopePublic: true
+            NSUbiquitousContainerName: Pauta
+            NSUbiquitousContainerSupportedFolderLevels: Any
         # Sin estas cadenas, pedir acceso al calendario aborta el proceso.
         NSCalendarsFullAccessUsageDescription: >-
           Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios.

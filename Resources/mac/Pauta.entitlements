@@ -13,5 +13,12 @@
          sistema niega igual. -->
     <key>com.apple.security.personal-information.calendars</key>
     <true/>
+    <!-- El contenedor de iCloud propio (fase 0 del plan del contenedor). -->
+    <key>com.apple.developer.icloud-container-identifiers</key>
+    <array><string>iCloud.dev.jadrdev.pauta</string></array>
+    <key>com.apple.developer.icloud-services</key>
+    <array><string>CloudDocuments</string></array>
+    <key>com.apple.developer.ubiquity-container-identifiers</key>
+    <array><string>iCloud.dev.jadrdev.pauta</string></array>
 </dict>
 </plist>
