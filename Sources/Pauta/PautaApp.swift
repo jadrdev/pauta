@@ -258,10 +258,20 @@ struct Entry {
             }
             return
         }
-        // Fase 0 del contenedor de iCloud: deja una marca y cuenta las de los
-        // demás aparatos. Temporal, como `Contenedor.prueba`.
-        if CommandLine.arguments.contains("--contenedor") {
-            print(Contenedor.prueba(aparato: Host.current().localizedName ?? "Mac"))
+        // En qué punto está la mudanza al contenedor de iCloud de este Mac.
+        if CommandLine.arguments.contains("--mudanza") {
+            let desde = Mudanza.mudadoDesde()
+            print("almacén: \(Store.defaultRoot.path)")
+            print("mudado: " + (desde.map { "sí, desde \($0.formatted())" } ?? "todavía no"))
+            print("copia de antes: \(MudanzaDelMac.resguardo ?? "sin hacer")")
+            print("última vuelta: \(MudanzaDelMac.estado ?? "ninguna")")
+            if let vieja = Store.iCloudRoot, let contenedor = Contenedor.rutaEnElMac,
+               FileManager.default.fileExists(atPath: contenedor.path) {
+                let faltan = Mudanza.discrepancias(entre: vieja, y: contenedor)
+                print("la carpeta vieja frente al contenedor: "
+                      + (faltan.isEmpty ? "cuadra" : "\(faltan.count) sin cuadrar"))
+                for f in faltan.prefix(10) { print("  · \(f)") }
+            }
             return
         }
         if CommandLine.arguments.contains("--dump") {
@@ -331,6 +341,12 @@ struct Entry {
 @MainActor
 struct PautaApp: App {
     @State private var store = Launch.demo ? Store.demo() : Store()
+
+    init() {
+        // La mudanza al contenedor de iCloud, en segundo plano y desde aquí y no
+        // desde una ventana: tiene que hacerse aunque no se abra ninguna.
+        if !Launch.demo { MudanzaDelMac.arrancar() }
+    }
     @State private var nav = Navigation()
     /// Vigila la carpeta de datos para recoger lo que llegue de otro
     /// dispositivo mientras la app está abierta.

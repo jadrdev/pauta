@@ -159,7 +159,9 @@ public final class Store {
     public private(set) var pendingDownloads = 0
 
     /// Si los datos viven en iCloud Drive o solo en local.
-    public var isSynced: Bool { root == Store.iCloudRoot }
+    public var isSynced: Bool {
+        root == Store.iCloudRoot || (Contenedor.rutaEnElMac.map { root == $0 } ?? false)
+    }
 
     /// Carpeta de la app dentro de iCloud Drive, si iCloud Drive está activo.
     ///
@@ -234,43 +236,18 @@ public final class Store {
     /// iCloud si está; en el teléfono, la carpeta del grupo; y si no, la local.
     /// Nunca falla: sin iCloud y sin grupo la app sigue funcionando
     /// exactamente como antes.
-    public nonisolated static var defaultRoot: URL { iCloudRoot ?? grupoRoot ?? localRoot }
-
-    /// Copia los datos de una carpeta a otra si el destino aún no tiene ninguno.
-    /// El origen se deja intacto: sirve de respaldo del paso anterior.
     ///
-    /// Devuelve **cuántos archivos** copió, sumando tareas y proyectos.
-    @discardableResult
-    static func adoptData(from source: URL, to destination: URL) -> Int {
-        let fm = FileManager.default
-        guard source != destination else { return 0 }
-        let already = (try? fm.contentsOfDirectory(
-            at: destination.appendingPathComponent("items"),
-            includingPropertiesForKeys: nil))?.filter { $0.pathExtension == "json" } ?? []
-        guard already.isEmpty else { return 0 }
-
-        var copied = 0
-        try? fm.createDirectory(at: destination, withIntermediateDirectories: true)
-        for sub in ["items", "projects", "areas"] {
-            let from = source.appendingPathComponent(sub, isDirectory: true)
-            let to = destination.appendingPathComponent(sub, isDirectory: true)
-            guard let files = try? fm.contentsOfDirectory(at: from,
-                                                          includingPropertiesForKeys: nil)
-            else { continue }
-            try? fm.createDirectory(at: to, withIntermediateDirectories: true)
-            for file in files where file.pathExtension == "json" {
-                let target = to.appendingPathComponent(file.lastPathComponent)
-                if !fm.fileExists(atPath: target.path),
-                   (try? fm.copyItem(at: file, to: target)) != nil { copied += 1 }
-            }
+    /// En el Mac, el contenedor de iCloud cuando la mudanza de este Mac se ha
+    /// comprobado (docs/plan-contenedor-icloud.md); si no, la carpeta de
+    /// siempre en iCloud Drive.
+    public nonisolated static var defaultRoot: URL {
+        #if os(macOS)
+        if let raiz = Mudanza.raiz(mudado: Mudanza.mudadoDesde() != nil,
+                                   contenedor: Contenedor.rutaEnElMac, vieja: iCloudRoot) {
+            return raiz
         }
-        // Y el blob antiguo, si todavía no se había troceado.
-        let blob = source.appendingPathComponent("data.json")
-        let blobTarget = destination.appendingPathComponent("data.json")
-        if copied == 0, fm.fileExists(atPath: blob.path), !fm.fileExists(atPath: blobTarget.path) {
-            try? fm.copyItem(at: blob, to: blobTarget)
-        }
-        return copied
+        #endif
+        return iCloudRoot ?? grupoRoot ?? localRoot
     }
 
     /// `root` permite apuntar a otra carpeta en los tests.
@@ -283,8 +260,12 @@ public final class Store {
         self.areasDir = base.appendingPathComponent("areas", isDirectory: true)
         self.adjuntosDir = base.appendingPathComponent("adjuntos", isDirectory: true)
         if !inMemory {
-            // Al estrenar la carpeta de iCloud, adopta lo que hubiera en local.
-            if root == nil { Store.adoptData(from: Store.localRoot, to: base) }
+            // Aquí se adoptaba lo que hubiera en la carpeta local si la de
+            // iCloud se veía vacía: era para estrenar iCloud en agosto, y desde
+            // entonces era un peligro —una carpeta de iCloud que tarda en
+            // listarse se habría llenado con tareas de agosto—. Lo quitó la
+            // mudanza al contenedor, que cambia de carpeta y lo habría hecho
+            // más probable.
             migrateFromSingleFile()
             let fm = FileManager.default
             try? fm.createDirectory(at: itemsDir, withIntermediateDirectories: true)

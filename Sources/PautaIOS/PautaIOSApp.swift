@@ -33,12 +33,6 @@ struct PautaIOSApp: App {
         RefrescoEnSegundoPlano.registrar {
             await RefrescoEnSegundoPlano.cruzarYAvisar()
         }
-        // Fase 0 del contenedor de iCloud: con este argumento al lanzarla, deja
-        // una marca y escribe lo que ve para que el Mac lo lea. Temporal.
-        if ProcessInfo.processInfo.arguments.contains("-pruebaContenedor") {
-            let aparato = UIDevice.current.name
-            Task.detached(priority: .utility) { _ = Contenedor.prueba(aparato: aparato) }
-        }
     }
 
     var body: some Scene {

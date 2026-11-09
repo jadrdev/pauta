@@ -33,6 +33,139 @@ public enum Mudanza {
         }
     }
 
+    // MARK: - Fase 2: la mudanza
+
+    /// Cómo fue un intento de mudanza.
+    public struct Resultado: Equatable, Sendable {
+        /// Lo que el cruce movió, en cada sentido.
+        public var balance = Puente.Balance()
+        /// Copias diarias llevadas al contenedor.
+        public var copias = 0
+        /// Lo que no cuadra entre las dos carpetas, dicho por ruta. Vacío es
+        /// que se puede cambiar de carpeta.
+        public var discrepancias: [String] = []
+        public var cuadra: Bool { discrepancias.isEmpty }
+    }
+
+    /// Lleva los datos de la carpeta vieja al contenedor y comprueba que no se
+    /// ha quedado nada atrás.
+    ///
+    /// **La mudanza es un cruce**: `Puente.cruzar`, el de siempre, con su «gana
+    /// la versión más reciente» y sin borrar nunca. Eso es lo que la hace
+    /// repetible: si se corta a medias, el siguiente intento cruza lo que
+    /// faltaba y no duplica nada; si dos Mac se mudan a la vez, cruzan los
+    /// mismos archivos y llegan a lo mismo. Y como cruza en los dos sentidos,
+    /// lo que otro aparato ya hubiera llevado al contenedor tampoco se pierde.
+    ///
+    /// Las copias diarias van aparte y en un solo sentido: no son datos que se
+    /// editen, y el Puente no las mira.
+    public static func mudar(desde vieja: URL, a contenedor: URL,
+                             enLocal: (URL) -> Bool = Puente.enLocal) -> Resultado {
+        var resultado = Resultado()
+        resultado.balance = Puente.cruzar(vieja, contenedor, enLocal: enLocal)
+        resultado.copias = llevarCopias(desde: vieja, a: contenedor, enLocal: enLocal)
+        resultado.discrepancias = discrepancias(entre: vieja, y: contenedor, enLocal: enLocal)
+        return resultado
+    }
+
+    /// Qué hay en la carpeta vieja que el contenedor no tenga igual o más nuevo.
+    ///
+    /// Es la comprobación que decide si se cambia de carpeta, así que mira lo
+    /// que importa y nada más: cada tarea, proyecto y área de la vieja tiene
+    /// que estar en el contenedor con la misma fecha o una posterior, y cada
+    /// adjunto vigente, presente. Lo que no se pueda leer porque iCloud no lo
+    /// ha bajado **no cuadra**: no se sabe qué hay dentro.
+    public static func discrepancias(entre vieja: URL, y contenedor: URL,
+                                     enLocal: (URL) -> Bool = Puente.enLocal) -> [String] {
+        let fm = FileManager.default
+        let decoder = ISODate.decodificador()
+        struct Version: Decodable { let updatedAt: Date }
+        func fecha(_ url: URL) -> Date? {
+            guard let datos = try? Data(contentsOf: url) else { return nil }
+            return (try? decoder.decode(Version.self, from: datos))?.updatedAt
+        }
+
+        var faltan: [String] = []
+        var vigentes: [Adjunto] = []
+        for sub in ["items", "projects", "areas"] {
+            let dir = vieja.appendingPathComponent(sub, isDirectory: true)
+            let nombres = (try? fm.contentsOfDirectory(atPath: dir.path)) ?? []
+            for nombre in nombres.sorted() where nombre.hasSuffix(".json") && !nombre.hasPrefix(".") {
+                let ruta = "\(sub)/\(nombre)"
+                let suya = dir.appendingPathComponent(nombre)
+                let nueva = contenedor.appendingPathComponent(ruta)
+                guard enLocal(suya) else { faltan.append("\(ruta) (sin bajar)"); continue }
+                guard fm.fileExists(atPath: nueva.path) else { faltan.append(ruta); continue }
+                guard enLocal(nueva) else { faltan.append("\(ruta) (sin bajar en el contenedor)"); continue }
+                // Uno que no se entiende en la vieja no se puede comparar, y no
+                // es motivo para quedarse: el cruce tampoco lo habría llevado.
+                guard let antes = fecha(suya) else { continue }
+                guard let ahora = fecha(nueva), ahora >= antes else {
+                    faltan.append("\(ruta) (más viejo en el contenedor)"); continue
+                }
+                if sub == "items", let datos = try? Data(contentsOf: suya),
+                   let item = try? decoder.decode(Item.self, from: datos) {
+                    vigentes.append(contentsOf: item.adjuntosVigentes())
+                }
+            }
+        }
+        for adjunto in vigentes {
+            let ruta = "adjuntos/\(adjunto.id.uuidString)/\(adjunto.nombre)"
+            // Solo los que la vieja tiene de verdad: uno que faltaba ya allí no
+            // es culpa de la mudanza.
+            guard fm.fileExists(atPath: vieja.appendingPathComponent(ruta).path) else { continue }
+            if !fm.fileExists(atPath: contenedor.appendingPathComponent(ruta).path) {
+                faltan.append(ruta)
+            }
+        }
+        return faltan
+    }
+
+    /// Las copias diarias que el contenedor no tiene, sin pisar ninguna.
+    static func llevarCopias(desde vieja: URL, a contenedor: URL,
+                             enLocal: (URL) -> Bool) -> Int {
+        let fm = FileManager.default
+        let origen = vieja.appendingPathComponent("copias", isDirectory: true)
+        let destino = contenedor.appendingPathComponent("copias", isDirectory: true)
+        let nombres = (try? fm.contentsOfDirectory(atPath: origen.path)) ?? []
+        var llevadas = 0
+        for nombre in nombres where nombre.hasSuffix(".json.gz") && !nombre.hasPrefix(".") {
+            let de = origen.appendingPathComponent(nombre)
+            let a = destino.appendingPathComponent(nombre)
+            guard !fm.fileExists(atPath: a.path), enLocal(de) else { continue }
+            try? fm.createDirectory(at: destino, withIntermediateDirectories: true)
+            if (try? fm.copyItem(at: de, to: a)) != nil { llevadas += 1 }
+        }
+        return llevadas
+    }
+
+    // MARK: - Dónde vive el almacén
+
+    /// Desde cuándo este Mac usa el contenedor, o `nil` si todavía no se ha
+    /// mudado. Es **de cada Mac** —en sus preferencias, no en iCloud—: que el
+    /// otro se haya mudado no quiere decir que este haya comprobado nada.
+    public static func mudadoDesde(_ defaults: UserDefaults = .standard) -> Date? {
+        defaults.object(forKey: claveMudado) as? Date
+    }
+
+    public static func marcarMudado(_ cuando: Date = .now, _ defaults: UserDefaults = .standard) {
+        defaults.set(cuando, forKey: claveMudado)
+    }
+
+    /// La carpeta del almacén, según si este Mac se ha mudado.
+    ///
+    /// Al contenedor solo cuando la mudanza se comprobó **y** la carpeta
+    /// existe. Si no, la de siempre: equivocarse hacia la vieja deja los datos
+    /// como estaban; equivocarse hacia un contenedor vacío enseñaría una app
+    /// sin nada.
+    public static func raiz(mudado: Bool, contenedor: URL?, vieja: URL?) -> URL? {
+        if mudado, let contenedor,
+           FileManager.default.fileExists(atPath: contenedor.path) { return contenedor }
+        return vieja
+    }
+
+    static let claveMudado = "mudanza.contenedorDesde"
+
     /// Dónde va la copia de antes de la mudanza: la carpeta de usuario, que no
     /// se sincroniza.
     ///

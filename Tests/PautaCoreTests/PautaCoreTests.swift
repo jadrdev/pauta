@@ -746,47 +746,6 @@ struct PersistenceTests {
         #expect(reloaded.items.map(\.title) == titulos)
     }
 
-    /// Al estrenar la carpeta sincronizada, adopta lo que hubiera en la local.
-    @Test func adoptsDataFromPreviousFolder() throws {
-        let local = tempRoot(), nube = tempRoot()
-        do {
-            let store = Store(root: local)
-            store.addItem(title: "venía de local", in: .inbox)
-            store.addProject(name: "proyecto local")
-        }
-        // Dos archivos: la tarea y el proyecto.
-        #expect(Store.adoptData(from: local, to: nube) == 2)
-
-        let store = Store(root: nube)
-        #expect(store.items.map(\.title) == ["venía de local"])
-        #expect(store.projects.map(\.name) == ["proyecto local"])
-        // El origen se conserva como respaldo.
-        #expect(Store(root: local).items.count == 1)
-    }
-
-    /// No debe adoptar encima de datos que ya existen en el destino.
-    @Test func doesNotAdoptOverExistingData() throws {
-        let local = tempRoot(), nube = tempRoot()
-        do {
-            Store(root: local).addItem(title: "vieja", in: .inbox)
-            Store(root: nube).addItem(title: "la que ya estaba", in: .inbox)
-        }
-        #expect(Store.adoptData(from: local, to: nube) == 0)
-        #expect(Store(root: nube).items.map(\.title) == ["la que ya estaba"])
-    }
-
-    /// Adoptar el blob antiguo cuando el origen aún no estaba troceado.
-    @Test func adoptsLegacyBlobToo() throws {
-        let local = tempRoot(), nube = tempRoot()
-        let blob = #"{"items":[{"id":"\#(UUID().uuidString)","title":"del blob"}],"projects":[]}"#
-        try blob.write(to: local.appendingPathComponent("data.json"),
-                       atomically: true, encoding: .utf8)
-        Store.adoptData(from: local, to: nube)
-
-        let store = Store(root: nube)
-        #expect(store.items.map(\.title) == ["del blob"])
-    }
-
     /// Recargar recoge lo que otro escribió en la misma carpeta: es el caso de
     /// dos dispositivos sincronizando.
     @Test func reloadPicksUpExternalChanges() throws {
@@ -5833,5 +5792,128 @@ struct ProyectoNombradoTests {
         let r = try await Mudanza.resguardar(origen, en: destino, enLocal: { _ in true })
         #expect(r.carpeta.lastPathComponent == "copia 2")
         #expect(try String(contentsOf: destino.appendingPathComponent("ayer.txt"), encoding: .utf8) == "la de ayer")
+    }
+}
+
+/// La mudanza de la carpeta de iCloud Drive al contenedor: un cruce que se
+/// puede repetir, y una comprobación que decide si se cambia de carpeta.
+@MainActor
+@Suite struct MudanzaTests {
+    private func tempDir(_ nombre: String) -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaMudanza-\(nombre)-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    /// Una carpeta vieja con un poco de todo: tareas, un proyecto, un área, un
+    /// adjunto y una copia diaria.
+    private func carpetaVieja() throws -> (URL, Store) {
+        let vieja = tempDir("vieja")
+        let store = Store(root: vieja)
+        let tarea = store.addItem(title: "Llevar el coche a la revisión", in: .inbox)
+        store.addItem(title: "Renovar el pasaporte", in: .inbox)
+        store.addProject(name: "Casa")
+        store.addArea(name: "Personal")
+        let factura = tempDir("factura").appendingPathComponent("factura.pdf")
+        try "%PDF".write(to: factura, atomically: true, encoding: .utf8)
+        try store.adjuntar(factura, a: tarea)
+        let copias = vieja.appendingPathComponent("copias", isDirectory: true)
+        try FileManager.default.createDirectory(at: copias, withIntermediateDirectories: true)
+        try "gz".write(to: copias.appendingPathComponent("Pauta-2026-11-08.json.gz"),
+                       atomically: true, encoding: .utf8)
+        return (vieja, store)
+    }
+
+    @Test func theFirstMoveCarriesEverything() throws {
+        let (vieja, _) = try carpetaVieja()
+        let contenedor = tempDir("contenedor")
+        let r = Mudanza.mudar(desde: vieja, a: contenedor, enLocal: { _ in true })
+        #expect(r.cuadra)
+        #expect(r.copias == 1)
+        let nuevo = Store(root: contenedor)
+        #expect(Set(nuevo.items.map(\.title)) == ["Llevar el coche a la revisión", "Renovar el pasaporte"])
+        #expect(nuevo.projects.map(\.name) == ["Casa"])
+        #expect(nuevo.areas.map(\.name) == ["Personal"])
+        let adjunto = try #require(nuevo.items.flatMap { $0.adjuntosVigentes() }.first)
+        #expect(FileManager.default.fileExists(atPath: nuevo.url(de: adjunto).path))
+    }
+
+    /// Repetirla no mueve nada ni estropea nada: es lo que permite reintentar
+    /// una mudanza cortada, o que dos Mac se muden a la vez.
+    @Test func repeatingItChangesNothing() throws {
+        let (vieja, _) = try carpetaVieja()
+        let contenedor = tempDir("contenedor")
+        Mudanza.mudar(desde: vieja, a: contenedor, enLocal: { _ in true })
+        let otra = Mudanza.mudar(desde: vieja, a: contenedor, enLocal: { _ in true })
+        #expect(otra.balance.llevadas == 0 && otra.balance.traidas == 0 && otra.copias == 0)
+        #expect(otra.cuadra)
+    }
+
+    @Test func anInterruptedMoveIsCompletedNextTime() throws {
+        let (vieja, _) = try carpetaVieja()
+        let contenedor = tempDir("contenedor")
+        // Cortada a medias: solo llegó una tarea.
+        let items = vieja.appendingPathComponent("items")
+        let una = try #require(try FileManager.default.contentsOfDirectory(atPath: items.path).first)
+        try FileManager.default.createDirectory(at: contenedor.appendingPathComponent("items"),
+                                                withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: items.appendingPathComponent(una),
+                                         to: contenedor.appendingPathComponent("items/\(una)"))
+        #expect(!Mudanza.discrepancias(entre: vieja, y: contenedor, enLocal: { _ in true }).isEmpty)
+        #expect(Mudanza.mudar(desde: vieja, a: contenedor, enLocal: { _ in true }).cuadra)
+        #expect(Store(root: contenedor).items.count == 2)
+    }
+
+    /// Lo que otro aparato ya llevó al contenedor y es más nuevo no se pisa: la
+    /// mudanza es un cruce, y además lo trae a la carpeta vieja.
+    @Test func aNewerVersionInTheContainerWins() throws {
+        let (vieja, store) = try carpetaVieja()
+        let contenedor = tempDir("contenedor")
+        Mudanza.mudar(desde: vieja, a: contenedor, enLocal: { _ in true })
+        let enElContenedor = Store(root: contenedor)
+        let tarea = try #require(enElContenedor.items.first { $0.title == "Renovar el pasaporte" })
+        var hecha = tarea
+        hecha.title = "Renovar el pasaporte y el DNI"
+        enElContenedor.update(hecha)
+
+        let r = Mudanza.mudar(desde: vieja, a: contenedor, enLocal: { _ in true })
+        #expect(r.cuadra)
+        store.reload()
+        #expect(store.items.contains { $0.title == "Renovar el pasaporte y el DNI" })
+        #expect(Store(root: contenedor).items.contains { $0.title == "Renovar el pasaporte y el DNI" })
+    }
+
+    /// Un archivo que iCloud no ha bajado no se sabe qué tiene: no cuadra, y
+    /// la mudanza espera a la vuelta siguiente en vez de cambiar de carpeta.
+    @Test func somethingNotDownloadedDoesNotSquare() throws {
+        let (vieja, _) = try carpetaVieja()
+        let contenedor = tempDir("contenedor")
+        let items = vieja.appendingPathComponent("items")
+        let desalojada = try #require(try FileManager.default.contentsOfDirectory(atPath: items.path).first)
+        let r = Mudanza.mudar(desde: vieja, a: contenedor,
+                              enLocal: { $0.lastPathComponent != desalojada })
+        #expect(!r.cuadra)
+        #expect(r.discrepancias.contains("items/\(desalojada) (sin bajar)"))
+    }
+
+    /// Después de mudarse, lo que toque un aparato todavía en la versión
+    /// anterior —en la carpeta vieja— llega al contenedor con el cruce de la
+    /// transición.
+    @Test func theTransitionCarriesLateEdits() throws {
+        let (vieja, store) = try carpetaVieja()
+        let contenedor = tempDir("contenedor")
+        Mudanza.mudar(desde: vieja, a: contenedor, enLocal: { _ in true })
+        store.addItem(title: "Apuntada en el iPhone viejo", in: .inbox)
+        Puente.cruzar(contenedor, vieja, enLocal: { _ in true })
+        #expect(Store(root: contenedor).items.contains { $0.title == "Apuntada en el iPhone viejo" })
+    }
+
+    @Test func theStoreMovesOnlyWhenTheMoveWasChecked() throws {
+        let vieja = tempDir("vieja"), contenedor = tempDir("contenedor")
+        let noExiste = contenedor.appendingPathComponent("no-existe")
+        #expect(Mudanza.raiz(mudado: false, contenedor: contenedor, vieja: vieja) == vieja)
+        #expect(Mudanza.raiz(mudado: true, contenedor: noExiste, vieja: vieja) == vieja)
+        #expect(Mudanza.raiz(mudado: true, contenedor: contenedor, vieja: vieja) == contenedor)
     }
 }
