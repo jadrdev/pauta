@@ -1289,12 +1289,12 @@ versión. Nada más: ni ventana modal, ni insistencia, ni número rojo.
 **Por qué no se instala sola.** Lo normal aquí sería Sparkle. Instalar sola una
 app descargada obliga a verificar la firma de lo que se baja antes de sustituir
 lo que ya está —si no, el mecanismo de actualización es la forma más cómoda que
-existe de meterte otra cosa—, y esta app se firma con un certificado de
-desarrollo local y **sin notarizar**: no hay Developer ID con el que la
-comprobación signifique algo. El muro es la cuenta de Apple, no el código. Así
-que se avisa y el resto es arrastrar el `.app` al `.dmg`, como hasta ahora. El
-día que haya cuenta de pago, esto se puede convertir en una actualización de
-verdad sin tocar nada de lo demás.
+existe de meterte otra cosa—, y hasta la 0.4.15 la app iba firmada con un
+certificado de desarrollo y **sin notarizar**: no había Developer ID con el que
+la comprobación significara algo. Ese muro ya no está —ahora va firmada con
+Developer ID y notarizada—, así que convertir el aviso en una actualización de
+verdad es trabajo pendiente y no un imposible. Mientras tanto, se avisa y
+`brew upgrade` hace el resto.
 
 **Qué se manda.** Una petición `GET` a
 `api.github.com/repos/jadrdev/pauta/releases/latest`, sin cuenta, sin clave y
@@ -1391,26 +1391,20 @@ Con **Homebrew**, que además deja las actualizaciones a una orden:
 brew tap jadrdev/pauta
 brew trust jadrdev/pauta
 brew install --cask pauta
-xattr -dr com.apple.quarantine /Applications/Pauta.app
 ```
 
 El `brew trust` lo pide Homebrew 7 para cualquier tap que no sea el oficial, y
-tiene sentido: un cask es código que se ejecuta en tu Mac. La última línea es el
-mismo muro de siempre —está explicado justo debajo— y hay que repetirla en cada
-actualización, porque cada versión se baja otra vez. Hubo una bandera
-`--no-quarantine` que se lo saltaba; **Homebrew 7 la quitó**.
+tiene sentido: un cask es código que se ejecuta en tu Mac.
 
 Y a partir de ahí, cuando la app [avise de que hay versión
 nueva](#versiones-nuevas):
 
 ```bash
 brew upgrade --cask pauta
-xattr -dr com.apple.quarantine /Applications/Pauta.app
 ```
 
-**Eso cierra la mitad que a la app le falta.** Pauta avisa pero no instala,
-porque instalar sola algo descargado obliga a verificar la firma de lo que se
-baja y con esta cuenta no hay con qué. Homebrew sí verifica —el cask lleva el
+**Eso cierra la mitad que a la app le falta.** Pauta avisa pero no instala
+sola. Homebrew sí verifica —el cask lleva el
 `sha256` del disco y lo comprueba antes de tocar nada—, así que `brew upgrade`
 es el instalador que la app no puede tener. La receta vive en
 [jadrdev/homebrew-pauta](https://github.com/jadrdev/homebrew-pauta).
@@ -1418,24 +1412,12 @@ es el instalador que la app no puede tener. La receta vive en
 **O a mano:** el disco `.dmg` va en la [página de versiones](https://github.com/jadrdev/pauta/releases).
 Se abre, se arrastra Pauta a `Aplicaciones` y ya está.
 
-La primera vez macOS **no la va a dejar abrirse**, y conviene saber por qué en
-vez de pelearse con el mensaje: Gatekeeper solo confía en lo que se descarga si
-está firmado con un certificado *Developer ID* y notarizado por Apple, y el disco
-va firmado con un certificado de desarrollo. Sin esas dos cosas dice que la app
-«está dañada», que no es verdad y no explica nada. Se le quita la cuarentena a
-mano:
-
-```bash
-xattr -dr com.apple.quarantine /Applications/Pauta.app
-```
-
-No lo hagas con una app que no sepas de dónde viene. Aquí el código está entero
-a la vista y puedes compilarlo tú, que es la otra salida y la mejor.
-
-Este párrafo no se quita con trabajo: el certificado *Developer ID* que hace
-falta para notarizar lo da el **programa de pago** de Apple, y esta cuenta es un
-equipo personal. Mientras siga así, la cuarentena se quita a mano o se compila
-el código.
+Se abre a la primera porque va **firmada con un certificado *Developer ID* y
+notarizada por Apple**, el disco y la app de dentro, con el ticket grapado: es
+lo que Gatekeeper pide a lo que se descarga de internet, y lo comprueba sin red.
+Hasta la 0.4.15 no lo estaba —la cuenta era un equipo personal, sin ese
+certificado—, y había que quitarle la cuarentena a mano con `xattr` después de
+cada instalación. Si te encuentras esa instrucción en algún sitio, es de antes.
 
 Y si prefieres compilarla: **[compilar, firmar y empaquetar →](docs/compilar.md)**.
 ## Compilar y ejecutar
@@ -1736,16 +1718,12 @@ docs/tecnica.md           persistencia, orden, sincronización y decodificación
   ventana de semanas de calendario: primero conviene ver si en `Hoy` estorban o
   ayudan
 - **La sincronización automática en el teléfono.** Entrar en iCloud como lo hace
-  el Mac exige el contenedor de ubicuidad, y eso **lo cierra la cuenta**:
-  comprobado pidiéndoselo a Apple, «*Personal development teams do not support
-  the iCloud capability*». Lo que sí hay es el
+  el Mac exige el contenedor de ubicuidad, y eso lo cerraba la cuenta: «*Personal
+  development teams do not support the iCloud capability*». Con la cuenta de
+  pago ya no está cerrado, y es lo siguiente: el mismo contenedor para el Mac,
+  el teléfono y el iPad, sin elegir carpetas. Hasta entonces está el
   [puente](docs/ios.md#el-puente-con-el-mac): eliges la carpeta del Mac una vez
-  y el teléfono cruza con ella al volver a la app. Falta que sea automático de
-  verdad, sin elegir nada y sin volver a la app
-- **Notarizar el disco**, que es lo que quitaría el paso de la cuarentena al
-  instalar. Hace falta un certificado *Developer ID*, y ese lo da el **programa
-  de pago** de Apple: con esta cuenta personal no hay ninguno en el llavero ni
-  forma de crearlo
+  y el teléfono cruza con ella al volver a la app
 
 ## Licencia
 

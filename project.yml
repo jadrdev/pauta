@@ -242,6 +242,11 @@ targets:
         SWIFT_VERSION: "5.0"
         # Sin sandbox: la app lee tus datos en iCloud Drive por ruta.
         ENABLE_APP_SANDBOX: NO
+        # El «hardened runtime», que Apple exige para notarizar: sin él, un Mac
+        # que no es este dice que la app está dañada. Restringe lo que el
+        # proceso puede hacer, y lo que sí necesita se pide en los
+        # entitlements —el calendario, por ejemplo—.
+        ENABLE_HARDENED_RUNTIME: YES
 
   PautaWidgetMac:
     type: app-extension
@@ -275,6 +280,8 @@ targets:
         # declaraba en sandbox con un grupo que nada autorizaba: `libsecinit` lo
         # mataba antes de dibujar un píxel. Tres caídas y un widget en blanco.
         ENABLE_APP_SANDBOX: YES
+        # Como la app: se notariza el paquete entero, con lo que lleva dentro.
+        ENABLE_HARDENED_RUNTIME: YES
         DEVELOPMENT_TEAM: 26W4G92PSS
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: "5.0"

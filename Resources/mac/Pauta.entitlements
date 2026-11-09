@@ -8,5 +8,10 @@
          carpeta. -->
     <key>com.apple.security.application-groups</key>
     <array><string>26W4G92PSS.dev.jadrdev.pauta</string></array>
+    <!-- Con el hardened runtime, leer el calendario hay que pedirlo aquí además
+         de al usuario: sin esto la app pregunta, el usuario dice que sí y el
+         sistema niega igual. -->
+    <key>com.apple.security.personal-information.calendars</key>
+    <true/>
 </dict>
 </plist>

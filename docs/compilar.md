@@ -226,10 +226,79 @@ error sobre rutas que nadie escribió.
 ./tools/make-dmg.sh
 ```
 
-Monta el `.dmg` con la app y un enlace a `Aplicaciones`. Avisa de si la firma
-sirve para repartir o solo para probar, y escupe el sha256 para poder publicarlo
-junto al archivo. Los detalles de por qué hace falta quitarle la cuarentena están
-en [Instalar](../README.md#instalar).
+Monta el `.dmg` con la app y un enlace a `Aplicaciones`, **firmado con Developer
+ID y notarizado**, y escupe el sha256 para poder publicarlo junto al archivo.
+
+Para el día a día se sigue compilando con `build.sh` y el certificado *Apple
+Development*. Lo que se reparte va por otro camino, el del organizador de Xcode:
+**archivar y exportar para Developer ID**. Al exportar, Xcode pide a Apple los
+perfiles de esa distribución —«Mac Team Direct Provisioning Profile», uno para
+la app y otro para el widget, que sin perfil no arranca en sandbox— y vuelve a
+firmar el paquete entero con el sello de hora. Las opciones de exportación están
+en `tools/ExportOptions-devid.plist`.
+
+Luego se notariza **dos veces**: la app, en un zip, y se le grapa el ticket; y
+el disco, al que también se le grapa. La app lleva el suyo porque Homebrew la
+saca del disco y la deja en Aplicaciones: sin ticket grapado, la primera vez que
+se abre Gatekeeper le pregunta a Apple por red, y sin red no la deja abrir. Cada
+envío tarda un minuto o dos, y si Apple no lo acepta el guion enseña su informe,
+que dice qué binario falla y por qué.
+
+Termina preguntándole a Gatekeeper lo mismo que le preguntaría el Mac de otro, y
+si no dice «Notarized Developer ID», se para. Para comprobarlo a mano con un
+disco descargado de verdad:
+
+```bash
+spctl -a -vv -t open --context context:primary-signature Pauta-X.Y.Z.dmg
+xcrun stapler validate Pauta-X.Y.Z.dmg
+```
+
+### Lo que hace falta, una vez por Mac
+
+**El certificado *Developer ID Application*.** Solo lo puede crear el titular de
+la cuenta, y Xcode puede no saber que lo eres: con la cuenta personal recién
+renovada, en Ajustes ▸ Cuentas seguía diciendo «Admin» —también tras salir y
+volver a entrar— y al crearlo contestaba «*This operation can only be performed
+by the Account Holder*». La web sí lo sabe: en
+[developer.apple.com ▸ Certificates ▸ +](https://developer.apple.com/account/resources/certificates/add)
+la opción *Developer ID Application* sale activa. Hace falta una solicitud de
+firma, y **cada solicitud vale para un solo certificado**: si se usa para uno
+equivocado —*Developer ID Installer* está justo encima en la lista—, hay que
+hacer otra.
+
+Ojo al bajarlo: un `.cer` es solo la mitad pública. Sin la clave privada con la
+que se hizo la solicitud, el llavero lo guarda y no firma con él.
+
+**La contraseña de notarización**, guardada en el llavero con un nombre que el
+guion conoce:
+
+```bash
+xcrun notarytool store-credentials pauta-notario \
+    --apple-id <tu Apple ID> --team-id 26W4G92PSS
+```
+
+Pide una **contraseña específica de app**, de account.apple.com ▸ Inicio de
+sesión y seguridad, no la del Apple ID. Pegada en un campo que no se ve puede
+colarse algo y Apple contesta `401 Invalid credentials` sin decir qué; escrita a
+mano, entra. Si el guion no la encuentra, se para **antes** de compilar.
+
+Sin el certificado, el guion cae a la firma de desarrollo de antes y avisa de
+que en otro Mac habrá que quitar la cuarentena. Sin la contraseña no cae a nada:
+un disco con Developer ID sin notarizar se bloquea igual, y publicarlo sería
+creer que ya no hace falta.
+
+### El hardened runtime
+
+Notarizar exige el **hardened runtime** (`ENABLE_HARDENED_RUNTIME` en
+`project.yml`, en la app y en el widget), que restringe lo que puede hacer el
+proceso. Lo que sí necesita se pide en los entitlements, y en Pauta es una cosa:
+**el calendario**, `com.apple.security.personal-information.calendars`. Sin él
+la app pregunta, el usuario dice que sí y el sistema niega igual.
+
+Cambiar de certificado cambia la firma, y TCC identifica las apps por ella: la
+primera vez que se abre la versión firmada con Developer ID, el sistema vuelve
+a pedir los permisos —calendario y arranque al iniciar sesión—, igual que pasó
+al cambiar de equipo.
 
 ## Publicar una versión
 
@@ -238,7 +307,7 @@ del proyecto, que la heredan todos los objetivos. Se escribe una vez: el Mac, el
 iPhone, el reloj y los dos widgets tienen que decir lo mismo, y tener la versión
 repetida por objetivo es garantizar que un día discrepen.
 
-El orden es: subir `MARKETING_VERSION`, `./build.sh`, `./tools/make-dmg.sh`,
+El orden es: subir `MARKETING_VERSION`, `./tools/make-dmg.sh`,
 `gh release create` con la etiqueta `vX.Y.Z` y el `.dmg` adjunto, y por último
 **actualizar el cask** en
 [jadrdev/homebrew-pauta](https://github.com/jadrdev/homebrew-pauta): la versión y
