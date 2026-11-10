@@ -194,6 +194,26 @@ Mac en segundos.
 
 Pendientes: el iPad y el otro Mac, cuando tengan la versión nueva.
 
+### Después: quien no usa iCloud, y los Mac nuevos
+
+Revisándolo salieron dos fallos en el Mac, arreglados antes de que la app la
+use más gente:
+
+- **Empezar sin iCloud y activarlo después dejaba de enseñar las tareas.** El
+  almacén saltaba a la carpeta de iCloud Drive, vacía, y lo local se quedaba en
+  el disco sin enseñarse. Lo cubría la adopción de la carpeta local, quitada en
+  la fase 2.
+- **Un Mac nuevo con iCloud pasaba por la mudanza sin motivo.** Creaba la
+  carpeta vieja vacía, dejaba una copia vacía en la carpeta de usuario y se
+  mudaba de ella.
+
+Ahora la mudanza parte de `Store.carpetaDeAntes`: la de iCloud Drive solo si ya
+existe, y si no, la local. La copia de antes solo se hace si hay algo que
+proteger. Mientras la app sigue abierta tras mudarse, la carpeta de esa sesión
+se cruza con el contenedor; para un Mac nuevo eso trae al momento lo que ya
+haya en iCloud. Sin iCloud, el Mac guarda en local y mira cada minuto si se ha
+activado.
+
 ## Fase 4 — Limpieza (una versión más tarde, cuando tú lo digas)
 
 Cuando todos los aparatos lleven la versión nueva:

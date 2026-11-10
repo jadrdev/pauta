@@ -5958,3 +5958,23 @@ struct ProyectoNombradoTests {
         #expect(Agenda.authorization == .denied)
     }
 }
+
+/// Un Mac nuevo, o uno que empezó sin iCloud, no tiene nada en la carpeta de
+/// la que se muda: ahí no se deja copia de antes, que sería una carpeta vacía
+/// en la carpeta de usuario.
+@MainActor
+@Suite struct CarpetaConDatosTests {
+    @Test func onlyAFolderWithTasksProjectsOrAreasHasData() throws {
+        let raiz = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaConDatos-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: raiz.appendingPathComponent("items"),
+                                                withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: raiz.appendingPathComponent("copias"),
+                                                withIntermediateDirectories: true)
+        try "gz".write(to: raiz.appendingPathComponent("copias/Pauta-2026-11-10.json.gz"),
+                       atomically: true, encoding: .utf8)
+        #expect(!Mudanza.tieneDatos(raiz))
+        Store(root: raiz).addProject(name: "Casa")
+        #expect(Mudanza.tieneDatos(raiz))
+    }
+}

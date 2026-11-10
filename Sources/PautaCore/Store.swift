@@ -242,12 +242,29 @@ public final class Store {
     /// siempre en iCloud Drive.
     public nonisolated static var defaultRoot: URL {
         #if os(macOS)
-        if let raiz = Mudanza.raiz(mudado: Mudanza.mudadoDesde() != nil,
-                                   contenedor: Contenedor.rutaEnElMac, vieja: iCloudRoot) {
-            return raiz
-        }
-        #endif
+        return Mudanza.raiz(mudado: Mudanza.mudadoDesde() != nil,
+                            contenedor: Contenedor.rutaEnElMac, vieja: carpetaDeAntes) ?? carpetaDeAntes
+        #else
         return iCloudRoot ?? grupoRoot ?? localRoot
+        #endif
+    }
+
+    /// La carpeta que usa un Mac **antes** de mudarse al contenedor: la de
+    /// iCloud Drive si ya existe —quien venía de una versión anterior—, y si
+    /// no, la local.
+    ///
+    /// Solo si ya existe, y eso importa: antes se elegía la de iCloud Drive
+    /// con solo tener iCloud Drive, y un Mac nuevo la creaba vacía para
+    /// mudarse de ella un momento después, con copia de seguridad vacía
+    /// incluida. Y quien empezaba sin iCloud guardaba en la local; si luego lo
+    /// activaba, el almacén saltaba a la de iCloud Drive, vacía, y sus tareas
+    /// se quedaban en el disco sin enseñarse. Ahora la mudanza parte siempre de
+    /// la que se estaba usando.
+    public nonisolated static var carpetaDeAntes: URL {
+        #if os(macOS)
+        if let vieja = iCloudRoot, FileManager.default.fileExists(atPath: vieja.path) { return vieja }
+        #endif
+        return localRoot
     }
 
     /// `root` permite apuntar a otra carpeta en los tests.

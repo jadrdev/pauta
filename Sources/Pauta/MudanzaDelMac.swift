@@ -37,7 +37,28 @@ enum MudanzaDelMac {
                                   forKey: claveEstado)
     }
 
+    /// La carpeta que usa el almacén en esta sesión, fijada al arrancar: si el
+    /// Mac se muda con la app abierta, el almacén sigue en ella hasta el
+    /// siguiente arranque, y lo que se escriba ahí tiene que llegar al
+    /// contenedor igual.
+    private static var raizDeLaSesion: URL?
+
+    /// Las carpetas que se cruzan con el contenedor una vez mudado: la de esta
+    /// sesión si no es el contenedor, y la de iCloud Drive mientras exista,
+    /// que es la de los aparatos todavía en una versión anterior.
+    private static func carpetasQueCruzar(_ contenedor: URL) -> [URL] {
+        var carpetas: [URL] = []
+        for carpeta in [raizDeLaSesion, Store.iCloudRoot].compactMap({ $0 })
+        where carpeta.standardizedFileURL != contenedor.standardizedFileURL
+            && FileManager.default.fileExists(atPath: carpeta.path)
+            && !carpetas.contains(carpeta) {
+            carpetas.append(carpeta)
+        }
+        return carpetas
+    }
+
     static func arrancar() {
+        raizDeLaSesion = Store.defaultRoot
         // Al salir, un último cruce: lo escrito en el último minuto en una
         // carpeta tiene que estar en la otra antes del siguiente arranque.
         NotificationCenter.default.addObserver(
@@ -65,9 +86,10 @@ enum MudanzaDelMac {
     private static let cerrojo = NSLock()
 
     @MainActor private static func vigilar() {
-        guard vigilantes.isEmpty, let vieja = Store.iCloudRoot,
-              let contenedor = Contenedor.rutaEnElMac else { return }
-        vigilantes = [vieja, contenedor].compactMap { carpeta in
+        guard vigilantes.isEmpty, let contenedor = Contenedor.rutaEnElMac else { return }
+        let otras = carpetasQueCruzar(contenedor)
+        guard !otras.isEmpty else { return }
+        vigilantes = ([contenedor] + otras).compactMap { carpeta in
             FolderWatcher(url: carpeta) { cruzarPronto() }
         }
     }
@@ -85,19 +107,19 @@ enum MudanzaDelMac {
     }
 
     private static func cruzarLaTransicion() {
-        guard Mudanza.mudadoDesde() != nil, let vieja = Store.iCloudRoot,
-              let contenedor = Contenedor.rutaEnElMac,
-              FileManager.default.fileExists(atPath: contenedor.path),
-              FileManager.default.fileExists(atPath: vieja.path) else { return }
-        cerrojo.withLock { _ = Puente.cruzar(contenedor, vieja) }
+        guard Mudanza.mudadoDesde() != nil, let contenedor = Contenedor.rutaEnElMac,
+              FileManager.default.fileExists(atPath: contenedor.path) else { return }
+        cerrojo.withLock {
+            for carpeta in carpetasQueCruzar(contenedor) { _ = Puente.cruzar(contenedor, carpeta) }
+        }
     }
 
     /// Una vuelta: la mudanza si aún no está hecha, o un cruce si ya lo está.
     /// Devuelve si este Mac está mudado.
     private static func vuelta() async -> Bool {
-        // Sin iCloud Drive no hay de dónde mudarse ni adónde.
-        guard let vieja = Store.iCloudRoot,
-              FileManager.default.fileExists(atPath: vieja.path) else { return false }
+        // De la carpeta que se estaba usando: la de iCloud Drive para quien
+        // venía de antes, la local para quien empezó sin iCloud o es nuevo.
+        let vieja = Store.carpetaDeAntes
         // Bloquea la primera vez, y por eso va aquí y no al arrancar el
         // almacén. `nil` es iCloud apagado o una firma sin el contenedor.
         guard let contenedor = Contenedor.documentos() else {
@@ -111,9 +133,11 @@ enum MudanzaDelMac {
         }
 
         // 1. La copia de antes, una sola vez por Mac: la carpeta vieja no se
-        //    borra nunca, así que la de la primera vez sigue protegiendo.
+        //    borra nunca, así que la de la primera vez sigue protegiendo. Y
+        //    solo si hay algo que proteger: un Mac nuevo no deja una copia
+        //    vacía en tu carpeta de usuario.
         let hecha = resguardo.map { FileManager.default.fileExists(atPath: $0) } ?? false
-        if !hecha {
+        if !hecha && Mudanza.tieneDatos(vieja) {
             do {
                 let r = try await Mudanza.resguardar(vieja, en: Mudanza.carpetaDelResguardo())
                 UserDefaults.standard.set(r.carpeta.path, forKey: claveResguardo)
@@ -123,7 +147,14 @@ enum MudanzaDelMac {
             }
         }
 
-        // 2. Cruzar y comprobar.
+        // 2. Cruzar y comprobar. Si esta sesión trabaja en otra carpeta con
+        //    datos —empezó sin iCloud, y al activarlo ya había una carpeta de
+        //    iCloud Drive de otro aparato—, también entra: si no, lo apuntado
+        //    aquí se quedaría fuera de la mudanza.
+        if let sesion = raizDeLaSesion, sesion != vieja,
+           sesion.standardizedFileURL != contenedor.standardizedFileURL, Mudanza.tieneDatos(sesion) {
+            cerrojo.withLock { _ = Puente.cruzar(sesion, contenedor) }
+        }
         let resultado = Mudanza.mudar(desde: vieja, a: contenedor)
         guard resultado.cuadra else {
             let muestra = resultado.discrepancias.prefix(3).joined(separator: ", ")
@@ -133,7 +164,8 @@ enum MudanzaDelMac {
 
         // 3. Apuntado: el almacén lo usará desde el siguiente arranque.
         Mudanza.marcarMudado()
-        dejarAviso(en: vieja)
+        // La nota, solo en la de iCloud Drive: la local no la abre nadie.
+        if vieja == Store.iCloudRoot { dejarAviso(en: vieja) }
         apuntar("mudado: \(resultado.balance.llevadas) archivos llevados, "
                 + "\(resultado.copias) copias; se usa al volver a abrir Pauta")
         return true

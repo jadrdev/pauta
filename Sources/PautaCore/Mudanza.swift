@@ -166,6 +166,16 @@ public enum Mudanza {
 
     static let claveMudado = "mudanza.contenedorDesde"
 
+    /// Si una carpeta tiene alguna tarea, proyecto o área. Una que no tiene
+    /// nada no necesita copia de antes: no hay nada que proteger.
+    public static func tieneDatos(_ carpeta: URL) -> Bool {
+        ["items", "projects", "areas"].contains { sub in
+            let nombres = (try? FileManager.default.contentsOfDirectory(
+                atPath: carpeta.appendingPathComponent(sub).path)) ?? []
+            return nombres.contains { $0.hasSuffix(".json") }
+        }
+    }
+
     /// Dónde va la copia de antes de la mudanza: la carpeta de usuario, que no
     /// se sincroniza.
     ///
