@@ -123,9 +123,27 @@ public final class Agenda {
         if let valor = testigo.valor { NotificationCenter.default.removeObserver(valor) }
     }
 
+    /// El permiso del calendario, tal como está **de verdad**.
+    ///
+    /// No basta con preguntarle al sistema. Justo después de contestar al
+    /// diálogo, `EKEventStore.authorizationStatus` sigue diciendo «sin
+    /// preguntar» en ese proceso hasta que la app se reabre. Así un probador con
+    /// la app recién instalada concedía el calendario, la tarjeta de bienvenida
+    /// seguía ofreciéndolo, y al volver a pulsar ya no salía diálogo —ya estaba
+    /// contestado—: atascado en la bienvenida. Reproducido en el simulador; al
+    /// reabrir, el permiso aparecía concedido.
+    ///
+    /// Así que la respuesta del diálogo se recuerda en el proceso y manda
+    /// mientras el sistema diga «sin preguntar». Si el sistema dice otra cosa
+    /// —denegado en los ajustes, por ejemplo—, manda el sistema.
     public static var authorization: EKAuthorizationStatus {
-        EKEventStore.authorizationStatus(for: .event)
+        let sistema = EKEventStore.authorizationStatus(for: .event)
+        guard sistema == .notDetermined, let respuesta = respuestaDelDialogo else { return sistema }
+        return respuesta ? .fullAccess : .denied
     }
+
+    /// Lo que se contestó al diálogo en este proceso, si se contestó.
+    nonisolated(unsafe) static var respuestaDelDialogo: Bool?
 
     public static var isAuthorized: Bool {
         authorization == .fullAccess
@@ -136,6 +154,7 @@ public final class Agenda {
         defer { permiso = Agenda.authorization }
         do {
             let granted = try await ek.requestFullAccessToEvents()
+            Agenda.respuestaDelDialogo = granted
             if !granted { log.notice("acceso al calendario no concedido") }
             return granted
         } catch {
@@ -147,7 +166,12 @@ public final class Agenda {
     /// Lee los eventos de un día. Sin permiso deja la lista vacía y no insiste.
     public func load(_ day: Date = .now, force: Bool = false) async {
         let inicio = Calendar.current.startOfDay(for: day)
+        let antes = permiso
         if permiso != Agenda.authorization { permiso = Agenda.authorization }
+        // Un almacén de EventKit creado antes de tener permiso no ve eventos
+        // aunque ya lo tenga: Apple pide reiniciarlo. Sin esto, recién
+        // concedido, Hoy seguía sin eventos hasta reabrir la app.
+        if antes != .fullAccess && permiso == .fullAccess { ek.reset() }
         guard force || diaCargado != inicio else { return }
         diaCargado = inicio
 

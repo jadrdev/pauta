@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import EventKit
 @testable import PautaCore
 
 /// El troceo de texto pegado en títulos de tarea.
@@ -5935,5 +5936,25 @@ struct ProyectoNombradoTests {
         // Un año después, la poda se lleva las copias diarias viejas, no esta.
         Copias.podar(en: raiz, ahora: hoy.addingTimeInterval(365 * 86_400))
         #expect(FileManager.default.fileExists(atPath: url.path))
+    }
+}
+
+/// Justo después de contestar al diálogo del calendario, el sistema sigue
+/// diciendo «sin preguntar» en ese proceso. La respuesta del diálogo manda
+/// mientras tanto, para que la bienvenida no se quede atascada.
+@MainActor
+@Suite(.serialized) struct PermisoDelCalendarioTests {
+    @Test func theDialogAnswerWinsWhileTheSystemStillSaysNotDetermined() {
+        // Solo se puede comprobar donde el sistema aún no tiene respuesta; en
+        // una máquina que ya la tiene, manda la del sistema y no hay nada que ver.
+        guard EKEventStore.authorizationStatus(for: .event) == .notDetermined else { return }
+        defer { Agenda.respuestaDelDialogo = nil }
+        Agenda.respuestaDelDialogo = nil
+        #expect(Agenda.authorization == .notDetermined)
+        Agenda.respuestaDelDialogo = true
+        #expect(Agenda.authorization == .fullAccess)
+        #expect(PuestaAPunto.pendientes([.calendario: .sinPreguntar]) == [.calendario])
+        Agenda.respuestaDelDialogo = false
+        #expect(Agenda.authorization == .denied)
     }
 }

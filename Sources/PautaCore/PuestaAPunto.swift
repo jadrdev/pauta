@@ -58,7 +58,7 @@ public enum PuestaAPunto {
     @MainActor
     public static func estados() async -> [Permiso: EstadoDePermiso] {
         [.avisos: deAvisos(await Avisos.authorization()),
-         .calendario: deEventKit(EKEventStore.authorizationStatus(for: .event))]
+         .calendario: deEventKit(Agenda.authorization)]
     }
 
     @MainActor
