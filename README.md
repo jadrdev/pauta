@@ -807,6 +807,20 @@ Es **gzip de verdad** y no un formato propio: `gunzip -c` la abre sin Pauta, y
 lo que sale es JSON legible. Una copia que solo sabe abrir la app que se rompió
 no es una copia.
 
+### Llevársela fuera
+
+**Exportar una copia…** la guarda donde elijas: Archivos, Google Drive, Dropbox,
+un disco. **Importar una copia…** la recupera, en ese aparato o en otro, con la
+misma confirmación que volver a una de las diarias. Están en el mismo sitio que
+las diarias, en el Mac y en el teléfono.
+
+Es lo que tiene quien no usa iCloud para no perderlo todo con el aparato, y vale
+igual para pasar las tareas a otro. El formato es el de siempre —gzip con JSON
+dentro—, e importar acepta también el JSON ya descomprimido. Lleva tareas,
+proyectos y áreas; los adjuntos no, como en las diarias. Sin iCloud, la app
+funciona igual, solo que en un aparato: en el Mac guarda en
+`~/Library/Application Support/Pauta`, y en el teléfono, en su carpeta.
+
 ### Por qué aparte y no en vez de los archivos
 
 La idea de guardar los datos directamente en un solo archivo comprimido se

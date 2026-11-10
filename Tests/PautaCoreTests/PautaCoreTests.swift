@@ -5978,3 +5978,38 @@ struct ProyectoNombradoTests {
         #expect(Mudanza.tieneDatos(raiz))
     }
 }
+
+/// Exportar una copia e importarla en otro sitio deja lo mismo.
+@MainActor
+@Suite struct ExportarTests {
+    private func tempRoot() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("PautaExportar-\(UUID().uuidString)", isDirectory: true)
+    }
+
+    @Test func whatIsExportedComesBackOnAnotherDevice() throws {
+        let aqui = Store(root: tempRoot())
+        let casa = aqui.addProject(name: "Casa")
+        var tarea = aqui.addItem(title: "Llevar el coche a la revisión", in: .inbox)
+        tarea.projectID = casa.id
+        aqui.update(tarea)
+        let (datos, nombre) = try aqui.exportar()
+        #expect(nombre.hasPrefix("Pauta-") && nombre.hasSuffix(".json.gz"))
+
+        // En otro aparato, vacío.
+        let alla = Store(root: tempRoot())
+        let copia = try #require(Copias.leer(datos: datos))
+        alla.restaurar(copia)
+        #expect(alla.items.map(\.title) == ["Llevar el coche a la revisión"])
+        #expect(alla.items.first?.projectID == casa.id)
+        #expect(alla.projects.map(\.name) == ["Casa"])
+    }
+
+    @Test func aDecompressedCopyStillImportsAndJunkDoesNot() throws {
+        let aqui = Store(root: tempRoot())
+        aqui.addItem(title: "Renovar el pasaporte", in: .inbox)
+        let json = try ISODate.codificador().encode(aqui.instantanea())
+        #expect(Copias.leer(datos: json)?.items.map(\.title) == ["Renovar el pasaporte"])
+        #expect(Copias.leer(datos: Data("esto no es una copia".utf8)) == nil)
+    }
+}

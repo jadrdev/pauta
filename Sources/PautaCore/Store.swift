@@ -2108,6 +2108,19 @@ extension Store {
         return destino
     }
 
+    /// Una copia de todo para llevársela fuera de la app: a Archivos, a otra
+    /// nube, a un disco. Es lo que tiene quien no usa iCloud para no perder
+    /// nada, y vale igual para pasar las tareas a otro aparato.
+    ///
+    /// Entera o ninguna, como la del día: una copia a la que le faltan tareas
+    /// por bajar de iCloud se tomaría por completa. Los adjuntos no van dentro,
+    /// como en las copias diarias: un vídeo inflaría cada una.
+    public func exportar(ahora: Date = .now) throws -> (datos: Data, nombre: String) {
+        let (copia, faltan) = foto(ahora: ahora)
+        guard faltan == 0 else { throw Mudanza.Fallo.sinBajar(["\(faltan) archivos"]) }
+        return (try Copias.datos(copia), Copias.nombre(para: ahora))
+    }
+
     /// La copia de antes del primer cruce con el contenedor de iCloud.
     ///
     /// Entera o ninguna: si falta algo por bajar, falla, y quien la pide no

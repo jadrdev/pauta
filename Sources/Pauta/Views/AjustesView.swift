@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 import ServiceManagement
 import os
+import UniformTypeIdentifiers
 import PautaCore
 
 /// Abrir Pauta al iniciar sesión.
@@ -42,6 +43,8 @@ struct AjustesView: View {
     @State private var copias: [Copias.Guardada] = []
     @State private var aRestaurar: Copias.Guardada?
     @State private var restaurada: String?
+    /// La copia importada, esperando a que se confirme.
+    @State private var importada: Copia?
 
     init(ajustes: Ajustes, store: Store) {
         self.ajustes = ajustes
@@ -199,6 +202,29 @@ struct AjustesView: View {
                     }
                 }
                 .padding(.top, 4)
+                // Fuera de la app: para quien no usa iCloud, y para pasar las
+                // tareas a otro aparato. Los adjuntos no van dentro.
+                HStack(spacing: 14) {
+                    EnlaceDeTexto("Exportar una copia…") { exportar() }
+                    EnlaceDeTexto("Importar una copia…") { importar() }
+                }
+                .padding(.top, 2)
+                .confirmationDialog(
+                    "¿Dejar todo como en la copia importada?",
+                    isPresented: Binding(get: { importada != nil },
+                                         set: { if !$0 { importada = nil } }),
+                    titleVisibility: .visible
+                ) {
+                    Button("Importar", role: .destructive) {
+                        guard let copia = importada else { return }
+                        store.restaurar(copia)
+                        restaurada = "Hecho: \(copia.items.count) tareas importadas."
+                        Task { await leerCopias() }
+                    }
+                } message: {
+                    Text("Lo que no esté en ella irá a la papelera. Antes se guarda una "
+                         + "copia de cómo está ahora, por si quieres volver.")
+                }
                 if let restaurada {
                     Text(restaurada).ajusteNota(Paper.accentInk)
                 }
@@ -250,6 +276,41 @@ struct AjustesView: View {
         // Ajustes—, y leerlas ahí colgó la app: iCloud las tenía sin bajar y
         // cada lectura esperaba a la descarga.
         .task { await leerCopias() }
+    }
+
+    /// Guarda una copia de todo donde se elija: tareas, proyectos y áreas,
+    /// sin adjuntos, en el mismo formato que las copias diarias.
+    private func exportar() {
+        let datos: Data, nombre: String
+        do { (datos, nombre) = try store.exportar() } catch {
+            restaurada = "Aún faltan tareas por bajar de iCloud. Prueba en un momento."
+            return
+        }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = nombre
+        panel.allowedContentTypes = [.gzip]
+        panel.message = "Tus tareas, proyectos y áreas. Los adjuntos no van dentro."
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try datos.write(to: url, options: .atomic)
+            restaurada = "Copia exportada: \(url.lastPathComponent)."
+        } catch {
+            restaurada = "No se pudo guardar: \(error.localizedDescription)"
+        }
+    }
+
+    /// Abre una copia exportada y pide confirmación antes de restaurarla.
+    private func importar() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.gzip, .json]
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Importar"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let datos = try? Data(contentsOf: url), let copia = Copias.leer(datos: datos) else {
+            restaurada = "Ese archivo no es una copia de Pauta."
+            return
+        }
+        importada = copia
     }
 
     private func leerCopias() async {

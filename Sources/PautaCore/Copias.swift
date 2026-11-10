@@ -176,6 +176,22 @@ public enum Copias {
         try comprimido.write(to: url, options: .atomic)
     }
 
+    /// Una copia hecha datos, comprimida: lo que se escribe en disco y lo que
+    /// se exporta.
+    public static func datos(_ copia: Copia) throws -> Data {
+        let json = try ISODate.codificador().encode(copia)
+        guard let comprimido = gzip(json) else { throw CocoaError(.fileWriteUnknown) }
+        return comprimido
+    }
+
+    /// Una copia desde sus datos, como llega al importarla. Acepta también el
+    /// JSON sin comprimir: si alguien la descomprimió para mirarla, sigue
+    /// siendo su copia. `nil` si no es una copia de Pauta.
+    public static func leer(datos: Data) -> Copia? {
+        let json = gunzip(datos) ?? datos
+        return try? ISODate.decodificador().decode(Copia.self, from: json)
+    }
+
     /// `nil` también si está en iCloud sin bajar: no se espera a la descarga.
     public static func leer(_ url: URL) -> Copia? {
         guard bajada(url), let datos = try? Data(contentsOf: url),
