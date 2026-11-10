@@ -81,7 +81,11 @@ private struct FilaDeReloj: View {
     let tachar: () -> Void
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        // Centrado y no por la línea base: el círculo es un botón sin texto, y
+        // con `.firstTextBaseline` se alineaba por su borde de abajo con la
+        // primera línea del título, más alto que el texto. Con títulos de dos
+        // líneas se notaba más todavía.
+        HStack(alignment: .center, spacing: 8) {
             Button(action: tachar) {
                 ZStack {
                     Circle()
