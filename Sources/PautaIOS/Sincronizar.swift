@@ -33,6 +33,9 @@ enum Sincronizar {
     /// disco y de red: no se hace donde se dibuja.
     @discardableResult
     static func conICloud(_ store: Store, vez: Int = 0) async -> Puente.Balance? {
+        // La maqueta de las capturas no toca iCloud: llevaría sus tareas de
+        // muestra a las de verdad.
+        guard !Maqueta.activa else { return nil }
         let origen = store.storageURL
         // Bloquea la primera vez: fuera del hilo principal.
         let contenedor = await Task.detached(priority: .utility) { Contenedor.documentos() }.value

@@ -19,9 +19,17 @@ struct PautaWatchApp: App {
     /// sesiones peleándose por el mismo delegado.
     @State private var enlace = EnlaceConElTelefono.shared
 
+    /// Tareas de muestra para las capturas de la App Store, lanzando con
+    /// `-demo`: las mismas que la maqueta del teléfono, sin hablar con él.
+    private static let maqueta: Vistazo? = {
+        guard ProcessInfo.processInfo.arguments.contains("-demo") else { return nil }
+        let demo = Store.demo()
+        return Vistazo.de(demo.items, proyectos: demo.projects, limite: Vistazo.limitePublicado)
+    }()
+
     var body: some Scene {
         WindowGroup {
-            HoyWatchView(vistazo: enlace.alDia,
+            HoyWatchView(vistazo: Self.maqueta ?? enlace.alDia,
                          enCamino: enlace.enCamino,
                          tachar: { enlace.tachar($0) })
                 .task {

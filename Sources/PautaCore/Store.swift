@@ -1975,6 +1975,18 @@ extension Store {
         store.schedule(taxes, to: calendar.date(byAdding: .day, value: 4, to: .now))
         let flights = store.addItem(title: "Buscar vuelos de septiembre", in: .upcoming)
         store.schedule(flights, to: calendar.date(byAdding: .day, value: 4, to: .now))
+        // Unas cuantas más, repartidas por la semana y con hora: Próximamente
+        // con tres filas parecía una lista vacía.
+        for (titulo, dias, minuto) in [("Reunión con el equipo", 1, 10 * 60),
+                                       ("Recoger el traje", 2, 18 * 60 + 30),
+                                       ("Cena con Marta", 2, 21 * 60),
+                                       ("Revisión del coche", 3, 9 * 60),
+                                       ("Clase de guitarra", 5, 19 * 60),
+                                       ("Comprar el regalo de Lucía", 6, nil)] {
+            let t = store.addItem(title: titulo, in: .upcoming)
+            store.schedule(t, to: calendar.date(byAdding: .day, value: dias, to: .now))
+            if let minuto { store.setTime(store.items.first { $0.id == t.id }!, to: minuto) }
+        }
         // Una repetitiva con principio y fin.
         let riego = store.addItem(title: "Regar las plantas", in: .today)
         store.setTime(riego, to: 8 * 60 + 30)

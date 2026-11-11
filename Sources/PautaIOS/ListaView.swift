@@ -91,6 +91,10 @@ struct ListaView: View {
         .sheet(isPresented: $vaciando) { VaciarBandejaView() }
         .task {
             if case .today = perspectiva { await agenda.load() }
+            // En la maqueta de las capturas, la tarea que se pidió, abierta.
+            if let titulo = Maqueta.abrir, abierta == nil, case .today = perspectiva {
+                abierta = items.first { $0.title == titulo }
+            }
         }
     }
 

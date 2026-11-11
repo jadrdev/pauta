@@ -12,7 +12,7 @@ import PautaCore
 @main
 @MainActor
 struct PautaIOSApp: App {
-    @State private var store = Store()
+    @State private var store = Maqueta.activa ? Store.demo() : Store()
     @State private var agenda = Agenda()
 
     init() {
@@ -76,6 +76,17 @@ struct RaizView: View {
 
     private enum Pestana: Hashable { case hoy, proximamente, bandeja, mas }
 
+    /// La pestaña de arranque en la maqueta de las capturas.
+    private static var pestanaDeMaqueta: Pestana? {
+        switch Maqueta.vista {
+        case "proximamente": .proximamente
+        case "bandeja": .bandeja
+        case "mas": .mas
+        case "hoy": .hoy
+        default: nil
+        }
+    }
+
     var body: some View {
         TabView(selection: $pestana) {
             ListaView(perspectiva: .today, pidenApuntar: pulsoApuntar)
@@ -95,6 +106,7 @@ struct RaizView: View {
         // así da igual en qué pestaña estuvieras y no hay que llevar el enlace
         // a mano hasta el fondo de la vista que la enseña.
         .sheet(item: $delEnlace) { DetalleView(item: $0) }
+        .task { if let p = Self.pestanaDeMaqueta { pestana = p } }
         .onOpenURL { url in
             switch Enlaces.destino(url) {
             case .hoy:
