@@ -79,7 +79,13 @@ struct ListaView: View {
             }
         }
         .sheet(item: $enHoja) { DetalleView(item: $0) }
-        .onChange(of: abierta) { _, tarea in enHoja = enDosPaneles ? nil : tarea }
+        .onChange(of: abierta) { _, tarea in
+            enHoja = enDosPaneles ? nil : tarea
+            // Abrir una tarea es dejar de apuntar. Con la barra abierta, al
+            // cerrar la ficha el cursor volvía a ella y salía el teclado sin
+            // que nadie lo hubiera pedido.
+            if tarea != nil { apuntando = false }
+        }
         .onChange(of: enDosPaneles) { _, dos in enHoja = dos ? nil : abierta }
         // La hoja se cerró. Si fue a mano —deslizando, «Listo»—, se acabó la
         // tarea; si fue por desplegar, la tarea sigue, ahora en el panel. Aquí
