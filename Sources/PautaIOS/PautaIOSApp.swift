@@ -160,7 +160,7 @@ struct RaizView: View {
             // o moverse una reunión mientras la app dormía, y el día que se
             // enseña ya no sería el de verdad.
             Task {
-                await Avisos.reschedule(store.items)
+                if !Maqueta.activa { await Avisos.reschedule(store.items) }
                 await agenda.load(force: true)
             }
         }
@@ -169,6 +169,9 @@ struct RaizView: View {
             // las tareas en cada tecla.
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
+            // La maqueta no toca nada de fuera: reprogramar borra los avisos
+            // pendientes, y serían los de verdad cambiados por los de muestra.
+            guard !Maqueta.activa else { return }
             await Avisos.reschedule(store.items)
             avisarAFuera()
             // Lo cambiado aquí sale hacia el Mac al momento, y no la próxima
@@ -271,6 +274,8 @@ struct RaizView: View {
     /// reloj. Los dos enseñan el mismo vistazo y ninguno se entera por su
     /// cuenta.
     private func avisarAFuera() {
+        // Las tareas de muestra no salen al widget, al reloj ni al globo.
+        guard !Maqueta.activa else { return }
         let vistazo = Vistazo.de(store.items, proyectos: store.projects,
                                  limite: Vistazo.limitePublicado)
         // El widget, que si no se enteraría cuando el sistema quisiera:
