@@ -6,7 +6,7 @@ import PautaCore
 
 /// La ficha de una tarea: lo justo para decidir sin abrir el Mac.
 ///
-/// Título, notas, cuándo, la hora y si se repite. Sin fecha límite y sin
+/// Título, notas, los pasos, cuándo, la hora y si se repite. Sin fecha límite y sin
 /// etiquetas: eso se configura una vez sentado, y ofrecerlo todo en una hoja de
 /// teléfono la convierte en un formulario que nadie rellena.
 ///
@@ -35,6 +35,7 @@ struct DetalleView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var titulo = ""
     @State private var notas = ""
+    @State private var pasoNuevo = ""
     @State private var importando = false
     @State private var eligiendoFotos = false
     @State private var fotos: [PhotosPickerItem] = []
@@ -52,6 +53,7 @@ struct DetalleView: View {
                         .font(.system(size: 15))
                         .lineLimit(3...8)
                 }
+                seccionDePasos
                 Section("CUÁNDO") {
                     Button("Hoy") { conFecha(.now) }
                     Button("Mañana") {
@@ -206,6 +208,44 @@ struct DetalleView: View {
                             Button("Listo") { guardar(); cerrar() }
                         }
                     }
+            }
+        }
+    }
+
+    /// Los pasos de la tarea. La fila ya decía «1/3» y no había forma de ver
+    /// cuáles eran: se marcan aquí con un toque, que es justo lo que se hace con
+    /// el teléfono en la mano —ir tachando—, y se apuntan o se quitan sin más.
+    /// Cambiarles el texto o el orden sigue siendo cosa del Mac.
+    @ViewBuilder private var seccionDePasos: some View {
+        let pasos = actual?.checklist ?? []
+        Section {
+            ForEach(pasos) { paso in
+                Button { store.toggleStep(item, paso.id) } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: paso.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(paso.isCompleted ? Papel.accentInk : Papel.inkSoft)
+                        Text(paso.title)
+                            .foregroundStyle(paso.isCompleted ? Papel.inkSoft : Papel.ink)
+                            .strikethrough(paso.isCompleted)
+                    }
+                }
+                .accessibilityValue(paso.isCompleted ? "Hecho" : "Pendiente")
+                .swipeActions {
+                    Button("Quitar", role: .destructive) { store.deleteStep(item, paso.id) }
+                        .tint(Papel.warning)
+                }
+            }
+            TextField("Añadir un paso", text: $pasoNuevo)
+                .submitLabel(.next)
+                .onSubmit {
+                    store.addStep(to: item, title: pasoNuevo)
+                    pasoNuevo = ""
+                }
+        } header: {
+            if !pasos.isEmpty {
+                Text("PASOS · \(pasos.filter(\.isCompleted).count)/\(pasos.count)")
+            } else {
+                Text("PASOS")
             }
         }
     }

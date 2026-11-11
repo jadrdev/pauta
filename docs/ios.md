@@ -478,6 +478,11 @@ Lo que no sube es **hasta cuándo**. «Cada día hasta el 15 de octubre» sí es
 decisión de sentarse. Si el Mac le puso un fin, el teléfono lo dice —callarlo
 haría parecer eterna una serie que caduca— pero no lo cambia.
 
+Los **pasos** también están, debajo de las notas. La fila ya decía «1/3» y no
+había forma de saber cuáles eran. En la ficha se marcan con un toque, que es lo
+que se hace con el teléfono en la mano: ir tachando. También se apuntan o se
+quitan deslizando. Cambiarles el texto o el orden sigue siendo cosa del Mac.
+
 En la lista, una repetitiva lleva **solo la flecha** de repetición, como en el
 Mac: poner «Cada día» al lado del título gasta media fila en algo que ya se sabe
 en cuanto se reconoce el icono.
