@@ -220,8 +220,6 @@ struct AjustesView: View {
             }
 
             Section {
-                enlace("Código", "chevron.left.forwardslash.chevron.right",
-                       Enlaces.repositorio)
                 enlace("Novedades", "sparkles", Enlaces.novedades)
                 enlace("Escribir al desarrollador", "envelope", Enlaces.problemas)
                 // Con todo ya de fábrica no hay nada que hacer, y un botón que se
