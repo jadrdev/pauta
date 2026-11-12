@@ -13,6 +13,7 @@ struct MasView: View {
     /// De qué se está eligiendo el emoji, si de algo.
     @State private var emojiDe: ConEmoji?
     @State private var pegando = false
+    @State private var enAjustes = false
 
     private enum ConEmoji: Identifiable {
         case proyecto(Project)
@@ -131,11 +132,18 @@ struct MasView: View {
                 }
                 // Al final, siempre: los ajustes son lo que menos se abre, y
                 // ponerlos entre las listas los cruza con lo que sí se usa.
+                // En una hoja y no empujando la pantalla: los ajustes no son
+                // una lista más, son salir un momento a cambiar algo y volver
+                // donde estabas. La hoja dice eso, y se cierra con «Listo».
                 Section {
-                    NavigationLink {
-                        AjustesView()
-                    } label: {
-                        Label("Ajustes", systemImage: "gearshape")
+                    Button { enAjustes = true } label: {
+                        // El texto en tinta, como las demás filas; el icono
+                        // con el color de la app, como los suyos.
+                        Label {
+                            Text("Ajustes").foregroundStyle(Papel.ink)
+                        } icon: {
+                            Image(systemName: "gearshape")
+                        }
                     }
                 }
             }
@@ -144,6 +152,19 @@ struct MasView: View {
             .background(Papel.bg)
             .navigationTitle("Más")
             .sheet(isPresented: $pegando) { PegarCalendarioView(proyectoInicial: nil) }
+            .sheet(isPresented: $enAjustes) {
+                // Su propia navegación: dentro hay pantallas que se empujan,
+                // como las copias de seguridad.
+                NavigationStack {
+                    AjustesView()
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Listo") { enAjustes = false }
+                            }
+                        }
+                }
+            }
             .sheet(item: $emojiDe) { cual in
                 ElegirEmojiView(actual: cual.actual) { emoji in
                     switch cual {
