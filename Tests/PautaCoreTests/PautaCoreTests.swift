@@ -2418,9 +2418,18 @@ struct AjustesTests {
         let (a, _) = limpios("pauta.tests.ajustes.restaurar")
         a.repasoHora = nil
         a.margenPorDefecto = 60
+        #expect(!a.estaDeFabrica)
         a.restaurar()
         #expect(a.repasoHora == Ajustes.repasoPorDefecto)
         #expect(a.margenPorDefecto == 0)
+        #expect(a.estaDeFabrica)
+    }
+
+    @Test func freshSettingsAreFactorySettings() {
+        let (a, _) = limpios("pauta.tests.ajustes.defabrica")
+        #expect(a.estaDeFabrica)
+        a.minutosAplazados = 15
+        #expect(!a.estaDeFabrica)
     }
 
     /// El margen de los ajustes es un valor de partida y no una regla viva: se

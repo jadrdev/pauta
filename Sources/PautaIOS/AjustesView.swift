@@ -33,6 +33,7 @@ struct AjustesView: View {
     @State private var avisos: UNAuthorizationStatus = .notDetermined
     @State private var calendario = Agenda.authorization
     @State private var globo = true
+    @State private var preguntarFabrica = false
 
     private static let horasDeRepaso = [7 * 60, 7 * 60 + 30, 8 * 60, 8 * 60 + 30,
                                         9 * 60, 9 * 60 + 30, 10 * 60]
@@ -223,7 +224,14 @@ struct AjustesView: View {
                        Enlaces.repositorio)
                 enlace("Novedades", "sparkles", Enlaces.novedades)
                 enlace("Escribir al desarrollador", "envelope", Enlaces.problemas)
-                Button("Restaurar los valores de fábrica") { ajustes.restaurar() }
+                // Con todo ya de fábrica no hay nada que hacer, y un botón que se
+                // pulsa sin que cambie nada parece roto: se dice.
+                if ajustes.estaDeFabrica {
+                    Text("Tienes los valores de fábrica")
+                        .foregroundStyle(Papel.inkFaint)
+                } else {
+                    Button("Restaurar los valores de fábrica") { preguntarFabrica = true }
+                }
             } header: {
                 Text("PAUTA \(SobreLaApp.version)")
             } footer: {
@@ -232,6 +240,16 @@ struct AjustesView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        // En la lista y no en la fila del botón: una fila que sale de la
+        // pantalla deja de existir, y el diálogo con ella.
+        .confirmationDialog("¿Volver a los valores de fábrica?",
+                            isPresented: $preguntarFabrica,
+                            titleVisibility: .visible) {
+            Button("Restaurar") { ajustes.restaurar() }
+        } message: {
+            Text("El repaso del día y los avisos vuelven a como venían. "
+                 + "Tus tareas no se tocan.")
+        }
         .background(Papel.bg)
         .navigationTitle("Ajustes")
         .task {

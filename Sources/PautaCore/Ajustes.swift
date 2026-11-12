@@ -147,7 +147,18 @@ public final class Ajustes {
         return ahora.timeIntervalSince(ultima) >= 24 * 3600
     }
 
+    /// Si ya está todo como venía de fábrica: entonces el botón de restaurar
+    /// no tiene nada que hacer, y ofrecerlo es un botón que «no funciona».
+    public var estaDeFabrica: Bool {
+        repasoHora == Ajustes.repasoPorDefecto && margenPorDefecto == 0
+            && minutosAplazados == 10 && avisarDeVersiones && barraConCuenta
+            && atajo == Atajo.porDefecto
+    }
+
     /// Vuelve a dejarlo todo como venía de fábrica.
+    ///
+    /// Solo las preferencias: en el Mac, el atajo además hay que registrarlo
+    /// en el sistema, y eso lo hace quien llama.
     public func restaurar() {
         repasoHora = Ajustes.repasoPorDefecto
         margenPorDefecto = 0

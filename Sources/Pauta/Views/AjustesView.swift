@@ -43,6 +43,7 @@ struct AjustesView: View {
     @State private var copias: [Copias.Guardada] = []
     @State private var aRestaurar: Copias.Guardada?
     @State private var restaurada: String?
+    @State private var preguntarFabrica = false
     /// La copia importada, esperando a que se confirme.
     @State private var importada: Copia?
 
@@ -63,6 +64,18 @@ struct AjustesView: View {
 
     private static let horasDeRepaso = [7 * 60, 7 * 60 + 30, 8 * 60, 8 * 60 + 30,
                                         9 * 60, 9 * 60 + 30, 10 * 60]
+
+    /// Las preferencias, y el atajo **registrado de verdad**: guardar el de
+    /// fábrica sin registrarlo dejaba funcionando el de antes, y el ajuste
+    /// enseñando uno que no respondía. Si el sistema no acepta el de fábrica
+    /// —otra app se lo queda—, se queda el tuyo, que sí funciona.
+    private func restaurarDeFabrica() {
+        let atajo = ajustes.atajo
+        ajustes.restaurar()
+        guard atajo != Atajo.porDefecto else { return }
+        ajustes.atajo = atajo
+        _ = AltaRapida.shared.cambiar(a: Atajo.porDefecto)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -253,8 +266,23 @@ struct AjustesView: View {
 
             Rectangle().fill(Paper.hairline).frame(height: 1).padding(.vertical, 14)
             HStack {
-                EnlaceDeTexto("Restaurar los valores de fábrica") { ajustes.restaurar() }
+                // Con todo ya de fábrica no hay nada que restaurar, y un botón
+                // que se pulsa sin que cambie nada parece roto: se dice.
+                if ajustes.estaDeFabrica {
+                    Text("Tienes los valores de fábrica")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Paper.inkFaint)
+                } else {
+                    EnlaceDeTexto("Restaurar los valores de fábrica") { preguntarFabrica = true }
+                }
                 Spacer(minLength: 0)
+            }
+            .confirmationDialog("¿Volver a los valores de fábrica?",
+                                isPresented: $preguntarFabrica) {
+                Button("Restaurar") { restaurarDeFabrica() }
+            } message: {
+                Text("El atajo, el repaso del día, los avisos y la barra de menús vuelven "
+                     + "a como venían. Tus tareas no se tocan.")
             }
         }
         .padding(24)
