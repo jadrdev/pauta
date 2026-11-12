@@ -6,7 +6,6 @@ import Foundation
 /// teléfono, y dos copias de una dirección es una dirección que un día apunta a
 /// dos sitios distintos.
 public enum Enlaces {
-    public static let repositorio = URL(string: "https://github.com/jadrdev/pauta")!
     public static let autor = URL(string: "https://github.com/jadrdev")!
     public static let guia = URL(string: "https://github.com/jadrdev/pauta#readme")!
     public static let novedades = URL(string: "https://github.com/jadrdev/pauta/releases")!

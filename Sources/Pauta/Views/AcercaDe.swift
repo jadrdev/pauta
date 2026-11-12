@@ -73,7 +73,6 @@ struct AcercaDeView: View {
             // ni servidor, este panel es el único sitio donde el usuario puede
             // saber a quién le está confiando sus datos.
             HStack(spacing: 14) {
-                EnlaceDeTexto("Código") { NSWorkspace.shared.open(Enlaces.repositorio) }
                 EnlaceDeTexto("Novedades") { NSWorkspace.shared.open(Enlaces.novedades) }
                 EnlaceDeTexto("Escribir al desarrollador") {
                     NSWorkspace.shared.open(Enlaces.problemas)
