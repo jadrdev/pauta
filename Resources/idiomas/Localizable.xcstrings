@@ -2,7 +2,6 @@
   "sourceLanguage" : "es",
   "strings" : {
     "" : {
-      "shouldTranslate" : false,
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -10,7 +9,8 @@
             "value" : ""
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     },
     "%@ antes" : {
       "localizations" : {
@@ -58,12 +58,6 @@
     },
     "%@ en lo estimado, %lld tareas sin estimar" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ en lo estimado, %2$lld tareas sin estimar"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -74,6 +68,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ estimated, %lld tasks not estimated"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ en lo estimado, %2$lld tareas sin estimar"
           }
         }
       }
@@ -114,12 +114,6 @@
     "%@ · antes de restaurar, %@" : {
       "comment" : "Copia de seguridad hecha justo antes de restaurar otra; huecos: el día («Domingo, 28 de septiembre») y la hora",
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · antes de restaurar, %2$@"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -130,6 +124,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ · before restoring, %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · antes de restaurar, %2$@"
           }
         }
       }
@@ -190,7 +190,6 @@
       }
     },
     "%lld" : {
-      "shouldTranslate" : false,
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -198,7 +197,8 @@
             "value" : "%lld"
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     },
     "%lld ABIERTAS" : {
       "localizations" : {
@@ -224,12 +224,6 @@
     },
     "%lld DE %lld" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld DE %2$lld"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -240,6 +234,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld OF %lld"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld DE %2$lld"
           }
         }
       }
@@ -379,12 +379,6 @@
     },
     "%lld de %lld hechas" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld de %2$lld hechas"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -396,17 +390,17 @@
             "state" : "translated",
             "value" : "%lld of %lld done"
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld de %2$lld hechas"
+          }
         }
       }
     },
     "%lld de %lld hechas hoy" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld de %2$lld hechas hoy"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -417,6 +411,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld of %lld done today"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld de %2$lld hechas hoy"
           }
         }
       }
@@ -491,12 +491,6 @@
     "%lld h %lld min" : {
       "comment" : "Duración abreviada en horas y minutos: «1 h 5 min»",
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld h %2$lld min"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -507,6 +501,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld h %lld min"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld h %2$lld min"
           }
         }
       }
@@ -842,7 +842,6 @@
       "shouldTranslate" : false
     },
     "+" : {
-      "shouldTranslate" : false,
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -850,7 +849,8 @@
             "value" : "+"
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     },
     "+ ADJUNTAR" : {
       "localizations" : {
@@ -2516,6 +2516,72 @@
         }
       }
     },
+    "Busca «Pauta» y elígelo." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Busca «Pauta» y elígelo."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerca «Pauta» i tria-la."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Find “Pauta” and choose it."
+          }
+        }
+      }
+    },
+    "Busca «Pauta» y tócalo." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Busca «Pauta» y tócalo."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerca «Pauta» i toca-la."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Find “Pauta” and tap it."
+          }
+        }
+      }
+    },
+    "Busca «Pauta», elige el tamaño y toca «Añadir widget»." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Busca «Pauta», elige el tamaño y toca «Añadir widget»."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerca «Pauta», tria la mida i toca «Afegeix el giny»."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Find “Pauta”, pick a size and tap “Add Widget”."
+          }
+        }
+      }
+    },
     "Buscar ahora" : {
       "localizations" : {
         "ca" : {
@@ -3266,12 +3332,6 @@
     "Copia de los datos de Pauta de antes de mudarlos al contenedor de iCloud.\n\nHecha el %@, desde:\n  %@\n%lld archivos, %@, comprobados uno a uno.\n\nPauta no la lee ni la borra: es tuya. Si algo saliera mal, esta carpeta\ntiene todo como estaba." : {
       "comment" : "Texto del LEEME.txt que va en la copia de antes de mudar los datos (Mac); huecos: fecha y hora, ruta de la carpeta, número de archivos, tamaño",
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copia de los datos de Pauta de antes de mudarlos al contenedor de iCloud.\n\nHecha el %1$@, desde:\n  %2$@\n%3$lld archivos, %4$@, comprobados uno a uno.\n\nPauta no la lee ni la borra: es tuya. Si algo saliera mal, esta carpeta\ntiene todo como estaba."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3282,6 +3342,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "A copy of Pauta's data from before it moved to the iCloud container.\n\nMade on %@, from:\n  %@\n%lld files, %@, checked one by one.\n\nPauta doesn't read it or delete it: it's yours. If anything went wrong, this folder\nhas everything as it was."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia de los datos de Pauta de antes de mudarlos al contenedor de iCloud.\n\nHecha el %1$@, desde:\n  %2$@\n%3$lld archivos, %4$@, comprobados uno a uno.\n\nPauta no la lee ni la borra: es tuya. Si algo saliera mal, esta carpeta\ntiene todo como estaba."
           }
         }
       }
@@ -3593,6 +3659,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cuándo"
+          }
+        }
+      }
+    },
+    "Cuántas tareas quedan hoy, en la esfera. Hace falta Pauta instalada en el reloj." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuántas tareas quedan hoy, en la esfera. Hace falta Pauta instalada en el reloj."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quantes tasques queden avui, a l'esfera. Cal tenir Pauta instal·lada al rellotge."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How many tasks are left today, on your watch face. Pauta needs to be installed on the watch."
           }
         }
       }
@@ -3950,6 +4038,28 @@
         }
       }
     },
+    "Desliza hasta las complicaciones y toca un hueco." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desliza hasta las complicaciones y toca un hueco."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Llisca fins a les complicacions i toca un espai."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Swipe to the complications and tap a slot."
+          }
+        }
+      }
+    },
     "Devolver" : {
       "localizations" : {
         "ca" : {
@@ -4062,6 +4172,72 @@
         }
       }
     },
+    "EN EL APPLE WATCH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EN EL APPLE WATCH"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A L'APPLE WATCH"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ON APPLE WATCH"
+          }
+        }
+      }
+    },
+    "EN LA PANTALLA BLOQUEADA" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EN LA PANTALLA BLOQUEADA"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A LA PANTALLA BLOQUEJADA"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ON THE LOCK SCREEN"
+          }
+        }
+      }
+    },
+    "EN LA PANTALLA DE INICIO" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EN LA PANTALLA DE INICIO"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A LA PANTALLA D'INICI"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ON THE HOME SCREEN"
+          }
+        }
+      }
+    },
     "ETIQUETAS" : {
       "localizations" : {
         "ca" : {
@@ -4168,6 +4344,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "El sistema no lo aceptó. Suele ser porque la app no está en Aplicaciones."
+          }
+        }
+      }
+    },
+    "Elige la pantalla bloqueada y toca el hueco de los widgets, debajo de la hora." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige la pantalla bloqueada y toca el hueco de los widgets, debajo de la hora."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tria la pantalla bloquejada i toca l'espai dels ginys, sota l'hora."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick your Lock Screen and tap the widget area below the time."
           }
         }
       }
@@ -4413,6 +4611,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Encender los globos del icono"
+          }
+        }
+      }
+    },
+    "Enseña lo que toca hoy y lo que se arrastra de días pasados. El círculo tacha la tarea sin abrir la app." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enseña lo que toca hoy y lo que se arrastra de días pasados. El círculo tacha la tarea sin abrir la app."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra el que toca avui i el que arrossegues de dies passats. El cercle marca la tasca com a feta sense obrir l'app."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows what's on today and what's carried over from past days. The circle checks off a task without opening the app."
           }
         }
       }
@@ -5306,6 +5526,28 @@
         }
       }
     },
+    "Hoy en la pantalla de inicio, en la bloqueada y en la esfera del reloj, sin abrir la app." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoy en la pantalla de inicio, en la bloqueada y en la esfera del reloj, sin abrir la app."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avui a la pantalla d'inici, a la bloquejada i a l'esfera del rellotge, sense obrir l'app."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today on your Home Screen, Lock Screen and watch face, without opening the app."
+          }
+        }
+      }
+    },
     "ICLOUD" : {
       "localizations" : {
         "ca" : {
@@ -5946,6 +6188,72 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mandado al teléfono"
+          }
+        }
+      }
+    },
+    "Mantén pulsada la esfera del reloj y toca «Editar»." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén pulsada la esfera del reloj y toca «Editar»."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén premuda l'esfera del rellotge i toca «Edita»."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch and hold the watch face, then tap “Edit”."
+          }
+        }
+      }
+    },
+    "Mantén pulsada la pantalla bloqueada y toca «Personalizar»." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén pulsada la pantalla bloqueada y toca «Personalizar»."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén premuda la pantalla bloquejada i toca «Personalitza»."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch and hold the Lock Screen, then tap “Customize”."
+          }
+        }
+      }
+    },
+    "Mantén pulsado un hueco vacío de la pantalla de inicio, hasta que los iconos se muevan." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén pulsado un hueco vacío de la pantalla de inicio, hasta que los iconos se muevan."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén premut un espai buit de la pantalla d'inici, fins que les icones es moguin."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch and hold an empty spot on the Home Screen until the icons jiggle."
           }
         }
       }
@@ -7146,12 +7454,6 @@
     },
     "PASOS · %lld/%lld" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PASOS · %1$lld/%2$lld"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7162,6 +7464,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "STEPS · %lld/%lld"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PASOS · %1$lld/%2$lld"
           }
         }
       }
@@ -7747,6 +8055,28 @@
         }
       }
     },
+    "Poner el widget" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poner el widget"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afegir el giny"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add the Widget"
+          }
+        }
+      }
+    },
     "Poner la hora" : {
       "localizations" : {
         "ca" : {
@@ -8063,12 +8393,6 @@
     },
     "QUEDAN %lld · %@" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "QUEDAN %1$lld · %2$@"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8079,6 +8403,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld LEFT · %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QUEDAN %1$lld · %2$@"
           }
         }
       }
@@ -9333,12 +9663,6 @@
     },
     "También en tu calendario: «%@» · %@" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "También en tu calendario: «%1$@» · %2$@"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9349,6 +9673,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Also on your calendar: “%@” · %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "También en tu calendario: «%1$@» · %2$@"
           }
         }
       }
@@ -9437,6 +9767,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Toca una tarea para verla aquí."
+          }
+        }
+      }
+    },
+    "Toca «Editar», arriba, y luego «Añadir widget»." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca «Editar», arriba, y luego «Añadir widget»."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca «Edita», a dalt, i després «Afegeix un giny»."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap “Edit” at the top, then “Add Widget”."
           }
         }
       }
@@ -9795,6 +10147,28 @@
         }
       }
     },
+    "Una línea con lo siguiente que toca, sin desbloquear." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una línea con lo siguiente que toca, sin desbloquear."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una línia amb el següent que toca, sense desbloquejar."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One line with what's next, without unlocking."
+          }
+        }
+      }
+    },
     "Una tarea con %lld pasos" : {
       "localizations" : {
         "ca" : {
@@ -9841,14 +10215,7 @@
     },
     "VACIAR (bandeja)" : {
       "comment" : "Botón que empieza Vaciar la bandeja: decidir una por una qué hacer con cada tarea",
-      "extractionState" : "extracted_with_value",
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VACIAR"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9859,6 +10226,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "CLEAR"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VACIAR"
           }
         }
       }
@@ -9887,12 +10260,6 @@
     },
     "VERSIÓN %@  ·  BUILD %@" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VERSIÓN %1$@  ·  BUILD %2$@"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9903,6 +10270,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "VERSION %@  ·  BUILD %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VERSIÓN %1$@  ·  BUILD %2$@"
           }
         }
       }
@@ -9997,14 +10370,7 @@
     },
     "Vaciar (bandeja)" : {
       "comment" : "Botón que empieza Vaciar la bandeja: decidir una por una qué hacer con cada tarea",
-      "extractionState" : "extracted_with_value",
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vaciar"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10015,6 +10381,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Clear"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vaciar"
           }
         }
       }
@@ -10235,6 +10607,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Volver a una copia…"
+          }
+        }
+      }
+    },
+    "WIDGET" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WIDGET"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GINY"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WIDGET"
+          }
+        }
+      }
+    },
+    "Widget" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Widget"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giny"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Widget"
           }
         }
       }
@@ -10758,12 +11174,6 @@
     "«%@» lleva %@ sin fecha" : {
       "comment" : "Repaso de la mañana: una tarea sin fecha desde hace tiempo; el segundo hueco es «4 semanas», «2 meses»",
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "«%1$@» lleva %2$@ sin fecha"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10775,18 +11185,18 @@
             "state" : "translated",
             "value" : "“%@” has gone %@ without a date"
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«%1$@» lleva %2$@ sin fecha"
+          }
         }
       }
     },
     "«%@» y «%@» llevan semanas sin fecha" : {
       "comment" : "Repaso de la mañana: dos tareas sin fecha desde hace semanas",
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "«%1$@» y «%2$@» llevan semanas sin fecha"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10797,6 +11207,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "“%@” and “%@” have gone weeks without a date"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«%1$@» y «%2$@» llevan semanas sin fecha"
           }
         }
       }
@@ -10824,7 +11240,6 @@
       }
     },
     "·" : {
-      "shouldTranslate" : false,
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -10832,7 +11247,8 @@
             "value" : "·"
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     },
     "¿A qué proyecto?" : {
       "localizations" : {
@@ -11101,7 +11517,6 @@
       }
     },
     "…" : {
-      "shouldTranslate" : false,
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -11109,7 +11524,8 @@
             "value" : "…"
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     },
     "⏎ a la bandeja · ⇧⏎ a Hoy" : {
       "localizations" : {

@@ -187,6 +187,20 @@ struct AjustesView: View {
                 }
             }
 
+            // El widget no se puede poner desde la app, solo contarlo: quien no
+            // sabe que existe no lo busca nunca.
+            Section {
+                NavigationLink {
+                    WidgetsView()
+                } label: {
+                    Label("Poner el widget", systemImage: "square.text.square")
+                }
+            } header: {
+                Text("WIDGET")
+            } footer: {
+                Text("Hoy en la pantalla de inicio, en la bloqueada y en la esfera del reloj, sin abrir la app.")
+            }
+
             Section {
                 NavigationLink {
                     CopiasView()
