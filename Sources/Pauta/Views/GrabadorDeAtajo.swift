@@ -14,7 +14,7 @@ enum Teclas {
     /// Las que no escriben nada. Sin esta tabla, «Espacio» saldría como un
     /// espacio en blanco y ↩ como un salto de línea.
     private static let especiales: [Int: String] = [
-        kVK_Space: "Espacio", kVK_Return: "↩", kVK_Tab: "⇥", kVK_Delete: "⌫",
+        kVK_Space: String(localized: "Espacio", comment: "Nombre de la tecla espaciadora en un atajo, como en «⌃Espacio»"), kVK_Return: "↩", kVK_Tab: "⇥", kVK_Delete: "⌫",
         kVK_Escape: "esc", kVK_ForwardDelete: "⌦", kVK_ANSI_KeypadEnter: "⌤",
         kVK_LeftArrow: "←", kVK_RightArrow: "→", kVK_DownArrow: "↓", kVK_UpArrow: "↑",
         kVK_PageUp: "⇞", kVK_PageDown: "⇟", kVK_Home: "↖", kVK_End: "↘",
@@ -25,7 +25,7 @@ enum Teclas {
 
     static func nombre(_ codigo: Int) -> String {
         if let nombre = especiales[codigo] { return nombre }
-        return traducir(codigo)?.uppercased() ?? "tecla \(codigo)"
+        return traducir(codigo)?.uppercased() ?? String(localized: "tecla \(codigo)", comment: "Tecla sin nombre conocido, con su código")
     }
 
     /// Le pregunta al teclado **de verdad** qué letra es ese código.
@@ -77,7 +77,7 @@ struct GrabadorDeAtajo: View {
                 grabando.toggle()
                 error = nil
             } label: {
-                Text(grabando ? "Pulsa la combinación…" : actual.descripcion)
+                Text(grabando ? String(localized: "Pulsa la combinación…") : actual.descripcion)
                     .font(.system(size: 12, weight: .semibold).monospaced())
                     .foregroundStyle(grabando ? Paper.accentInk : Paper.ink)
                     .frame(minWidth: 132)
@@ -104,15 +104,14 @@ struct GrabadorDeAtajo: View {
 
     private func recibir(_ atajo: Atajo) {
         guard atajo.esUsable else {
-            error = "Hace falta ⌃, ⌥ o ⌘: si no, esa tecla dejaría de escribir "
-                  + "en todas las apps."
+            error = String(localized: "Hace falta ⌃, ⌥ o ⌘: si no, esa tecla dejaría de escribir en todas las apps.")
             grabando = false
             return
         }
         if alElegir(atajo) {
             error = nil
         } else {
-            error = "Esa combinación no la suelta el sistema. Prueba otra."
+            error = String(localized: "Esa combinación no la suelta el sistema. Prueba otra.")
         }
         grabando = false
     }

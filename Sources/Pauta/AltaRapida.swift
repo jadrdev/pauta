@@ -261,8 +261,8 @@ private struct VistaAltaRapida: View {
     }
 
     private var pista: String {
-        texto.contains("\n") ? "⏎ crea una tarea por línea · ⇧⏎ a Hoy"
-                             : "⏎ a la bandeja · ⇧⏎ a Hoy"
+        texto.contains("\n") ? String(localized: "⏎ crea una tarea por línea · ⇧⏎ a Hoy")
+                             : String(localized: "⏎ a la bandeja · ⇧⏎ a Hoy")
     }
 
     /// El destino se lee del teclado en el momento de enviar.

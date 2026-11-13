@@ -87,8 +87,12 @@ public enum Retention {
     public static func leQuedan(desde borrado: Date, ahora: Date = .now) -> String {
         let segundos = tombstones - ahora.timeIntervalSince(borrado)
         let dias = Int((segundos / 86_400).rounded(.up))
-        if dias <= 0 { return "se va hoy" }
-        return dias == 1 ? "queda 1 día" : "quedan \(dias) días"
+        if dias <= 0 {
+            return String(localized: "se va hoy", comment: "Papelera: lo que le queda a algo borrado antes de irse del todo")
+        }
+        return dias == 1
+            ? String(localized: "queda 1 día", comment: "Papelera: lo que le queda a algo borrado antes de irse del todo")
+            : String(localized: "quedan \(dias) días", comment: "Papelera: lo que le queda a algo borrado antes de irse del todo")
     }
 }
 
@@ -772,8 +776,14 @@ public final class Store {
     public func project(_ id: UUID) -> Project? { projects.first { $0.id == id } }
 
     public func title(for perspective: Perspective) -> String {
-        if case .project(let id) = perspective { return project(id)?.name ?? "Proyecto" }
-        if case .area(let id) = perspective { return area(id)?.name ?? "Área" }
+        if case .project(let id) = perspective {
+            return project(id)?.name
+                ?? String(localized: "Proyecto", comment: "Título genérico de la vista de un proyecto (sustantivo)")
+        }
+        if case .area(let id) = perspective {
+            return area(id)?.name
+                ?? String(localized: "Área", comment: "Título genérico de la vista de un área, grupo de proyectos")
+        }
         return perspective.title
     }
 
@@ -1404,7 +1414,9 @@ public final class Store {
 
     @discardableResult
     public func addProject(name: String) -> Project {
-        var project = Project(name: name.isEmpty ? "Nuevo proyecto" : name)
+        var project = Project(name: name.isEmpty
+                              ? String(localized: "Nuevo proyecto", comment: "Nombre de un proyecto recién creado sin nombre")
+                              : name)
         var created = Store.stamped(project.createdAt)
         if let last = projects.map(\.createdAt).max(),
            created < last.addingTimeInterval(0.001) {
@@ -1706,7 +1718,9 @@ public final class Store {
 
     @discardableResult
     public func addArea(name: String) -> Area {
-        var area = Area(name: name.isEmpty ? "Nueva área" : name)
+        var area = Area(name: name.isEmpty
+                        ? String(localized: "Nueva área", comment: "Nombre de un área recién creada sin nombre")
+                        : name)
         var created = Store.stamped(area.createdAt)
         if let last = areas.map(\.createdAt).max(),
            created < last.addingTimeInterval(0.001) {
@@ -1873,15 +1887,15 @@ public final class Store {
             switch ultimo {
             case .tarea(let id):
                 guard let t = borradas.first(where: { $0.id == id }) else { continue }
-                let nombre = t.title.isEmpty ? "Sin título" : t.title
+                let nombre = t.title.isEmpty ? String(localized: "Sin título", comment: "Tarea que no tiene nombre") : t.title
                 if restaurar(id) { return nombre }
             case .proyecto(let id):
                 guard let p = proyectosBorrados.first(where: { $0.id == id }) else { continue }
-                let nombre = p.name.isEmpty ? "Sin título" : p.name
+                let nombre = p.name.isEmpty ? String(localized: "Sin título", comment: "Proyecto que no tiene nombre") : p.name
                 if restaurarProyecto(id) { return nombre }
             case .area(let id):
                 guard let a = areasBorradas.first(where: { $0.id == id }) else { continue }
-                let nombre = a.name.isEmpty ? "Sin título" : a.name
+                let nombre = a.name.isEmpty ? String(localized: "Sin título", comment: "Área que no tiene nombre") : a.name
                 if restaurarArea(id) { return nombre }
             }
         }
@@ -1943,125 +1957,125 @@ extension Store {
     /// Datos de muestra en memoria para revisar el diseño (`--demo`).
     public static func demo() -> Store {
         let store = Store(inMemory: true)
-        let project = store.addProject(name: "Rediseño de la web")
+        let project = store.addProject(name: String(localized: "Rediseño de la web", comment: "Tarea de ejemplo de la maqueta"))
         store.setIcon(project, to: "🎨")
-        store.addItem(title: "Llamar al fontanero", in: .today)
-        var budget = store.addItem(title: "Revisar el presupuesto del trimestre", in: .today)
-        budget.notes = "Comparar con las cifras de junio antes de enviarlo."
+        store.addItem(title: String(localized: "Llamar al fontanero", comment: "Tarea de ejemplo de la maqueta"), in: .today)
+        var budget = store.addItem(title: String(localized: "Revisar el presupuesto del trimestre", comment: "Tarea de ejemplo de la maqueta"), in: .today)
+        budget.notes = String(localized: "Comparar con las cifras de junio antes de enviarlo.", comment: "Tarea de ejemplo de la maqueta")
         store.update(budget)
-        store.addItem(title: "Definir la paleta de color", in: .project(project.id))
+        store.addItem(title: String(localized: "Definir la paleta de color", comment: "Tarea de ejemplo de la maqueta"), in: .project(project.id))
         store.schedule(store.items.last!, to: .now)
         // Sin fecha: solo se ve en el proyecto y en Cualquier momento.
-        store.addItem(title: "Escribir los textos de la portada", in: .project(project.id))
-        store.addItem(title: "Comprar entradas del concierto", in: .inbox)
+        store.addItem(title: String(localized: "Escribir los textos de la portada", comment: "Tarea de ejemplo de la maqueta"), in: .project(project.id))
+        store.addItem(title: String(localized: "Comprar entradas del concierto", comment: "Tarea de ejemplo de la maqueta"), in: .inbox)
         // Una arrastrada de días atrás, para ver cómo lo dice.
-        let atrasada = store.addItem(title: "Devolver el paquete", in: .inbox)
+        let atrasada = store.addItem(title: String(localized: "Devolver el paquete", comment: "Tarea de ejemplo de la maqueta"), in: .inbox)
         store.schedule(atrasada,
                        to: Calendar.current.date(byAdding: .day, value: -3, to: .now))
         // Una lista de comprobación y unas etiquetas, para que se vean.
-        for paso in ["Cerrar junio", "Pedir facturas", "Enviar a gestoría"] {
+        for paso in [String(localized: "Cerrar junio", comment: "Tarea de ejemplo de la maqueta"), String(localized: "Pedir facturas", comment: "Tarea de ejemplo de la maqueta"), String(localized: "Enviar a gestoría", comment: "Tarea de ejemplo de la maqueta")] {
             store.addStep(to: budget, title: paso)
         }
         store.toggleStep(budget, store.items.first { $0.id == budget.id }!.checklist[0].id)
-        store.addTag(budget, "trabajo")
-        store.addTag(store.items.first { $0.title == "Llamar al fontanero" }!, "casa")
-        store.addTag(store.items.first { $0.title == "Llamar al fontanero" }!, "recados")
-        store.addTag(store.items.first { $0.title == "Comprar entradas del concierto" }!, "ocio")
+        store.addTag(budget, String(localized: "trabajo", comment: "Etiqueta de ejemplo de la maqueta"))
+        store.addTag(store.items.first { $0.title == String(localized: "Llamar al fontanero", comment: "Tarea de ejemplo de la maqueta") }!, String(localized: "casa", comment: "Etiqueta de ejemplo de la maqueta"))
+        store.addTag(store.items.first { $0.title == String(localized: "Llamar al fontanero", comment: "Tarea de ejemplo de la maqueta") }!, String(localized: "recados", comment: "Etiqueta de ejemplo de la maqueta"))
+        store.addTag(store.items.first { $0.title == String(localized: "Comprar entradas del concierto", comment: "Tarea de ejemplo de la maqueta") }!, String(localized: "ocio", comment: "Etiqueta de ejemplo de la maqueta"))
         // Dos días distintos, para que se vea el agrupado de Próximamente.
         let calendar = Calendar.current
-        let dentist = store.addItem(title: "Cita con el dentista", in: .upcoming)
+        let dentist = store.addItem(title: String(localized: "Cita con el dentista", comment: "Tarea de ejemplo de la maqueta"), in: .upcoming)
         store.schedule(dentist, to: calendar.date(byAdding: .day, value: 1, to: .now))
-        let taxes = store.addItem(title: "Presentar el trimestre", in: .upcoming)
+        let taxes = store.addItem(title: String(localized: "Presentar el trimestre", comment: "Tarea de ejemplo de la maqueta"), in: .upcoming)
         store.schedule(taxes, to: calendar.date(byAdding: .day, value: 4, to: .now))
-        let flights = store.addItem(title: "Buscar vuelos de septiembre", in: .upcoming)
+        let flights = store.addItem(title: String(localized: "Buscar vuelos de septiembre", comment: "Tarea de ejemplo de la maqueta"), in: .upcoming)
         store.schedule(flights, to: calendar.date(byAdding: .day, value: 4, to: .now))
         // Unas cuantas más, repartidas por la semana y con hora: Próximamente
         // con tres filas parecía una lista vacía.
-        for (titulo, dias, minuto) in [("Reunión con el equipo", 1, 10 * 60),
-                                       ("Recoger el traje", 2, 18 * 60 + 30),
-                                       ("Cena con Marta", 2, 21 * 60),
-                                       ("Revisión del coche", 3, 9 * 60),
-                                       ("Clase de guitarra", 5, 19 * 60),
-                                       ("Comprar el regalo de Lucía", 6, nil)] {
+        for (titulo, dias, minuto) in [(String(localized: "Reunión con el equipo", comment: "Tarea de ejemplo de la maqueta"), 1, 10 * 60),
+                                       (String(localized: "Recoger el traje", comment: "Tarea de ejemplo de la maqueta"), 2, 18 * 60 + 30),
+                                       (String(localized: "Cena con Marta", comment: "Tarea de ejemplo de la maqueta"), 2, 21 * 60),
+                                       (String(localized: "Revisión del coche", comment: "Tarea de ejemplo de la maqueta"), 3, 9 * 60),
+                                       (String(localized: "Clase de guitarra", comment: "Tarea de ejemplo de la maqueta"), 5, 19 * 60),
+                                       (String(localized: "Comprar el regalo de Lucía", comment: "Tarea de ejemplo de la maqueta"), 6, nil)] {
             let t = store.addItem(title: titulo, in: .upcoming)
             store.schedule(t, to: calendar.date(byAdding: .day, value: dias, to: .now))
             if let minuto { store.setTime(store.items.first { $0.id == t.id }!, to: minuto) }
         }
         // Una repetitiva con principio y fin.
-        let riego = store.addItem(title: "Regar las plantas", in: .today)
+        let riego = store.addItem(title: String(localized: "Regar las plantas", comment: "Tarea de ejemplo de la maqueta"), in: .today)
         store.setTime(riego, to: 8 * 60 + 30)
         store.setWarnBefore(riego, to: 10)
         store.setRecurrence(riego, to: .semanal)
         store.setRecurrenceEnd(store.items.last!,
                                to: calendar.date(byAdding: .day, value: 60, to: .now))
         // Fechas límite en sus tres estados: vencida, hoy y futura.
-        let vencida = store.addItem(title: "Renovar el pasaporte", in: .today)
+        let vencida = store.addItem(title: String(localized: "Renovar el pasaporte", comment: "Tarea de ejemplo de la maqueta"), in: .today)
         store.setDeadline(vencida, to: calendar.date(byAdding: .day, value: -2, to: .now))
-        let hoyLimite = store.addItem(title: "Enviar la factura de agosto", in: .today)
+        let hoyLimite = store.addItem(title: String(localized: "Enviar la factura de agosto", comment: "Tarea de ejemplo de la maqueta"), in: .today)
         store.setDeadline(hoyLimite, to: .now)
-        let futura = store.addItem(title: "Preparar la declaración", in: .inbox)
+        let futura = store.addItem(title: String(localized: "Preparar la declaración", comment: "Tarea de ejemplo de la maqueta"), in: .inbox)
         store.setDeadline(futura, to: calendar.date(byAdding: .day, value: 12, to: .now))
         // Tres proyectos, y no uno: el orden de la barra lateral solo se ve
         // cuando hay varios. Dos de ellos dentro de un área.
-        let mudanza = store.addProject(name: "Mudanza")
+        let mudanza = store.addProject(name: String(localized: "Mudanza", comment: "Tarea de ejemplo de la maqueta"))
         store.setIcon(mudanza, to: "📦")
-        let bici = store.addProject(name: "Bicicleta")
+        let bici = store.addProject(name: String(localized: "Bicicleta", comment: "Tarea de ejemplo de la maqueta"))
         store.setIcon(bici, to: "💪")
-        store.addItem(title: "Pedir cajas", in: .project(mudanza.id))
+        store.addItem(title: String(localized: "Pedir cajas", comment: "Tarea de ejemplo de la maqueta"), in: .project(mudanza.id))
         // Tres de un mismo proyecto en Hoy, para ver el agrupado y el filete a
         // medio entintar. Una ya hecha: el contador tiene que seguir contándola
         // o el denominador encogería y la raya no avanzaría nunca.
-        for (titulo, minutos) in [("Pedir presupuesto de furgoneta", 30),
-                                  ("Cambiar la dirección en el banco", 25),
-                                  ("Recoger las llaves", 20)] {
+        for (titulo, minutos) in [(String(localized: "Pedir presupuesto de furgoneta", comment: "Tarea de ejemplo de la maqueta"), 30),
+                                  (String(localized: "Cambiar la dirección en el banco", comment: "Tarea de ejemplo de la maqueta"), 25),
+                                  (String(localized: "Recoger las llaves", comment: "Tarea de ejemplo de la maqueta"), 20)] {
             let t = store.addItem(title: titulo, in: .project(mudanza.id))
             store.schedule(t, to: .now)
             store.setEstimate(store.items.first { $0.id == t.id }!, to: minutos)
         }
-        store.toggleComplete(store.items.first { $0.title == "Pedir presupuesto de furgoneta" }!)
-        store.addItem(title: "Cambiar la cadena", in: .project(bici.id))
-        let casa = store.addArea(name: "Casa")
+        store.toggleComplete(store.items.first { $0.title == String(localized: "Pedir presupuesto de furgoneta", comment: "Tarea de ejemplo de la maqueta") }!)
+        store.addItem(title: String(localized: "Cambiar la cadena", comment: "Tarea de ejemplo de la maqueta"), in: .project(bici.id))
+        let casa = store.addArea(name: String(localized: "Casa", comment: "Tarea de ejemplo de la maqueta"))
         store.setIcon(casa, to: "🏠")
         store.move(mudanza, toArea: casa.id)
         store.move(bici, toArea: casa.id)
         // Una con la hora encima, para ver la cuenta atrás de la barra de
         // menús, y una aplazada, para ver que se dice.
-        let recogida = store.addItem(title: "Recoger a los niños", in: .today)
+        let recogida = store.addItem(title: String(localized: "Recoger a los niños", comment: "Tarea de ejemplo de la maqueta"), in: .today)
         store.setTime(recogida, to: Calendar.current.component(.hour, from: .now) * 60
                                  + Calendar.current.component(.minute, from: .now) + 25)
         // Con la hora ya pasada, que es cuando se aplaza de verdad: sonó, no era
         // momento, y vuelve luego.
-        let llamada = store.addItem(title: "Llamar a la aseguradora", in: .today)
+        let llamada = store.addItem(title: String(localized: "Llamar a la aseguradora", comment: "Tarea de ejemplo de la maqueta"), in: .today)
         let haceUnaHora = Calendar.current.component(.hour, from: .now) * 60
             + Calendar.current.component(.minute, from: .now) - 60
         store.setTime(llamada, to: max(0, haceUnaHora))
         store.snooze(llamada, minutes: 12)
         // Estimaciones en unas cuantas, para que la cabecera sume algo.
-        for (titulo, minutos) in [("Llamar al fontanero", 15),
-                                  ("Revisar el presupuesto del trimestre", 90),
-                                  ("Recoger a los niños", 45),
-                                  ("Renovar el pasaporte", 60)] {
+        for (titulo, minutos) in [(String(localized: "Llamar al fontanero", comment: "Tarea de ejemplo de la maqueta"), 15),
+                                  (String(localized: "Revisar el presupuesto del trimestre", comment: "Tarea de ejemplo de la maqueta"), 90),
+                                  (String(localized: "Recoger a los niños", comment: "Tarea de ejemplo de la maqueta"), 45),
+                                  (String(localized: "Renovar el pasaporte", comment: "Tarea de ejemplo de la maqueta"), 60)] {
             if let t = store.items.first(where: { $0.title == titulo }) {
                 store.setEstimate(t, to: minutos)
             }
         }
         // Y una apuntada hace mes y medio y todavía sin fecha, para ver la marca
         // de lo que se queda quieto.
-        var bajo = store.addItem(title: "Aprender a tocar el bajo", in: .someday)
+        var bajo = store.addItem(title: String(localized: "Aprender a tocar el bajo", comment: "Tarea de ejemplo de la maqueta"), in: .someday)
         bajo.createdAt = calendar.date(byAdding: .day, value: -45, to: .now) ?? bajo.createdAt
         store.update(bajo)
-        store.addItem(title: "Rehacer la estantería del salón", in: .someday)
-        let done = store.addItem(title: "Reservar mesa para el viernes", in: .inbox)
+        store.addItem(title: String(localized: "Rehacer la estantería del salón", comment: "Tarea de ejemplo de la maqueta"), in: .someday)
+        let done = store.addItem(title: String(localized: "Reservar mesa para el viernes", comment: "Tarea de ejemplo de la maqueta"), in: .inbox)
         store.toggleComplete(done)
         // Algo en la papelera, para poder mirarla: una tarea y un proyecto con
         // tareas dentro, que es el caso que hay que ver —al devolverlo tiene que
         // decir con cuántas vuelve.
-        let borrada = store.addItem(title: "Mirar lo del seguro", in: .inbox)
+        let borrada = store.addItem(title: String(localized: "Mirar lo del seguro", comment: "Tarea de ejemplo de la maqueta"), in: .inbox)
         store.delete(borrada)
-        let cursillo = store.addProject(name: "Cursillo de cerámica")
+        let cursillo = store.addProject(name: String(localized: "Cursillo de cerámica", comment: "Tarea de ejemplo de la maqueta"))
         store.setIcon(cursillo, to: "🏺")
-        store.addItem(title: "Buscar horarios", in: .project(cursillo.id))
-        store.addItem(title: "Preguntar el precio", in: .project(cursillo.id))
+        store.addItem(title: String(localized: "Buscar horarios", comment: "Tarea de ejemplo de la maqueta"), in: .project(cursillo.id))
+        store.addItem(title: String(localized: "Preguntar el precio", comment: "Tarea de ejemplo de la maqueta"), in: .project(cursillo.id))
         store.delete(cursillo)
         return store
     }

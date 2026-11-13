@@ -32,9 +32,25 @@ struct VaciarBandejaView: View {
 
     /// Las decisiones con su tecla. La inicial de cada una, salvo eliminar
     /// —retroceso, como en todas partes— y saltar, que es seguir.
+    ///
+    /// La letra se traduce con la palabra: «Today» no se despacha con la H. Si
+    /// una traducción deja dos letras iguales —en inglés «Today» y «Tomorrow»
+    /// empiezan por T—, dos botones tendrían la misma tecla y uno no
+    /// funcionaría sin que nada lo dijera; entonces se vuelve a las del español.
     private var teclas: [(Despacho, KeyEquivalent, String)] {
-        [(.hoy, "h", "H"), (.manana, "m", "M"), (.proximaSemana, "s", "S"),
-         (.algunDia, "a", "A")]
+        let decisiones: [Despacho] = [.hoy, .manana, .proximaSemana, .algunDia]
+        let traducidas = [
+            String(localized: "H", comment: "Tecla de «Hoy» en Vaciar la bandeja: una letra, distinta de las otras tres"),
+            String(localized: "M", comment: "Tecla de «Mañana» en Vaciar la bandeja: una letra, distinta de las otras tres"),
+            String(localized: "S", comment: "Tecla de «Próxima semana» en Vaciar la bandeja: una letra, distinta de las otras tres"),
+            String(localized: "A", comment: "Tecla de «Algún día» en Vaciar la bandeja: una letra, distinta de las otras tres"),
+        ].map { $0.uppercased() }
+        let validas = traducidas.allSatisfy { $0.count == 1 && $0.first!.isLetter }
+            && Set(traducidas).count == traducidas.count
+        let letras = validas ? traducidas : ["H", "M", "S", "A"]
+        return zip(decisiones, letras).map { decision, letra in
+            (decision, KeyEquivalent(Character(letra.lowercased())), letra)
+        }
     }
 
     var body: some View {
@@ -74,7 +90,7 @@ struct VaciarBandejaView: View {
 
     private func tarjeta(_ item: Item) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(item.title.isEmpty ? "Sin título" : item.title)
+            Text(item.title.isEmpty ? String(localized: "Sin título") : item.title)
                 .font(.display(24))
                 .tracking(-0.4)
                 .foregroundStyle(Paper.ink)
@@ -98,7 +114,7 @@ struct VaciarBandejaView: View {
                     // ignora la decoración de su etiqueta y aplica su propio
                     // tinte, así que la fila salía sin fondo y en verde, distinta
                     // de las otras cinco. Aquí las seis se ven iguales.
-                    boton("A un proyecto", "folder", "▾", Paper.ink) {
+                    boton(String(localized: "A un proyecto"), "folder", "▾", Paper.ink) {
                         eligiendoProyecto = true
                     }
                     .popover(isPresented: $eligiendoProyecto, arrowEdge: .trailing) {
@@ -131,11 +147,11 @@ struct VaciarBandejaView: View {
                     // Saltar deja la tarea donde está: hay cosas que de verdad
                     // no se pueden decidir ahora, y forzar una decisión es como
                     // se acaba con una lista llena de fechas falsas.
-                    boton("Saltar", "arrow.right", "↩", Paper.inkSoft) {
+                    boton(String(localized: "Saltar"), "arrow.right", "↩", Paper.inkSoft) {
                         saltadas += 1; avanzar()
                     }
                     .keyboardShortcut(.defaultAction)
-                    boton("Eliminar", "trash", "⌫", Paper.warning) {
+                    boton(String(localized: "Eliminar"), "trash", "⌫", Paper.warning) {
                         store.despachar(item, .eliminar); avanzar()
                     }
                     .keyboardShortcut(.delete, modifiers: [])

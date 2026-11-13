@@ -38,21 +38,30 @@ public enum Repaso {
         public var cuerpo: String {
             var partes: [String] = []
             if atrasadas > 0 {
-                partes.append("\(atrasadas) sin hacer de días pasados")
+                partes.append(String(localized: "\(atrasadas) sin hacer de días pasados",
+                                             comment: "Repaso de la mañana: tareas con fecha de días anteriores"))
             }
-            if deHoy > 0 { partes.append("\(deHoy) para hoy") }
+            if deHoy > 0 {
+                partes.append(String(localized: "\(deHoy) para hoy",
+                                     comment: "Repaso de la mañana: tareas que tocan hoy"))
+            }
             switch paradas.count {
             case 0:
                 break
             case 1:
                 let una = paradas[0]
-                partes.append("«\(Resumen.corto(una.titulo))» lleva "
-                              + "\(Resumen.tiempo(una.dias)) sin fecha")
+                let titulo = Resumen.corto(una.titulo)
+                let tiempo = Resumen.tiempo(una.dias)
+                partes.append(String(localized: "«\(titulo)» lleva \(tiempo) sin fecha",
+                                     comment: "Repaso de la mañana: una tarea sin fecha desde hace tiempo; el segundo hueco es «4 semanas», «2 meses»"))
             case 2:
-                partes.append("«\(Resumen.corto(paradas[0].titulo))» y "
-                              + "«\(Resumen.corto(paradas[1].titulo))» llevan semanas sin fecha")
+                let una = Resumen.corto(paradas[0].titulo)
+                let otra = Resumen.corto(paradas[1].titulo)
+                partes.append(String(localized: "«\(una)» y «\(otra)» llevan semanas sin fecha",
+                                     comment: "Repaso de la mañana: dos tareas sin fecha desde hace semanas"))
             default:
-                partes.append("\(rancias) sin fecha desde hace semanas")
+                partes.append(String(localized: "\(rancias) sin fecha desde hace semanas",
+                                     comment: "Repaso de la mañana: tres o más tareas sin fecha desde hace semanas"))
             }
             return partes.joined(separator: " · ")
         }
@@ -68,12 +77,14 @@ public enum Repaso {
         static func tiempo(_ dias: Int) -> String {
             if dias < 63 {
                 let semanas = dias / 7
-                return semanas == 1 ? "1 semana" : "\(semanas) semanas"
+                return semanas == 1 ? String(localized: "1 semana", comment: "Repaso de la mañana: tiempo sin fecha")
+                                 : String(localized: "\(semanas) semanas", comment: "Repaso de la mañana: tiempo sin fecha")
             }
-            return "\(dias / 30) meses"
+            let meses = dias / 30
+            return String(localized: "\(meses) meses", comment: "Repaso de la mañana: tiempo sin fecha")
         }
 
-        public var titulo: String { "Repaso del día" }
+        public var titulo: String { String(localized: "Repaso del día", comment: "Título del aviso del repaso de la mañana") }
     }
 
     /// Cuenta lo pendiente **para el día del repaso**.

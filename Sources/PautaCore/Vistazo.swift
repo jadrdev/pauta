@@ -74,7 +74,8 @@ public struct Vistazo: Codable, Equatable, Sendable {
     /// «Nada para hoy» y no una pantalla vacía: el widget ocupa su hueco igual,
     /// y un hueco en blanco parece que la app se rompió.
     public var titular: String {
-        hoy == 0 ? "Nada para hoy" : "\(hoy) para hoy"
+        hoy == 0 ? String(localized: "Nada para hoy", comment: "Widget: no hay tareas para hoy")
+                  : String(localized: "\(hoy) para hoy", comment: "Widget: cuántas tareas hay para hoy")
     }
 
     /// Lo que va en el globo del icono: cuántas atrasadas, o nada.
@@ -94,7 +95,8 @@ public struct Vistazo: Codable, Equatable, Sendable {
     /// por eso va aparte del titular en vez de sumado dentro.
     public var apunte: String? {
         guard atrasadas > 0 else { return nil }
-        return atrasadas == 1 ? "1 atrasada" : "\(atrasadas) atrasadas"
+        return atrasadas == 1 ? String(localized: "1 atrasada", comment: "Widget: tareas de días pasados")
+                               : String(localized: "\(atrasadas) atrasadas", comment: "Widget: tareas de días pasados")
     }
 
     // MARK: - Cálculo

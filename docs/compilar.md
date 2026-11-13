@@ -325,6 +325,58 @@ etiqueta que no sea un número no existe para el aviso. Un borrador o una previa
 tampoco cuentan, a propósito: sirven para preparar el texto sin avisar a nadie.
 Lo que la app hace con eso está en [Versiones nuevas](../README.md#versiones-nuevas).
 
+## Idiomas
+
+Pauta está en **español, catalán e inglés**. El código se sigue escribiendo en
+español, y el texto español es la clave: `Text("Hoy")` en una vista,
+`String(localized: "\(n) para hoy")` en el núcleo. Las traducciones viven al
+lado, en `Resources/idiomas/`:
+
+| Catálogo | Qué lleva |
+|---|---|
+| `Localizable.xcstrings` | Todos los textos de las siete apps, el núcleo incluido |
+| `InfoPlist.xcstrings` | Lo que el sistema enseña de la app: el permiso del calendario, el copyright |
+| `AppShortcuts.xcstrings` | Las frases de Siri, en español e inglés: Siri no habla catalán |
+
+Uno solo para todos los paquetes porque **el núcleo es una biblioteca
+estática**: no tiene paquete propio, y sus textos se buscan en el de quien lo
+usa — la app, el widget o el reloj.
+
+Al escribir un texto nuevo:
+
+```bash
+tools/textos.sh
+```
+
+Compila el iPhone y el Mac pidiéndole al compilador los textos, los mete en el
+catálogo y dice cuáles faltan por traducir. Desde Xcode el catálogo se pone al
+día solo; desde la terminal, no. Las traducciones se escriben en el catálogo,
+con Xcode o a mano.
+
+Tres cosas que no son obvias:
+
+- **El español también va escrito en el catálogo**, igual que la clave. El
+  idioma de respaldo es el inglés —quien tiene el teléfono en alemán ve
+  inglés—, y si a la tabla del español le falta un texto, el sistema no
+  devuelve la clave: lo busca en inglés. `tools/textos.sh` lo rellena solo.
+- **Frases enteras, no trozos.** `"«\(titulo)» lleva \(tiempo) sin fecha"` y no
+  dos cadenas pegadas con `+`: en otro idioma cambia el orden.
+- **Los plurales van en ramas** (`n == 1 ? … : …`), cada una con su texto, y
+  no como variantes del catálogo: así las pruebas, que corren sin catálogo,
+  siguen viendo el español de siempre.
+
+`make-dmg.sh` y `testflight.sh` llaman a `tools/textos-comprobar.py` antes de
+compilar: **si falta una traducción, no se publica.** Para probar un idioma sin
+cambiar el del aparato:
+
+```bash
+xcrun simctl launch <simulador> dev.jadrdev.pauta -demo -AppleLanguages "(ca)"
+```
+
+y en el Mac, `Pauta --dump --demo -AppleLanguages "(en)"`.
+
+El plan entero, y lo que queda, en [plan-idiomas.md](plan-idiomas.md).
+
 ## Modo maqueta
 
 Para revisar el diseño sin tocar tus datos reales: arranca con tareas de muestra

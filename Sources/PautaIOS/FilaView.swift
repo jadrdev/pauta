@@ -26,7 +26,7 @@ struct FilaView: View {
         HStack(alignment: .top, spacing: 13) {
             casilla
             VStack(alignment: .leading, spacing: 3) {
-                Text(item.title.isEmpty ? "Sin título" : item.title)
+                Text(item.title.isEmpty ? String(localized: "Sin título") : item.title)
                     .font(.system(size: 16.5))
                     .foregroundStyle(item.isCompleted ? Papel.inkFaint : Papel.ink)
                     .strikethrough(item.isCompleted, color: Papel.inkFaint)

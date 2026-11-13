@@ -8,11 +8,11 @@ import Foundation
 /// Mac y el teléfono ofrezcan exactamente los mismos.
 public enum Iconos {
     public static let temas: [(nombre: String, emojis: [String])] = [
-        ("Trabajo", ["💼", "💻", "📱", "🖥️", "🌐", "🧾", "📊", "🚀"]),
-        ("Estudiar y crear", ["📚", "🎓", "✍️", "🎨", "🎬", "📷", "🎸", "🎵"]),
-        ("Casa y fuera", ["🏠", "🛒", "🍳", "🧹", "🚗", "✈️", "🎁", "🐾"]),
-        ("Cuerpo y ocio", ["💪", "🩺", "⚽️", "🎮", "🌱", "☕️", "❤️", "🧠"]),
-        ("Para marcar", ["📌", "⭐️", "🔥", "🎯", "💡", "💰", "🛠️", "📦"]),
+        (String(localized: "Trabajo", comment: "Tema de emojis para proyectos y áreas"), ["💼", "💻", "📱", "🖥️", "🌐", "🧾", "📊", "🚀"]),
+        (String(localized: "Estudiar y crear", comment: "Tema de emojis para proyectos y áreas"), ["📚", "🎓", "✍️", "🎨", "🎬", "📷", "🎸", "🎵"]),
+        (String(localized: "Casa y fuera", comment: "Tema de emojis para proyectos y áreas"), ["🏠", "🛒", "🍳", "🧹", "🚗", "✈️", "🎁", "🐾"]),
+        (String(localized: "Cuerpo y ocio", comment: "Tema de emojis para proyectos y áreas"), ["💪", "🩺", "⚽️", "🎮", "🌱", "☕️", "❤️", "🧠"]),
+        (String(localized: "Para marcar", comment: "Tema de emojis para proyectos y áreas"), ["📌", "⭐️", "🔥", "🎯", "💡", "💰", "🛠️", "📦"]),
     ]
 
     public static var paleta: [String] { temas.flatMap(\.emojis) }

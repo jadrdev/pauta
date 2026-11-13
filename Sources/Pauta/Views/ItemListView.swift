@@ -186,7 +186,12 @@ struct ItemListView: View {
             // supone que se vacía.
             if case .inbox = nav.perspective, !items.isEmpty {
                 Button { vaciando = true } label: {
-                    Text("VACIAR").rubricStyle(Paper.accentInk)
+                    // Clave propia: en español es el mismo «Vaciar» que el de la
+                    // papelera, pero en inglés la papelera se «empty» y la
+                    // bandeja se «clear».
+                    Text(String(localized: "VACIAR (bandeja)", defaultValue: "VACIAR",
+                                comment: "Botón que empieza Vaciar la bandeja: decidir una por una qué hacer con cada tarea"))
+                        .rubricStyle(Paper.accentInk)
                 }
                 .buttonStyle(.plain)
                 .help("Decidir una por una qué hacer con lo que hay en la bandeja")
@@ -251,7 +256,8 @@ struct ItemListView: View {
         let eventos = eventosDeHoy.count
         // Los eventos no se suman a las tareas abiertas: no son cosas que hacer
         // ni se completan, así que se cuentan aparte o no se cuentan.
-        let cola = eventos == 0 ? "" : (eventos == 1 ? "1 EVENTO · " : "\(eventos) EVENTOS · ")
+        let cola = eventos == 0 ? ""
+            : (eventos == 1 ? String(localized: "1 EVENTO") : String(localized: "\(eventos) EVENTOS")) + " · "
         return cola + tareasLabel + estimado
     }
 
@@ -271,9 +277,10 @@ struct ItemListView: View {
         let minutos = Duracion.total(items)
         guard minutos > 0 else { return "" }
         let sin = Duracion.sinEstimar(items)
-        let suma = "\(Duracion.etiqueta(minutos)) en lo estimado"
-        guard sin > 0 else { return suma }
-        return suma + (sin == 1 ? ", 1 tarea sin estimar" : ", \(sin) tareas sin estimar")
+        let suma = Duracion.etiqueta(minutos)
+        guard sin > 0 else { return String(localized: "\(suma) en lo estimado") }
+        return sin == 1 ? String(localized: "\(suma) en lo estimado, 1 tarea sin estimar")
+                        : String(localized: "\(suma) en lo estimado, \(sin) tareas sin estimar")
     }
 
     private var tareasLabel: String {
@@ -281,9 +288,9 @@ struct ItemListView: View {
         // El título de esa lista ya dice «Completadas»: repetirlo en el rótulo
         // sobraría, así que ahí solo se cuenta.
         if case .completed = nav.perspective {
-            return n == 1 ? "1 TAREA" : "\(n) TAREAS"
+            return n == 1 ? String(localized: "1 TAREA") : String(localized: "\(n) TAREAS")
         }
-        return n == 1 ? "1 ABIERTA" : "\(n) ABIERTAS"
+        return n == 1 ? String(localized: "1 ABIERTA") : String(localized: "\(n) ABIERTAS")
     }
 
     @ViewBuilder private var emptyState: some View {
@@ -318,16 +325,16 @@ struct ItemListView: View {
     /// no pasa lo que se promete.
     private var emptyHint: String? {
         if case .area = nav.perspective {
-            return "Arrastra proyectos a esta área en la barra lateral."
+            return String(localized: "Arrastra proyectos a esta área en la barra lateral.")
         }
         guard nav.perspective.acceptsNewItems else { return nil }
-        return "Pulsa ⌘N para añadir una tarea."
+        return String(localized: "Pulsa ⌘N para añadir una tarea.")
     }
 
     /// «Mañana», «Sábado» dentro de la semana, y fecha con mes más allá.
     private func dayLabel(_ day: Date) -> String {
         let calendar = Calendar.current
-        if calendar.isDateInTomorrow(day) { return "Mañana" }
+        if calendar.isDateInTomorrow(day) { return String(localized: "Mañana") }
         let days = calendar.dateComponents([.day],
                                            from: calendar.startOfDay(for: .now),
                                            to: day).day ?? 0
@@ -337,16 +344,16 @@ struct ItemListView: View {
 
     private var emptyTitle: String {
         switch nav.perspective {
-        case .inbox: "La bandeja está vacía."
-        case .today: "Nada para hoy."
-        case .upcoming: "Nada planificado más adelante."
-        case .anytime: "Nada que hacer ahora mismo."
-        case .someday: "Nada aparcado para algún día."
-        case .completed: "Todavía no has completado nada."
-        case .project: "Este proyecto no tiene tareas."
-        case .area: "Los proyectos de esta área no tienen nada pendiente."
-        case .tag: "Nada lleva esta etiqueta."
-        case .papelera: "La papelera está vacía."
+        case .inbox: String(localized: "La bandeja está vacía.")
+        case .today: String(localized: "Nada para hoy.")
+        case .upcoming: String(localized: "Nada planificado más adelante.")
+        case .anytime: String(localized: "Nada que hacer ahora mismo.")
+        case .someday: String(localized: "Nada aparcado para algún día.")
+        case .completed: String(localized: "Todavía no has completado nada.")
+        case .project: String(localized: "Este proyecto no tiene tareas.")
+        case .area: String(localized: "Los proyectos de esta área no tienen nada pendiente.")
+        case .tag: String(localized: "Nada lleva esta etiqueta.")
+        case .papelera: String(localized: "La papelera está vacía.")
         }
     }
 
@@ -404,7 +411,7 @@ struct ItemListView: View {
     @ViewBuilder private var addButtonLabel: some View {
         Button { nav.startNewItem() } label: {
             HStack(spacing: 10) {
-                Text("\u{FF0B}").font(.system(size: 12))
+                Text(verbatim: "\u{FF0B}").font(.system(size: 12))
                 Text("Añadir").font(.system(size: 13.5, weight: .medium))
             }
             .foregroundStyle(Paper.inkFaint)
@@ -478,7 +485,7 @@ struct ItemListView: View {
         .padding(.vertical, 10)
     }
 
-    private func botonDeEleccion(_ titulo: String,
+    private func botonDeEleccion(_ titulo: LocalizedStringKey,
                                  destacado: Bool = false,
                                  accion: @escaping () -> Void) -> some View {
         Button(action: accion) {

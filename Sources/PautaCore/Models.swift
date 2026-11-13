@@ -7,10 +7,10 @@ public enum Recurrence: String, Codable, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .diaria: "Cada día"
-        case .semanal: "Cada semana"
-        case .mensual: "Cada mes"
-        case .anual: "Cada año"
+        case .diaria: String(localized: "Cada día", comment: "Repetición de una tarea")
+        case .semanal: String(localized: "Cada semana", comment: "Repetición de una tarea")
+        case .mensual: String(localized: "Cada mes", comment: "Repetición de una tarea")
+        case .anual: String(localized: "Cada año", comment: "Repetición de una tarea")
         }
     }
 
@@ -76,7 +76,8 @@ public struct Adjunto: Identifiable, Codable, Hashable, Sendable {
             .replacingOccurrences(of: ":", with: "-")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return limpio.trimmingCharacters(in: CharacterSet(charactersIn: ".")).isEmpty
-            ? "Adjunto" : limpio
+            ? String(localized: "Adjunto", comment: "Nombre de un archivo adjunto a una tarea cuando el original no tiene nombre válido")
+            : limpio
     }
 }
 
@@ -272,9 +273,12 @@ public struct Item: Identifiable, Codable, Hashable {
         guard isCompleted, let completedAt, !adjuntos.isEmpty else { return nil }
         let segundos = Item.vidaDeLosAdjuntos - ahora.timeIntervalSince(completedAt)
         let dias = Int((segundos / 86_400).rounded(.up))
-        if dias <= 0 { return "Los adjuntos se borran hoy" }
-        return dias == 1 ? "Los adjuntos se borran mañana"
-                         : "Los adjuntos se borran en \(dias) días"
+        if dias <= 0 {
+            return String(localized: "Los adjuntos se borran hoy", comment: "Ficha de una tarea hecha: cuándo se borran sus adjuntos")
+        }
+        return dias == 1
+            ? String(localized: "Los adjuntos se borran mañana", comment: "Ficha de una tarea hecha: cuándo se borran sus adjuntos")
+            : String(localized: "Los adjuntos se borran en \(dias) días", comment: "Ficha de una tarea hecha: cuándo se borran sus adjuntos")
     }
 
     /// Su fecha límite es hoy o ya pasó.
@@ -426,8 +430,11 @@ public struct Item: Identifiable, Codable, Hashable {
     /// hora, o parecerá que la hora está mal.
     public var warnLabel: String? {
         guard let warnBefore, warnBefore > 0 else { return nil }
-        if warnBefore % 60 == 0 { return "\(warnBefore / 60) h antes" }
-        return "\(warnBefore) min antes"
+        if warnBefore % 60 == 0 {
+            let horas = warnBefore / 60
+            return String(localized: "\(horas) h antes", comment: "Cuánto antes de la hora suena el aviso, en horas: «1 h antes»")
+        }
+        return String(localized: "\(warnBefore) min antes", comment: "Cuánto antes de la hora suena el aviso, en minutos: «10 min antes»")
     }
 
     /// Cuántos días lleva sin hacerse desde que se apuntó, para lo que no tiene
@@ -457,13 +464,26 @@ public struct Item: Identifiable, Codable, Hashable {
 
     /// «3 sem», «2 meses». En semanas mientras se cuenten con los dedos y en
     /// meses cuando ya da vergüenza contarlas.
-    public func staleLabel(now: Date = .now, calendar: Calendar = .current) -> String? {
+    /// - Parameter largo: «3 semanas» en vez de «3 sem», para la ayuda que sale
+    ///   al pasar por encima. Se pide aquí y no se despliega fuera cambiando
+    ///   «sem» por «semanas»: en otro idioma la abreviatura es otra.
+    public func staleLabel(now: Date = .now, calendar: Calendar = .current,
+                           largo: Bool = false) -> String? {
         guard estaRancia(now: now, calendar: calendar),
               let dias = staleDays(now: now, calendar: calendar) else { return nil }
         // En semanas hasta las nueve: «7 sem» dice más que «1 mes», y a partir
         // de ahí la cuenta exacta ya da igual porque el mensaje es el mismo.
-        if dias < 63 { return "\(dias / 7) sem" }
-        return "\(dias / 30) meses"
+        if dias < 63 {
+            let semanas = dias / 7
+            if largo {
+                return semanas == 1
+                    ? String(localized: "1 semana")
+                    : String(localized: "\(semanas) semanas", comment: "Cuánto lleva una tarea sin fecha, en la ayuda: «3 semanas»")
+            }
+            return String(localized: "\(semanas) sem", comment: "Marca en la fila de una tarea sin fecha desde hace semanas; «sem» abrevia «semanas», «3 sem»")
+        }
+        let meses = dias / 30
+        return String(localized: "\(meses) meses", comment: "Marca en la fila de una tarea sin fecha desde hace meses: «2 meses»")
     }
 
     /// La hora hasta la que está aplazada, si lo está.
@@ -732,16 +752,16 @@ public enum Perspective: Hashable, CaseIterable {
 
     public var title: String {
         switch self {
-        case .inbox: "Bandeja"
-        case .today: "Hoy"
-        case .upcoming: "Próximamente"
-        case .anytime: "Cualquier momento"
-        case .someday: "Algún día"
-        case .completed: "Completadas"
-        case .project: "Proyecto"
-        case .area: "Área"
+        case .inbox: String(localized: "Bandeja", comment: "Lista de la barra lateral: lo apuntado sin decidir")
+        case .today: String(localized: "Hoy", comment: "Lista de la barra lateral")
+        case .upcoming: String(localized: "Próximamente", comment: "Lista de la barra lateral: lo planificado para días siguientes")
+        case .anytime: String(localized: "Cualquier momento", comment: "Lista de la barra lateral: lo que se puede hacer ya, sin hora")
+        case .someday: String(localized: "Algún día", comment: "Lista de la barra lateral: lo aparcado")
+        case .completed: String(localized: "Completadas", comment: "Lista de la barra lateral: tareas hechas")
+        case .project: String(localized: "Proyecto", comment: "Título genérico de la vista de un proyecto (sustantivo)")
+        case .area: String(localized: "Área", comment: "Título genérico de la vista de un área, grupo de proyectos")
         case .tag(let name): name
-        case .papelera: "Papelera"
+        case .papelera: String(localized: "Papelera", comment: "Lista de la barra lateral: lo eliminado")
         }
     }
 

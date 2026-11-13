@@ -300,15 +300,18 @@ public enum Mudanza {
 
     private static func manifiesto(_ archivos: Int, _ bytes: Int64, de origen: URL,
                                    ahora: Date = .now) -> String {
-        """
-        Copia de los datos de Pauta de antes de mudarlos al contenedor de iCloud.
+        let cuando = ahora.formatted(date: .long, time: .standard)
+        let ruta = origen.path
+        let tamano = ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+        return String(localized: """
+            Copia de los datos de Pauta de antes de mudarlos al contenedor de iCloud.
 
-        Hecha el \(ahora.formatted(date: .long, time: .standard)), desde:
-          \(origen.path)
-        \(archivos) archivos, \(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)), comprobados uno a uno.
+            Hecha el \(cuando), desde:
+              \(ruta)
+            \(archivos) archivos, \(tamano), comprobados uno a uno.
 
-        Pauta no la lee ni la borra: es tuya. Si algo saliera mal, esta carpeta
-        tiene todo como estaba.
-        """
+            Pauta no la lee ni la borra: es tuya. Si algo saliera mal, esta carpeta
+            tiene todo como estaba.
+            """, comment: "Texto del LEEME.txt que va en la copia de antes de mudar los datos (Mac); huecos: fecha y hora, ruta de la carpeta, número de archivos, tamaño")
     }
 }

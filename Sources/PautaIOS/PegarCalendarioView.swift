@@ -37,8 +37,7 @@ struct PegarCalendarioView: View {
                         .onChange(of: texto) { releer() }
                     TextField("Delante de cada título, p. ej. «Tutoría: »", text: $prefijo)
                 } footer: {
-                    Text("Pega el texto de un PDF o de un mensaje con fechas. Abajo sale lo que se "
-                         + "ha entendido, antes de crear nada.")
+                    Text("Pega el texto de un PDF o de un mensaje con fechas. Abajo sale lo que se ha entendido, antes de crear nada.")
                 }
                 ForEach(grupos, id: \.clave) { grupo in
                     Section {
@@ -52,7 +51,7 @@ struct PegarCalendarioView: View {
                         }
                         ForEach(grupo.propuestas) { fila($0) }
                     } header: {
-                        Text(grupo.clave.isEmpty ? "SIN APARTADO" : grupo.clave.uppercased())
+                        Text(grupo.clave.isEmpty ? String(localized: "SIN APARTADO") : grupo.clave.uppercased())
                     }
                 }
                 if !lectura.ignoradas.isEmpty {
@@ -126,7 +125,7 @@ struct PegarCalendarioView: View {
     }
 
     private func horario(_ p: Calendario.Propuesta) -> String {
-        guard let m = p.minuto else { return "sin hora" }
+        guard let m = p.minuto else { return String(localized: "sin hora") }
         func reloj(_ m: Int) -> String { String(format: "%d:%02d", m / 60, m % 60) }
         guard let d = p.duracion else { return reloj(m) }
         return reloj(m) + "–" + reloj(m + d)

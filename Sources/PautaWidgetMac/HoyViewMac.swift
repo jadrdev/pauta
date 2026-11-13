@@ -86,9 +86,9 @@ struct HoyViewMac: View {
     }
 
     @ViewBuilder private func pie(_ v: Vistazo) -> some View {
-        let sobran = v.restantes > 0 ? "+\(v.restantes) más" : nil
+        let sobran = v.restantes > 0 ? String(localized: "+\(v.restantes) más") : nil
         let bandeja = v.bandeja > 0
-            ? (v.bandeja == 1 ? "1 en la bandeja" : "\(v.bandeja) en la bandeja")
+            ? (v.bandeja == 1 ? String(localized: "1 en la bandeja") : String(localized: "\(v.bandeja) en la bandeja"))
             : nil
         if sobran != nil || bandeja != nil {
             HStack(spacing: 6) {
@@ -133,7 +133,7 @@ private struct FilaDelVistazoMac: View {
                 // La proporción de la fila de la app: círculo 1,27× el título.
                 .frame(width: pequeno ? 16 : 17, height: pequeno ? 16 : 17)
                 .offset(y: pequeno ? 2 : 2.5)
-            Text(fila.titulo.isEmpty ? "Sin título" : fila.titulo)
+            Text(fila.titulo.isEmpty ? String(localized: "Sin título") : fila.titulo)
                 .font(.system(size: pequeno ? 12.5 : 13.5))
                 .foregroundStyle(Paper.ink)
                 .lineLimit(1)

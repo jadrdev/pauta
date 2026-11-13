@@ -41,8 +41,7 @@ struct PegarCalendarioView: View {
             Text("Pegar un calendario")
                 .font(.display(22))
                 .foregroundStyle(Paper.ink)
-            Text("Pega el texto de un PDF o de un mensaje con fechas. Antes de crear nada, "
-                 + "aquí abajo sale lo que se ha entendido.")
+            Text("Pega el texto de un PDF o de un mensaje con fechas. Antes de crear nada, aquí abajo sale lo que se ha entendido.")
                 .font(.system(size: 12))
                 .foregroundStyle(Paper.inkSoft)
 
@@ -72,7 +71,7 @@ struct PegarCalendarioView: View {
                     ForEach(grupos, id: \.clave) { grupo in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 8) {
-                                Text((grupo.clave.isEmpty ? "SIN APARTADO" : grupo.clave.uppercased()))
+                                Text((grupo.clave.isEmpty ? String(localized: "SIN APARTADO") : grupo.clave.uppercased()))
                                     .rubricStyle()
                                 Image(systemName: "arrow.right").font(.system(size: 9))
                                     .foregroundStyle(Paper.inkFaint)
@@ -139,7 +138,7 @@ struct PegarCalendarioView: View {
     private func selectorDeProyecto(_ clave: String) -> some View {
         let actual = destino[clave] ?? nil
         let nombre = actual.flatMap { id in store.projects.first { $0.id == id } }
-            .map { ($0.icon.isEmpty ? "" : $0.icon + " ") + $0.name } ?? "Bandeja"
+            .map { ($0.icon.isEmpty ? "" : $0.icon + " ") + $0.name } ?? String(localized: "Bandeja")
         return Menu(nombre) {
             Button("Bandeja") { destino[clave] = .some(nil) }
             Divider()
@@ -183,7 +182,7 @@ struct PegarCalendarioView: View {
     }
 
     private func horario(_ p: Calendario.Propuesta) -> String {
-        guard let m = p.minuto else { return "sin hora" }
+        guard let m = p.minuto else { return String(localized: "sin hora") }
         func reloj(_ m: Int) -> String { String(format: "%d:%02d", m / 60, m % 60) }
         guard let d = p.duracion else { return reloj(m) }
         return reloj(m) + "–" + reloj(m + d)

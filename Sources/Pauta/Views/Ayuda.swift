@@ -47,8 +47,7 @@ struct AyudaView: View {
             .padding(.top, 8)
 
             Text("PERMISOS").rubricStyle().padding(.top, 22)
-            Text("Tres cosas las hace el sistema y no la app. Si están en «no», "
-                 + "esa parte se queda muda; desde aquí se piden y se arreglan.")
+            Text("Tres cosas las hace el sistema y no la app. Si están en «no», esa parte se queda muda; desde aquí se piden y se arreglan.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(Paper.inkFaint)
                 .fixedSize(horizontal: false, vertical: true)
@@ -76,8 +75,7 @@ struct AyudaView: View {
                             NSWorkspace.shared.open(url)
                         }
                     } label: {
-                        Text("Los globos del icono están apagados: el Dock no "
-                             + "puede enseñar las atrasadas. Encenderlos…")
+                        Text("Los globos del icono están apagados: el Dock no puede enseñar las atrasadas. Encenderlos…")
                             .font(.system(size: 11.5))
                             .foregroundStyle(Paper.warning)
                             .multilineTextAlignment(.leading)
@@ -129,14 +127,14 @@ struct AyudaView: View {
     /// primero sería mentir.
     private var atajos: [(String, String)] {
         [(alta.combinacion ?? Ajustes.shared.atajo.descripcion,
-          "Apuntar algo desde cualquier app"),
-         ("⌘N", "Nueva tarea en la lista de delante"),
-         ("⌘⇧N", "Nuevo proyecto"),
-         ("⌘⌥N", "Nueva área"),
-         ("↩", "Guardar y seguir con otra tarea"),
-         ("esc", "Dejarlo estar"),
-         ("⌘1 … ⌘6", "Saltar de lista, en el orden de la barra lateral"),
-         ("⌘0", "Volver a la ventana principal")]
+          String(localized: "Apuntar algo desde cualquier app")),
+         ("⌘N", String(localized: "Nueva tarea en la lista de delante")),
+         ("⌘⇧N", String(localized: "Nuevo proyecto")),
+         ("⌘⌥N", String(localized: "Nueva área")),
+         ("↩", String(localized: "Guardar y seguir con otra tarea")),
+         ("esc", String(localized: "Dejarlo estar")),
+         ("⌘1 … ⌘6", String(localized: "Saltar de lista, en el orden de la barra lateral")),
+         ("⌘0", String(localized: "Volver a la ventana principal"))]
     }
 }
 
@@ -160,8 +158,8 @@ private struct FilaDeAtajo: View {
 }
 
 private struct FilaDePermiso: View {
-    let nombre: String
-    let para: String
+    let nombre: LocalizedStringResource
+    let para: LocalizedStringResource
     let concedido: Bool
     let decidido: Bool
     let ajustes: String
@@ -198,8 +196,9 @@ private struct FilaDePermiso: View {
     }
 
     private var estado: String {
-        if concedido { return "Concedido, para \(para)" }
-        if decidido { return "Denegado — hace falta para \(para)" }
-        return "Sin preguntar todavía, para \(para)"
+        let para = String(localized: para)
+        if concedido { return String(localized: "Concedido, para \(para)") }
+        if decidido { return String(localized: "Denegado — hace falta para \(para)") }
+        return String(localized: "Sin preguntar todavía, para \(para)")
     }
 }

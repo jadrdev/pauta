@@ -81,7 +81,7 @@ struct SidebarView: View {
             // aparecer **es** el aviso de que algo se borró.
             if store.papeleraLlena {
                 VStack(alignment: .leading, spacing: 1) {
-                    SidebarRow(perspective: .papelera, label: "Papelera")
+                    SidebarRow(perspective: .papelera, label: String(localized: "Papelera"))
                 }
                 .padding(.top, 26)
             }
@@ -111,16 +111,16 @@ struct SidebarView: View {
 
     private func fila(_ project: Project, sangria: CGFloat = 0) -> some View {
         SidebarRow(perspective: .project(project.id),
-                   label: project.name.isEmpty ? "Sin título" : project.name,
+                   label: project.name.isEmpty ? String(localized: "Sin título") : project.name,
                    project: project,
                    sangria: sangria)
     }
 
-    private func botonNuevo(_ titulo: String, accion: @escaping () -> Void) -> some View {
+    private func botonNuevo(_ titulo: LocalizedStringKey, accion: @escaping () -> Void) -> some View {
         Button(action: accion) {
             HStack(spacing: 9) {
                 // El «+» ocupa la columna del icono, el texto la de la etiqueta.
-                Text("\u{FF0B}")
+                Text(verbatim: "\u{FF0B}")
                     .font(.system(size: 11, weight: .bold))
                     .frame(width: 17, alignment: .center)
                 Text(titulo).font(.system(size: 12.5, weight: .medium))
@@ -195,7 +195,7 @@ private struct AreaRow: View {
             if !area.icon.isEmpty {
                 Text(area.icon).font(.system(size: 11))
             }
-            Text((area.name.isEmpty ? "Sin título" : area.name).uppercased())
+            Text((area.name.isEmpty ? String(localized: "Sin título") : area.name).uppercased())
                 .rubricStyle(seleccionada ? Paper.accentInk : Paper.inkSoft)
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -445,7 +445,7 @@ private struct SidebarRow: View {
                     Button("Sin área") { store.move(project, toArea: nil) }
                     Divider()
                     ForEach(store.areas) { area in
-                        Button(area.name.isEmpty ? "Sin título" : area.name) {
+                        Button(area.name.isEmpty ? String(localized: "Sin título") : area.name) {
                             store.move(project, toArea: area.id)
                         }
                     }

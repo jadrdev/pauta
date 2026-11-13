@@ -25,11 +25,11 @@ struct EsferaView: View {
             switch familia {
             case .accessoryInline:
                 // Una sola línea y sin fondo: es texto al lado de la hora.
-                Text(vistazo?.renglon ?? "Pauta · sin datos")
+                Text(vistazo?.renglon ?? String(localized: "Pauta · sin datos"))
             case .accessoryCorner:
                 Text(EsferaTextos.cifra(vistazo))
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .widgetLabel(vistazo?.renglon ?? "Sin datos")
+                    .widgetLabel(vistazo?.renglon ?? String(localized: "Sin datos"))
             case .accessoryRectangular:
                 RectanguloDeEsfera(vistazo: vistazo)
             default:
@@ -59,7 +59,7 @@ struct CirculoDeEsfera: View {
                 Text(EsferaTextos.cifra(vistazo))
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
                     .minimumScaleFactor(0.6)
-                Text("hoy")
+                Text("hoy", comment: "Bajo la cifra de tareas en la esfera del reloj; se enseña en mayúsculas.")
                     .font(.system(size: 9, weight: .medium))
                     .textCase(.uppercase)
                     .foregroundStyle(.secondary)

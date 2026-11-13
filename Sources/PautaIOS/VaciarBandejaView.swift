@@ -66,7 +66,7 @@ struct VaciarBandejaView: View {
     private func tarjeta(_ item: Item) -> some View {
         VStack(spacing: 0) {
             Spacer(minLength: 20)
-            Text(item.title.isEmpty ? "Sin título" : item.title)
+            Text(item.title.isEmpty ? String(localized: "Sin título") : item.title)
                 .font(.system(size: 26, weight: .semibold))
                 .foregroundStyle(Papel.ink)
                 .multilineTextAlignment(.center)

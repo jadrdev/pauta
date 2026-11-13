@@ -6,7 +6,7 @@ import Foundation
 /// y escribir eso y luego abrir un selector de fecha para repetirlo es hacer dos
 /// veces el mismo trabajo.
 ///
-/// Quien entiende el español es `NSDataDetector`, que trae el sistema: sabe de
+/// Quien entiende el idioma es `NSDataDetector`, que trae el sistema: sabe de
 /// «pasado mañana», «el viernes» y «el 3 de octubre» sin que aquí haya una sola
 /// lista de meses. Lo que se hace aquí es lo que él no hace — decidir qué es
 /// título, no tragarse las horas que se inventa, y juntar dos trozos sueltos.
@@ -64,20 +64,29 @@ public enum Cuando {
         return Lectura(titulo: titulo, dia: dia, minuto: minuto)
     }
 
+    // Lo que va delante de una hora y lo que va detrás, en los tres idiomas de
+    // la app **a la vez** y no según el del teléfono: el detector ya entiende
+    // los tres sin que nadie le diga cuál, y quien tiene el teléfono en español
+    // también escribe «Reunió dijous a les 6». Español «a las», catalán «a les»
+    // y «a la una», inglés «at».
+    private static let antesDeLaHora = #"(a\s+(las?|les)|at)\s+"#
+    private static let despuesDeLaHora = #"(h|hs|horas|hores|am|pm)"#
+
     /// Si el trozo nombra una hora. Se mira el texto y no la fecha resuelta,
     /// porque la fecha siempre trae hora: la que el detector se inventó.
     private static func dice(hora texto: String) -> Bool {
         let t = texto.lowercased()
         if t.range(of: #"\d{1,2}[:.]\d{2}"#, options: .regularExpression) != nil { return true }
-        if t.range(of: #"\ba\s+las?\s+\d"#, options: .regularExpression) != nil { return true }
-        if t.range(of: #"\d\s*(h|hs|horas|am|pm)\b"#, options: .regularExpression) != nil { return true }
+        if t.range(of: #"\b"# + antesDeLaHora + #"\d"#, options: .regularExpression) != nil { return true }
+        if t.range(of: #"\d\s*"# + despuesDeLaHora + #"\b"#, options: .regularExpression) != nil { return true }
         return false
     }
 
-    /// Si el trozo es **solo** una hora: «18:00», «a las 18».
+    /// Si el trozo es **solo** una hora: «18:00», «a las 18», «at 6pm».
     private static func soloHora(_ texto: String) -> Bool {
         let t = texto.lowercased().trimmingCharacters(in: .whitespaces)
-        return t.range(of: #"^(a\s+las?\s+)?\d{1,2}([:.]\d{2})?\s*(h|hs|horas|am|pm)?$"#,
+        return t.range(of: "^(" + antesDeLaHora + #")?\d{1,2}([:.]\d{2})?\s*"#
+                           + despuesDeLaHora + "?$",
                        options: .regularExpression) != nil
     }
 
@@ -94,8 +103,13 @@ public enum Cuando {
         }
         texto = texto.replacingOccurrences(of: #"\s+"#, with: " ",
                                            options: .regularExpression)
-        let sueltas: Set<String> = ["el", "la", "los", "las", "de", "del",
-                                    "a", "al", "en", "para", "por", "y", "-", "·"]
+        // También en los tres idiomas. En inglés solo las que nunca acaban un
+        // título de verdad: «in» o «to» no, que «Check in» es una tarea.
+        let sueltas: Set<String> = [
+            "el", "la", "los", "las", "de", "del", "a", "al", "en", "para", "por", "y",
+            "els", "les", "dels", "als", "per", "i",
+            "at", "on", "the", "for", "and",
+            "-", "·"]
         var partes = texto.split(separator: " ").map(String.init)
         while let primera = partes.first, sueltas.contains(primera.lowercased()) {
             partes.removeFirst()

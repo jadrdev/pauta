@@ -56,10 +56,10 @@ struct AjustesView: View {
     /// es lo mismo que «estás al día», y decir lo segundo cuando pasó lo primero
     /// es mentir en voz baja.
     private var estadoDeVersiones: String {
-        if let hay = novedad.hay { return "Hay una nueva: \(hay.version)" }
-        if novedad.falloAlMirar { return "No se pudo comprobar" }
-        if Ajustes.shared.ultimaMiradaDeVersiones != nil { return "Tienes la última (\(Acercade.version))" }
-        return "Se mira una vez al día. Solo pregunta; no envía nada"
+        if let hay = novedad.hay { return String(localized: "Hay una nueva: \(hay.version.description)") }
+        if novedad.falloAlMirar { return String(localized: "No se pudo comprobar") }
+        if Ajustes.shared.ultimaMiradaDeVersiones != nil { return String(localized: "Tienes la última (\(Acercade.version))") }
+        return String(localized: "Se mira una vez al día. Solo pregunta; no envía nada")
     }
 
     private static let horasDeRepaso = [7 * 60, 7 * 60 + 30, 8 * 60, 8 * 60 + 30,
@@ -88,15 +88,13 @@ struct AjustesView: View {
                 })) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Abrir Pauta al iniciar sesión").ajusteStyle()
-                        Text("Con la app cerrada no hay atajo, ni avisos nuevos, "
-                             + "ni cuenta atrás.")
+                        Text("Con la app cerrada no hay atajo, ni avisos nuevos, ni cuenta atrás.")
                             .ajusteNota()
                     }
                 }
                 .toggleStyle(.switch)
                 if falloDeArranque {
-                    Text("El sistema no lo aceptó. Suele ser porque la app no está "
-                         + "en Aplicaciones.")
+                    Text("El sistema no lo aceptó. Suele ser porque la app no está en Aplicaciones.")
                         .ajusteNota(Paper.warning)
                 }
             }
@@ -105,10 +103,7 @@ struct AjustesView: View {
                 GrabadorDeAtajo(grabando: $grabandoAtajo, actual: ajustes.atajo) { nuevo in
                     AltaRapida.shared.cambiar(a: nuevo)
                 }
-                Text("Abre la línea para apuntar algo sin ir a buscar la ventana. "
-                     + "Si al pulsarlo no pasa nada, es que otra app o el propio "
-                     + "sistema se queda esa combinación: el registro no falla, "
-                     + "pero la tecla no llega. Elige otra.")
+                Text("Abre la línea para apuntar algo sin ir a buscar la ventana. Si al pulsarlo no pasa nada, es que otra app o el propio sistema se queda esa combinación: el registro no falla, pero la tecla no llega. Elige otra.")
                     .ajusteNota()
             }
 
@@ -133,15 +128,14 @@ struct AjustesView: View {
                     Text("A la hora").tag(0)
                     Divider()
                     ForEach([5, 10, 15, 30, 60], id: \.self) { m in
-                        Text(Duracion.etiqueta(m) + " antes").tag(m)
+                        Text("\(Duracion.etiqueta(m)) antes").tag(m)
                     }
                 } label: {
                     Text("Avisar por defecto").ajusteStyle()
                 }
                 .pickerStyle(.menu)
                 .fixedSize()
-                Text("Se le pone a cada hora nueva. Las tareas que ya tengan margen "
-                     + "propio no se tocan.")
+                Text("Se le pone a cada hora nueva. Las tareas que ya tengan margen propio no se tocan.")
                     .ajusteNota()
 
                 Picker(selection: $ajustes.minutosAplazados) {
@@ -175,7 +169,7 @@ struct AjustesView: View {
                         }
                         .disabled(novedad.mirando)
                         if let hay = novedad.hay {
-                            EnlaceDeTexto("Ver la \(hay.version)") {
+                            EnlaceDeTexto("Ver la \(hay.version.description)") {
                                 NSWorkspace.shared.open(hay.url)
                             }
                         }
@@ -185,8 +179,7 @@ struct AjustesView: View {
                 Toggle(isOn: $ajustes.barraConCuenta) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Enseñar la cuenta atrás").ajusteStyle()
-                        Text("«En 20 min · Recoger a los niños» cuando falta menos "
-                             + "de una hora. Si no, solo el icono.")
+                        Text("«En 20 min · Recoger a los niños» cuando falta menos de una hora. Si no, solo el icono.")
                             .ajusteNota()
                     }
                 }
@@ -194,12 +187,10 @@ struct AjustesView: View {
             }
 
             grupo("COPIAS DE SEGURIDAD") {
-                Text(copias.first.map { "La última: \($0.titulo.lowercased())" }
-                     ?? "Todavía ninguna: se hace la primera al abrir la app")
+                Text(copias.first.map { String(localized: "La última: \($0.titulo.lowercased())") }
+                     ?? String(localized: "Todavía ninguna: se hace la primera al abrir la app"))
                     .ajusteStyle()
-                Text("Una al día, de los últimos \(Copias.cuantas) días, junto a tus datos en "
-                     + "iCloud. Volver a una deja todo como estaba ese día; lo apuntado "
-                     + "después va a la papelera, y antes se guarda una copia de ahora.")
+                Text("Una al día, de los últimos \(Copias.cuantas) días, junto a tus datos en iCloud. Volver a una deja todo como estaba ese día; lo apuntado después va a la papelera, y antes se guarda una copia de ahora.")
                     .ajusteNota()
                 HStack(spacing: 14) {
                     Menu("Volver a una copia…") {
@@ -231,12 +222,11 @@ struct AjustesView: View {
                     Button("Importar", role: .destructive) {
                         guard let copia = importada else { return }
                         store.restaurar(copia)
-                        restaurada = "Hecho: \(copia.items.count) tareas importadas."
+                        restaurada = String(localized: "Hecho: \(copia.items.count) tareas importadas.")
                         Task { await leerCopias() }
                     }
                 } message: {
-                    Text("Lo que no esté en ella irá a la papelera. Antes se guarda una "
-                         + "copia de cómo está ahora, por si quieres volver.")
+                    Text("Lo que no esté en ella irá a la papelera. Antes se guarda una copia de cómo está ahora, por si quieres volver.")
                 }
                 if let restaurada {
                     Text(restaurada).ajusteNota(Paper.accentInk)
@@ -252,16 +242,15 @@ struct AjustesView: View {
                     guard let elegida = aRestaurar else { return }
                     // Sin bajar no se espera: se pide y se dice.
                     guard let copia = Copias.leer(elegida.url) else {
-                        restaurada = "Esa copia aún está bajando de iCloud. Prueba en un momento."
+                        restaurada = String(localized: "Esa copia aún está bajando de iCloud. Prueba en un momento.")
                         return
                     }
                     store.restaurar(copia)
-                    restaurada = "Hecho: todo está como el \(elegida.titulo.lowercased())."
+                    restaurada = String(localized: "Hecho: todo está como el \(elegida.titulo.lowercased()).")
                     Task { await leerCopias() }
                 }
             } message: {
-                Text("Lo que hayas apuntado después irá a la papelera. Antes se guarda "
-                     + "una copia de cómo está ahora, por si quieres volver.")
+                Text("Lo que hayas apuntado después irá a la papelera. Antes se guarda una copia de cómo está ahora, por si quieres volver.")
             }
 
             Rectangle().fill(Paper.hairline).frame(height: 1).padding(.vertical, 14)
@@ -281,8 +270,7 @@ struct AjustesView: View {
                                 isPresented: $preguntarFabrica) {
                 Button("Restaurar") { restaurarDeFabrica() }
             } message: {
-                Text("El atajo, el repaso del día, los avisos y la barra de menús vuelven "
-                     + "a como venían. Tus tareas no se tocan.")
+                Text("El atajo, el repaso del día, los avisos y la barra de menús vuelven a como venían. Tus tareas no se tocan.")
             }
         }
         .padding(24)
@@ -311,19 +299,19 @@ struct AjustesView: View {
     private func exportar() {
         let datos: Data, nombre: String
         do { (datos, nombre) = try store.exportar() } catch {
-            restaurada = "Aún faltan tareas por bajar de iCloud. Prueba en un momento."
+            restaurada = String(localized: "Aún faltan tareas por bajar de iCloud. Prueba en un momento.")
             return
         }
         let panel = NSSavePanel()
         panel.nameFieldStringValue = nombre
         panel.allowedContentTypes = [.gzip]
-        panel.message = "Tus tareas, proyectos y áreas. Los adjuntos no van dentro."
+        panel.message = String(localized: "Tus tareas, proyectos y áreas. Los adjuntos no van dentro.")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try datos.write(to: url, options: .atomic)
-            restaurada = "Copia exportada: \(url.lastPathComponent)."
+            restaurada = String(localized: "Copia exportada: \(url.lastPathComponent).")
         } catch {
-            restaurada = "No se pudo guardar: \(error.localizedDescription)"
+            restaurada = String(localized: "No se pudo guardar: \(error.localizedDescription)")
         }
     }
 
@@ -332,10 +320,10 @@ struct AjustesView: View {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.gzip, .json]
         panel.allowsMultipleSelection = false
-        panel.prompt = "Importar"
+        panel.prompt = String(localized: "Importar")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         guard let datos = try? Data(contentsOf: url), let copia = Copias.leer(datos: datos) else {
-            restaurada = "Ese archivo no es una copia de Pauta."
+            restaurada = String(localized: "Ese archivo no es una copia de Pauta.")
             return
         }
         importada = copia
@@ -347,7 +335,7 @@ struct AjustesView: View {
     }
 
     @ViewBuilder
-    private func grupo(_ titulo: String,
+    private func grupo(_ titulo: LocalizedStringKey,
                        @ViewBuilder _ contenido: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(titulo).rubricStyle()

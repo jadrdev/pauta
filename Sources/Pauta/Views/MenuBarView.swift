@@ -185,7 +185,7 @@ private struct MenuBarItemRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Checkbox(isCompleted: item.isCompleted) { store.toggleComplete(item) }
-            Text(item.title.isEmpty ? "Sin título" : item.title)
+            Text(item.title.isEmpty ? String(localized: "Sin título") : item.title)
                 .font(.system(size: 12.5, weight: .medium))
                 .foregroundStyle(Paper.ink)
                 .lineLimit(1)

@@ -157,10 +157,10 @@ public enum Avisos {
             UNNotificationCategory(
                 identifier: categoria,
                 actions: [UNNotificationAction(identifier: accionCompletar,
-                                               title: "Completar",
+                                               title: String(localized: "Completar", comment: "Botón del aviso de una tarea: marcarla como hecha"),
                                                options: []),
                           UNNotificationAction(identifier: accionAplazar,
-                                               title: "Aplazar \(minutosAplazados) min",
+                                               title: String(localized: "Aplazar \(minutosAplazados) min", comment: "Botón del aviso de una tarea: que vuelva a sonar dentro de unos minutos"),
                                                options: [])],
                 intentIdentifiers: [])
         ])
@@ -276,7 +276,9 @@ public enum Avisos {
 
         for (item, cuando) in pendientes {
             let contenido = UNMutableNotificationContent()
-            contenido.title = item.title.isEmpty ? "Sin título" : item.title
+            contenido.title = item.title.isEmpty
+                ? String(localized: "Sin título", comment: "Tarea que no tiene nombre")
+                : item.title
             var explicacion: [String] = []
             // Cuando suena antes de la hora hay que decir cuánto falta, o
             // parecerá que la hora está mal puesta.
@@ -287,8 +289,9 @@ public enum Avisos {
             // Con fecha absoluta y no «hace tres días»: el aviso se escribe hoy
             // y puede sonar mañana, y entonces la cuenta ya no cuadraría.
             if item.daysLate > 0, let dia = item.day {
-                explicacion.append(
-                    "Pendiente desde el \(dia.formatted(.dateTime.day().month(.wide)))")
+                let fecha = dia.formatted(.dateTime.day().month(.wide))
+                explicacion.append(String(localized: "Pendiente desde el \(fecha)",
+                                          comment: "Aviso de una tarea atrasada; el hueco es la fecha, «3 de mayo»"))
             }
             contenido.subtitle = explicacion.joined(separator: " · ")
             if !item.notes.isEmpty { contenido.body = item.notes }

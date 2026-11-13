@@ -24,6 +24,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Ninguna versión con textos sin traducir: en catalán o en inglés saldrían en
+# español sin que nada avise. Si falla, `tools/textos.sh` dice cuáles son.
+/usr/bin/python3 tools/textos-comprobar.py
+
 . tools/xcode.sh
 ARCHIVO=build/PautaIOS.xcarchive
 SALIDA=build/ios-export

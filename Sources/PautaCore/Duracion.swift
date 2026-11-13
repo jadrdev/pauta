@@ -16,8 +16,12 @@ public enum Duracion {
     public static func etiqueta(_ minutos: Int) -> String {
         let horas = minutos / 60
         let resto = minutos % 60
-        if horas == 0 { return "\(resto) min" }
-        return resto == 0 ? "\(horas) h" : "\(horas) h \(resto) min"
+        if horas == 0 {
+            return String(localized: "\(resto) min", comment: "Duración abreviada en minutos: «45 min»")
+        }
+        return resto == 0
+            ? String(localized: "\(horas) h", comment: "Duración abreviada en horas: «2 h»")
+            : String(localized: "\(horas) h \(resto) min", comment: "Duración abreviada en horas y minutos: «1 h 5 min»")
     }
 
     /// Lo que suman las estimaciones de lo que sigue abierto.

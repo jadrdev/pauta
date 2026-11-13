@@ -4657,6 +4657,39 @@ struct OrdenDesdeElRelojTests {
         #expect(r.dia == nil)
         #expect(r.minuto == nil)
     }
+
+    /// En catalán: el detector entiende «demà a les 10», y lo nuestro tiene que
+    /// ver que «a les 10» es una hora. Si no, la tarea se queda sin aviso.
+    @Test func inCatalan() {
+        let r = Cuando.leer("Trucar a la gestoria demà a les 10")
+        #expect(r.titulo == "Trucar a la gestoria")
+        #expect(r.dia == dia(1))
+        #expect(r.minuto == 10 * 60)
+
+        let s = Cuando.leer("Sopar demà passat")
+        #expect(s.titulo == "Sopar")
+        #expect(s.dia == dia(2))
+        #expect(s.minuto == nil)
+    }
+
+    /// En inglés, con la hora como la dice quien habla inglés, y el «on» que
+    /// queda colgando fuera del título.
+    @Test func inEnglish() {
+        let r = Cuando.leer("Call the accountant tomorrow at 10")
+        #expect(r.titulo == "Call the accountant")
+        #expect(r.dia == dia(1))
+        #expect(r.minuto == 10 * 60)
+
+        let s = Cuando.leer("Meeting on Thursday at 6pm")
+        #expect(s.titulo == "Meeting")
+        #expect(s.minuto == 18 * 60)
+    }
+
+    /// Una palabra que podría colgar en inglés pero que acaba un título de
+    /// verdad no se poda: «Check in» es una tarea.
+    @Test func aRealEndingWordStays() {
+        #expect(Cuando.leer("Check in tomorrow").titulo == "Check in")
+    }
 }
 
 /// Y que la fecha leída llegue de verdad a la tarea.
@@ -5106,6 +5139,10 @@ struct OrdenDesdeElRelojTests {
         #expect(MismaCosa.titulos("Dentista", "Dentista"))
         #expect(MismaCosa.titulos("Dentista", "Cita con el dentista"))
         #expect(!MismaCosa.titulos("de la", "de la"), "sin palabras que digan algo")
+        // En los otros dos idiomas, las palabras vacías tampoco cuentan.
+        #expect(!MismaCosa.titulos("Call the doctor", "Email the doctor"))
+        #expect(MismaCosa.titulos("Doctor's appointment", "Appointment with the doctor"))
+        #expect(!MismaCosa.titulos("Trucar a l'advocat", "Escriure a l'advocat"))
     }
 
     /// Un evento se junta con una sola tarea; la segunda sale aparte.

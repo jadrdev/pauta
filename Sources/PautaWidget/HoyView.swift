@@ -105,9 +105,10 @@ private struct Tarjeta: View {
     }
 
     @ViewBuilder private var pie: some View {
-        let sobran = vistazo.restantes > 0 ? "+\(vistazo.restantes) más" : nil
+        let sobran = vistazo.restantes > 0 ? String(localized: "+\(vistazo.restantes) más") : nil
         let bandeja = vistazo.bandeja > 0
-            ? (vistazo.bandeja == 1 ? "1 en la bandeja" : "\(vistazo.bandeja) en la bandeja")
+            ? (vistazo.bandeja == 1 ? String(localized: "1 en la bandeja")
+                                     : String(localized: "\(vistazo.bandeja) en la bandeja"))
             : nil
         // Las dos cosas caben en una línea; si solo hay una, ocupa ella el pie.
         if sobran != nil || bandeja != nil {
@@ -175,7 +176,7 @@ private struct FilaDelVistazo: View {
             // Bajado y medido en la captura: con la fila alineada por la primera
             // línea base, el círculo queda por encima del centro del texto.
             .offset(y: pequeno ? 2 : 2.5)
-            Text(fila.titulo.isEmpty ? "Sin título" : fila.titulo)
+            Text(fila.titulo.isEmpty ? String(localized: "Sin título") : fila.titulo)
                 .font(.system(size: pequeno ? 12.5 : 13.5))
                 .foregroundStyle(Papel.ink)
                 .lineLimit(1)

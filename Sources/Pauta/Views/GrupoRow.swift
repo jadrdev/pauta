@@ -71,7 +71,7 @@ struct GrupoRow: View {
 
     private var nombre: String {
         let puesto = proyecto?.name ?? ""
-        return puesto.isEmpty ? "Sin título" : puesto
+        return puesto.isEmpty ? String(localized: "Sin título") : puesto
     }
 
     /// La raya. Entintada la parte despejada, filete la que falta.
@@ -97,22 +97,23 @@ struct GrupoRow: View {
     /// estimado algo —son un extra y no un requisito—, así que un proyecto sin
     /// estimar enseña «quedan 2» y ya.
     private var restante: String {
-        guard let minutos = grupo.minutosRestantes else { return "QUEDAN \(grupo.quedan)" }
-        return "QUEDAN \(grupo.quedan) · \(Duracion.etiqueta(minutos).uppercased())"
+        guard let minutos = grupo.minutosRestantes else { return String(localized: "QUEDAN \(grupo.quedan)") }
+        return String(localized: "QUEDAN \(grupo.quedan) · \(Duracion.etiqueta(minutos).uppercased())")
     }
 
     /// Lo de segundo orden, al pasar por encima: cómo va el proyecto entero —que
     /// el filete no mide— y si los minutos son toda la verdad o solo un suelo.
     private var detalle: String {
-        var partes = ["\(grupo.hechas) de \(grupo.total) hechas hoy"]
+        var partes = [String(localized: "\(grupo.hechas) de \(grupo.total) hechas hoy")]
         let abiertas = store.items(for: .project(grupo.proyecto)).count
         if abiertas > grupo.quedan {
-            partes.append("\(abiertas) abiertas en el proyecto")
+            partes.append(String(localized: "\(abiertas) abiertas en el proyecto"))
         }
         if grupo.sinEstimar > 0, grupo.minutosRestantes != nil {
-            partes.append("\(grupo.sinEstimar) sin estimar")
+            partes.append(String(localized: "\(grupo.sinEstimar) sin estimar"))
         }
-        return partes.joined(separator: " · ")
-             + (cerrado ? " — clic para abrir" : " — clic para cerrar")
+        let lista = partes.joined(separator: " · ")
+        return cerrado ? String(localized: "\(lista) — clic para abrir")
+                       : String(localized: "\(lista) — clic para cerrar")
     }
 }

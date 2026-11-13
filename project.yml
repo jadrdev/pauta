@@ -47,6 +47,12 @@ targets:
     platform: iOS
     sources:
       - Sources/PautaIOS
+      # Los textos en español, catalán e inglés. Uno solo para todos los
+      # paquetes: el núcleo es una biblioteca estática y busca sus textos en el
+      # paquete de quien lo usa.
+      - path: Resources/idiomas/Localizable.xcstrings
+      - path: Resources/idiomas/InfoPlist.xcstrings
+      - path: Resources/idiomas/AppShortcuts.xcstrings
       - Resources/ios/Assets.xcassets
       # El manifiesto de privacidad, que App Store Connect exige: el mismo
       # archivo en los cuatro paquetes que suben, porque declara lo del núcleo.
@@ -76,8 +82,12 @@ targets:
         # qué versión es.
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        CFBundleDevelopmentRegion: es
-        CFBundleLocalizations: [es]
+        # El idioma de respaldo: lo que ve quien tiene el teléfono en un idioma
+        # que la app no tiene. Inglés, que un alemán o un japonés entiende antes
+        # que el español. El código sigue escrito en español: eso lo dice el
+        # catálogo (`sourceLanguage`), no esto.
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [es, ca, en]
         UILaunchScreen: {}
         # Para que iOS despierte la app de vez en cuando y cruce con el Mac: sin
         # esto, el widget y el globo se quedan con lo de la última vez que la
@@ -137,6 +147,7 @@ targets:
     platform: iOS
     sources:
       - Sources/PautaWidget
+      - path: Resources/idiomas/Localizable.xcstrings
       # La paleta y las versalitas del teléfono, compartidas y no copiadas: un
       # widget que no se parece a su app parece de otra app.
       - path: Sources/PautaIOS/Tema.swift
@@ -152,6 +163,10 @@ targets:
       path: build/ios/Widget-Info.plist
       properties:
         CFBundleDisplayName: Pauta
+        # El mismo respaldo que la app: un widget en español junto a una app
+        # en inglés parecería de otra app.
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [es, ca, en]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
@@ -201,9 +216,10 @@ targets:
         buildPhase: resources
       # El idioma no es decoración: AppKit localiza sus propios menús según los
       # idiomas que declara el bundle, y sin ninguno los deja en inglés dentro
-      # de una app escrita entera en español.
-      - path: Resources/es.lproj
-        buildPhase: resources
+      # de una app escrita entera en español. Los catálogos crean `es.lproj`,
+      # `ca.lproj` y `en.lproj` al compilar.
+      - path: Resources/idiomas/Localizable.xcstrings
+      - path: Resources/idiomas/InfoPlist.xcstrings
     dependencies:
       - target: PautaCoreMac
       - target: PautaWidgetMac
@@ -216,8 +232,12 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleIconFile: $(ICONO)
-        CFBundleDevelopmentRegion: es
-        CFBundleLocalizations: [es]
+        # El idioma de respaldo: lo que ve quien tiene el teléfono en un idioma
+        # que la app no tiene. Inglés, que un alemán o un japonés entiende antes
+        # que el español. El código sigue escrito en español: eso lo dice el
+        # catálogo (`sourceLanguage`), no esto.
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [es, ca, en]
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         NSPrincipalClass: NSApplication
         NSHighResolutionCapable: true
@@ -276,6 +296,7 @@ targets:
     platform: macOS
     sources:
       - Sources/PautaWidgetMac
+      - path: Resources/idiomas/Localizable.xcstrings
       # El tema del Mac, compartido y no copiado.
       - path: Sources/Pauta/Views/Theme.swift
     dependencies:
@@ -286,6 +307,10 @@ targets:
       path: build/mac/Widget-Info.plist
       properties:
         CFBundleDisplayName: Pauta
+        # El mismo respaldo que la app: un widget en español junto a una app
+        # en inglés parecería de otra app.
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [es, ca, en]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
@@ -343,6 +368,8 @@ targets:
     platform: watchOS
     sources:
       - Sources/PautaWatch
+      - path: Resources/idiomas/Localizable.xcstrings
+      - path: Resources/idiomas/AppShortcuts.xcstrings
       # El icono, con su propio arte: la máscara de watchOS es un círculo y el
       # monograma va más pequeño que en el iPhone. Se genera con
       # `python3 tools/make-icon.py reloj`.
@@ -364,8 +391,12 @@ targets:
         CFBundleDisplayName: Pauta
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        CFBundleDevelopmentRegion: es
-        CFBundleLocalizations: [es]
+        # El idioma de respaldo: lo que ve quien tiene el teléfono en un idioma
+        # que la app no tiene. Inglés, que un alemán o un japonés entiende antes
+        # que el español. El código sigue escrito en español: eso lo dice el
+        # catálogo (`sourceLanguage`), no esto.
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [es, ca, en]
         WKApplication: true
         WKCompanionAppBundleIdentifier: dev.jadrdev.pauta
         ITSAppUsesNonExemptEncryption: false
@@ -385,6 +416,7 @@ targets:
     platform: watchOS
     sources:
       - Sources/PautaWatchWidget
+      - path: Resources/idiomas/Localizable.xcstrings
       - path: Resources/privacidad/PrivacyInfo.xcprivacy
         buildPhase: resources
     dependencies:
@@ -395,6 +427,10 @@ targets:
       path: build/watch/Widget-Info.plist
       properties:
         CFBundleDisplayName: Pauta
+        # El mismo respaldo que la app: un widget en español junto a una app
+        # en inglés parecería de otra app.
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [es, ca, en]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:

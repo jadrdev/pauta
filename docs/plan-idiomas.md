@@ -1,6 +1,19 @@
 # Plan: Pauta en español, catalán e inglés
 
-*Borrador para revisar antes de tocar código. Noviembre de 2026.*
+*Noviembre de 2026.*
+
+> **Estado, 13-nov-2026: fases 0 a 3 y 5 hechas, para la 1.0.1.** Los tres
+> idiomas funcionan en el iPhone, el iPad, el reloj, los widgets y el Mac; el
+> respaldo para cualquier otro idioma es el inglés. Falta:
+>
+> - **el repaso del catalán** por alguien que lo hable de casa;
+> - **la fase 4**, la ficha de la tienda y las capturas en catalán y en
+>   inglés, que se hace al publicar la 1.0.1.
+>
+> Decisiones tomadas con las recomendaciones de abajo: inglés de respaldo, el
+> lector de calendarios en español, las novedades y la guía en español con el
+> enlace avisándolo, y los dos idiomas a la vez. Cómo se trabaja con los textos
+> a partir de ahora: [compilar.md](compilar.md#idiomas).
 
 ## Qué se quiere
 

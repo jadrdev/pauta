@@ -8,8 +8,8 @@ public enum Permiso: String, CaseIterable, Sendable {
 
     public var titulo: String {
         switch self {
-        case .avisos: "Avisos"
-        case .calendario: "Calendario"
+        case .avisos: String(localized: "Avisos", comment: "Permiso del sistema: notificaciones")
+        case .calendario: String(localized: "Calendario", comment: "Permiso del sistema: acceso al calendario")
         }
     }
 
@@ -19,8 +19,8 @@ public enum Permiso: String, CaseIterable, Sendable {
     /// La razón es que sin eso el día que enseña Hoy está incompleto.
     public var motivo: String {
         switch self {
-        case .avisos: "Sin ellos, una hora es solo una etiqueta."
-        case .calendario: "Para que Hoy sea el día entero y no solo tus tareas."
+        case .avisos: String(localized: "Sin ellos, una hora es solo una etiqueta.", comment: "Por qué hace falta el permiso de avisos")
+        case .calendario: String(localized: "Para que Hoy sea el día entero y no solo tus tareas.", comment: "Por qué hace falta el permiso de calendario; «Hoy» es la lista del día")
         }
     }
 

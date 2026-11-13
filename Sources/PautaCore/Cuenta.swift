@@ -55,10 +55,13 @@ public enum Cuenta {
     /// «en 0 minutos» treinta segundos antes.
     public static func restante(_ cuando: Date, now: Date = .now) -> String {
         let segundos = cuando.timeIntervalSince(now)
-        guard segundos > 0 else { return "Ahora" }
+        guard segundos > 0 else {
+            return String(localized: "Ahora", comment: "Barra de menús: la tarea siguiente toca ya")
+        }
         // Hacia arriba: faltando treinta segundos, «en 1 min» se entiende y «en
         // 0 min» no dice nada.
         let minutos = Int((segundos / 60).rounded(.up))
-        return "En \(Duracion.etiqueta(minutos))"
+        let falta = Duracion.etiqueta(minutos)
+        return String(localized: "En \(falta)", comment: "Barra de menús: cuánto falta para la tarea siguiente; el hueco es «20 min», «1 h 5 min»")
     }
 }

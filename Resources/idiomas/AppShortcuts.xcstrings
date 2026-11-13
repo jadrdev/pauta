@@ -1,0 +1,88 @@
+{
+  "sourceLanguage": "es",
+  "strings": {
+    "Apuntar en ${applicationName}": {
+      "localizations": {
+        "en": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Add to ${applicationName}",
+              "Jot down in ${applicationName}"
+            ]
+          }
+        },
+        "es": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Apuntar en ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Apunta en ${applicationName}": {
+      "localizations": {
+        "en": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Note in ${applicationName}"
+            ]
+          }
+        },
+        "es": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Apunta en ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Añadir a ${applicationName}": {
+      "localizations": {
+        "en": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Add a task to ${applicationName}"
+            ]
+          }
+        },
+        "es": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Añadir a ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Nueva tarea en ${applicationName}": {
+      "localizations": {
+        "en": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "New task in ${applicationName}",
+              "New ${applicationName} task"
+            ]
+          }
+        },
+        "es": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "Nueva tarea en ${applicationName}"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

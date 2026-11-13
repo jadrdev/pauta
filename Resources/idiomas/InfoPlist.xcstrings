@@ -1,0 +1,126 @@
+{
+  "sourceLanguage": "es",
+  "strings": {
+    "NSCalendarsFullAccessUsageDescription": {
+      "comment": "Por qué Pauta pide el calendario: lo enseña el sistema al pedir permiso.",
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauta mostra els esdeveniments d'avui al costat de les teves tasques, perquè Avui sigui el dia sencer. Només els llegeix: mai no escriu als teus calendaris."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauta shows today's events next to your tasks, so Today is your whole day. It only reads them: it never writes to your calendars."
+          }
+        }
+      }
+    },
+    "NSCalendarsUsageDescription": {
+      "comment": "Por qué Pauta pide el calendario: lo enseña el sistema al pedir permiso.",
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauta enseña los eventos de hoy junto a tus tareas, para que Hoy sea el día completo. Solo los lee: nunca escribe en tus calendarios."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauta mostra els esdeveniments d'avui al costat de les teves tasques, perquè Avui sigui el dia sencer. Només els llegeix: mai no escriu als teus calendaris."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauta shows today's events next to your tasks, so Today is your whole day. It only reads them: it never writes to your calendars."
+          }
+        }
+      }
+    },
+    "NSHumanReadableCopyright": {
+      "comment": "El copyright del Mac, en «Acerca de» del Finder.",
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 2026 Joshua A. Díaz Robayna · Todos los derechos reservados"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 2026 Joshua A. Díaz Robayna · Tots els drets reservats"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 2026 Joshua A. Díaz Robayna · All rights reserved"
+          }
+        }
+      }
+    },
+    "CFBundleName": {
+      "comment": "El nombre de la app: no se traduce.",
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauta"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauta"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauta"
+          }
+        }
+      }
+    },
+    "CFBundleDisplayName": {
+      "comment": "El nombre de la app: no se traduce.",
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauta"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauta"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pauta"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

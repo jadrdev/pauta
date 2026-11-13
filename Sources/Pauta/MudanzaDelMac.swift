@@ -173,14 +173,14 @@ enum MudanzaDelMac {
 
     /// Una nota en la carpeta vieja para quien la abra en el Finder.
     private static func dejarAviso(en vieja: URL) {
-        let aviso = """
+        let aviso = String(localized: """
         Pauta se está mudando al contenedor de iCloud de la app.
 
         Desde el \(Date.now.formatted(date: .long, time: .omitted)), este Mac guarda sus datos allí.
         Mientras haya aparatos con una versión anterior, esta carpeta se sigue
         cruzando con la nueva, así que NO la borres todavía. Cuando todos estén
         actualizados dejará de usarse, y entonces podrás borrarla tú.
-        """
+        """, comment: "Nota de texto que se deja en la carpeta vieja de iCloud Drive")
         try? aviso.write(to: vieja.appendingPathComponent("LEEME - mudanza.txt"),
                          atomically: true, encoding: .utf8)
     }

@@ -105,14 +105,22 @@ public enum Copias {
             let dia = hecha.formatted(.dateTime.weekday(.wide).day().month(.wide))
             let bonito = dia.prefix(1).uppercased() + dia.dropFirst()
             guard antesDeRestaurar else { return bonito }
-            return bonito + " · antes de restaurar, "
-                + hecha.formatted(.dateTime.hour().minute())
+            let hora = hecha.formatted(.dateTime.hour().minute())
+            return String(localized: "\(bonito) · antes de restaurar, \(hora)",
+                          comment: "Copia de seguridad hecha justo antes de restaurar otra; huecos: el día («Domingo, 28 de septiembre») y la hora")
         }
 
         public var detalle: String {
-            guard let pendientes, let proyectos else { return "En iCloud, bajando…" }
-            return "\(pendientes) \(pendientes == 1 ? "pendiente" : "pendientes") · "
-                + "\(proyectos) \(proyectos == 1 ? "proyecto" : "proyectos")"
+            guard let pendientes, let proyectos else {
+                return String(localized: "En iCloud, bajando…", comment: "Copia de seguridad que aún no ha bajado de iCloud")
+            }
+            let tareas = pendientes == 1
+                ? String(localized: "1 pendiente", comment: "Copia de seguridad: tareas sin hacer que guarda")
+                : String(localized: "\(pendientes) pendientes", comment: "Copia de seguridad: tareas sin hacer que guarda")
+            let carpetas = proyectos == 1
+                ? String(localized: "1 proyecto", comment: "Copia de seguridad: proyectos que guarda")
+                : String(localized: "\(proyectos) proyectos", comment: "Copia de seguridad: proyectos que guarda")
+            return tareas + " · " + carpetas
         }
     }
 

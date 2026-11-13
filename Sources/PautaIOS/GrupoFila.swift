@@ -54,7 +54,7 @@ struct GrupoFila: View {
 
     private var nombre: String {
         let puesto = proyecto?.name ?? ""
-        return puesto.isEmpty ? "Sin título" : puesto
+        return puesto.isEmpty ? String(localized: "Sin título") : puesto
     }
 
     private var filete: some View {
@@ -74,7 +74,7 @@ struct GrupoFila: View {
 
     /// No hay estado «hecho»: al tachar la última, el bloque se va de Hoy.
     private var restante: String {
-        guard let minutos = grupo.minutosRestantes else { return "QUEDAN \(grupo.quedan)" }
-        return "QUEDAN \(grupo.quedan) · \(Duracion.etiqueta(minutos).uppercased())"
+        guard let minutos = grupo.minutosRestantes else { return String(localized: "QUEDAN \(grupo.quedan)") }
+        return String(localized: "QUEDAN \(grupo.quedan) · \(Duracion.etiqueta(minutos).uppercased())")
     }
 }

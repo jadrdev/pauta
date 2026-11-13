@@ -130,7 +130,7 @@ struct ItemRowView: View {
                         .focused($titleFocused)
                         .onSubmit { nav.selectedItemID = nil }
                 } else {
-                    Text(item.title.isEmpty ? "Sin título" : item.title)
+                    Text(item.title.isEmpty ? String(localized: "Sin título") : item.title)
                         .font(.system(size: 13.5, weight: .medium))
                         .strikethrough(item.isCompleted, color: Paper.inkFaint)
                         .foregroundStyle(item.isCompleted ? Paper.inkFaint : Paper.ink)
@@ -251,7 +251,7 @@ struct ItemRowView: View {
                 Button("Bandeja") { move(to: nil) }
                 if !store.projects.isEmpty { Divider() }
                 ForEach(store.projects) { project in
-                    Button(project.name.isEmpty ? "Sin título" : project.name) {
+                    Button(project.name.isEmpty ? String(localized: "Sin título") : project.name) {
                         move(to: project.id)
                     }
                 }
@@ -335,8 +335,8 @@ struct ItemRowView: View {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        panel.prompt = "Adjuntar"
-        panel.message = "Se copian a la carpeta de Pauta y viajan con la tarea."
+        panel.prompt = String(localized: "Adjuntar")
+        panel.message = String(localized: "Se copian a la carpeta de Pauta y viajan con la tarea.")
         guard panel.runModal() == .OK else { return }
         adjuntar(panel.urls)
     }
@@ -432,8 +432,7 @@ struct ItemRowView: View {
                         .font(.system(size: 11, weight: .medium).monospacedDigit())
                 }
                 .foregroundStyle(Paper.inkFaint)
-                .help("Apuntada hace \(parada.replacingOccurrences(of: "sem", with: "semanas"))"
-                      + " y todavía sin fecha")
+                .help("Apuntada hace \(item.staleLabel(largo: true) ?? parada) y todavía sin fecha")
             }
             if item.recurrence != nil {
                 Image(systemName: "repeat")
@@ -485,7 +484,7 @@ struct ItemRowView: View {
                     if !project.icon.isEmpty {
                         Text(project.icon).font(.system(size: 10))
                     }
-                    Text(project.name.isEmpty ? "Sin título" : project.name)
+                    Text(project.name.isEmpty ? String(localized: "Sin título") : project.name)
                         .font(.system(size: 11, weight: .medium))
                         .lineLimit(1)
                 }
@@ -594,9 +593,9 @@ struct ItemRowView: View {
         }
     }
 
-    private func filaDeControl(_ nombre: String, @ViewBuilder _ control: () -> some View) -> some View {
+    private func filaDeControl(_ nombre: LocalizedStringResource, @ViewBuilder _ control: () -> some View) -> some View {
         HStack(spacing: 12) {
-            Text(nombre.uppercased()).rubricStyle(Paper.inkFaint)
+            Text(String(localized: nombre).uppercased()).rubricStyle(Paper.inkFaint)
                 .frame(width: 92, alignment: .leading)
             control()
             Spacer(minLength: 0)
@@ -761,7 +760,7 @@ struct ItemRowView: View {
             Button("Bandeja") { move(to: nil) }
             if !store.projects.isEmpty { Divider() }
             ForEach(store.projects) { project in
-                Button(project.name.isEmpty ? "Sin título" : project.name) { move(to: project.id) }
+                Button(project.name.isEmpty ? String(localized: "Sin título") : project.name) { move(to: project.id) }
             }
         } label: {
             Text(projectLabel.uppercased()).rubricStyle()
@@ -793,14 +792,14 @@ struct ItemRowView: View {
     /// dice con esas palabras en vez de inventar un campo aparte que diría lo
     /// mismo y podría discrepar.
     private var whenLabel: String {
-        if item.isSomeday { return "Algún día" }
-        guard let when = item.when else { return "Sin fecha" }
+        if item.isSomeday { return String(localized: "Algún día") }
+        guard let when = item.when else { return String(localized: "Sin fecha") }
         let cal = Calendar.current
         var dia: String
-        if cal.isDateInToday(when) { dia = "Hoy" }
-        else if cal.isDateInTomorrow(when) { dia = "Mañana" }
+        if cal.isDateInToday(when) { dia = String(localized: "Hoy") }
+        else if cal.isDateInTomorrow(when) { dia = String(localized: "Mañana") }
         else { dia = when.formatted(.dateTime.day().month(.abbreviated)) }
-        if item.recurrence != nil { dia = "Desde \(dia.lowercased())" }
+        if item.recurrence != nil { dia = String(localized: "Desde \(dia.lowercased())") }
         guard let hora = item.timeLabel else { return dia }
         return "\(dia) · \(hora)"
     }
@@ -814,7 +813,7 @@ struct ItemRowView: View {
 
     /// «Cada semana», o «Cada semana → 30 nov» cuando tiene fin.
     private var repeticionLabel: String {
-        guard let recurrence = item.recurrence else { return "No repite" }
+        guard let recurrence = item.recurrence else { return String(localized: "No repite") }
         guard let fin = item.recurrenceEnd else { return recurrence.title }
         return "\(recurrence.title) → \(fin.formatted(.dateTime.day().month(.abbreviated)))"
     }
@@ -822,16 +821,16 @@ struct ItemRowView: View {
     /// Corto a propósito: en el editor hay cuatro menús en fila y las etiquetas
     /// largas en mayúsculas lo convierten en un muro.
     private var limiteLabel: String {
-        guard let deadline = item.deadline else { return "Sin límite" }
+        guard let deadline = item.deadline else { return String(localized: "Sin límite") }
         let cal = Calendar.current
-        if cal.isDateInToday(deadline) { return "Vence hoy" }
-        if cal.isDateInTomorrow(deadline) { return "Vence mañana" }
-        return "Vence \(deadline.formatted(.dateTime.day().month(.abbreviated)))"
+        if cal.isDateInToday(deadline) { return String(localized: "Vence hoy") }
+        if cal.isDateInTomorrow(deadline) { return String(localized: "Vence mañana") }
+        return String(localized: "Vence \(deadline.formatted(.dateTime.day().month(.abbreviated)))")
     }
 
     private var projectLabel: String {
-        guard let id = item.projectID, let project = store.project(id) else { return "Bandeja" }
-        return project.name.isEmpty ? "Sin título" : project.name
+        guard let id = item.projectID, let project = store.project(id) else { return String(localized: "Bandeja") }
+        return project.name.isEmpty ? String(localized: "Sin título") : project.name
     }
 
     // MARK: - Acciones
@@ -903,7 +902,7 @@ private struct SelectedPanel: ViewModifier {
 /// Calendario para elegir una fecha cualquiera.
 struct SelectorDeFecha: View {
     let inicial: Date
-    let accion: String
+    let accion: LocalizedStringKey
     let alElegir: (Date) -> Void
 
     @State private var fecha: Date
@@ -914,7 +913,7 @@ struct SelectorDeFecha: View {
     private static let celda: CGFloat = 36
     private static let fila: CGFloat = 32
 
-    init(inicial: Date, accion: String = "Programar", alElegir: @escaping (Date) -> Void) {
+    init(inicial: Date, accion: LocalizedStringKey = "Programar", alElegir: @escaping (Date) -> Void) {
         self.inicial = inicial
         self.accion = accion
         self.alElegir = alElegir
@@ -1231,8 +1230,8 @@ private struct EtiquetaChip: View {
 
 /// Un campo de texto suelto en un panel, para lo que no cabe en un menú.
 struct CampoEmergente: View {
-    let titulo: String
-    let accion: String
+    let titulo: LocalizedStringResource
+    let accion: LocalizedStringResource
     var inicial: String = ""
     let alConfirmar: (String) -> Void
 
@@ -1240,7 +1239,7 @@ struct CampoEmergente: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(titulo.uppercased()).rubricStyle()
+            Text(String(localized: titulo).uppercased()).rubricStyle()
             TextField("", text: $texto)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))

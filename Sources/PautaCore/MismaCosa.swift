@@ -17,11 +17,19 @@ public enum MismaCosa {
         "de", "del", "la", "el", "los", "las", "lo", "y", "e", "o", "u", "a", "al",
         "en", "con", "por", "para", "un", "una", "unos", "unas", "que", "se", "mi",
         "tu", "su", "sus", "mis",
+        // En catalán y en inglés también: con el teléfono en otro idioma los
+        // títulos se escriben en otro idioma, y «Call the doctor» y «Email the
+        // doctor» no pueden juntarse por compartir «the». El apóstrofo parte
+        // las palabras, así que «l'», «d'» y «s'» llegan sueltas.
+        "els", "les", "l", "d", "s", "dels", "als", "amb", "per", "i", "uns", "unes",
+        "meu", "teu", "seu", "meva", "teva", "seva",
+        "the", "an", "and", "or", "of", "to", "in", "on", "at", "for", "with", "by",
+        "my", "your", "our", "their",
     ]
 
     static func palabras(_ titulo: String) -> Set<String> {
         let plano = titulo.folding(options: [.caseInsensitive, .diacriticInsensitive],
-                                   locale: Locale(identifier: "es_ES"))
+                                   locale: .current)
         let trozos = plano.split { !$0.isLetter && !$0.isNumber }.map(String.init)
         return Set(trozos.filter { !vacias.contains($0) })
     }

@@ -50,14 +50,14 @@ struct AjustesView: View {
     private static func resumen(_ b: Puente.Balance) -> String {
         if b.traidas == 0 && b.llevadas == 0 {
             return b.pendientesDeBajar > 0
-                ? "Nada que cruzar · \(b.pendientesDeBajar) sin bajar de iCloud"
-                : "Nada que cruzar: ya estaban iguales"
+                ? String(localized: "Nada que cruzar · \(b.pendientesDeBajar) sin bajar de iCloud")
+                : String(localized: "Nada que cruzar: ya estaban iguales")
         }
         var partes: [String] = []
-        if b.traidas > 0 { partes.append("\(b.traidas) de iCloud") }
-        if b.llevadas > 0 { partes.append("\(b.llevadas) a iCloud") }
+        if b.traidas > 0 { partes.append(String(localized: "\(b.traidas) de iCloud")) }
+        if b.llevadas > 0 { partes.append(String(localized: "\(b.llevadas) a iCloud")) }
         if b.pendientesDeBajar > 0 {
-            partes.append("\(b.pendientesDeBajar) sin bajar de iCloud")
+            partes.append(String(localized: "\(b.pendientesDeBajar) sin bajar de iCloud"))
         }
         return partes.joined(separator: " · ")
     }
@@ -83,7 +83,7 @@ struct AjustesView: View {
                 Picker(selection: $ajustes.margenPorDefecto) {
                     Text("A la hora").tag(0)
                     ForEach([5, 10, 15, 30, 60], id: \.self) { m in
-                        Text(Duracion.etiqueta(m) + " antes").tag(m)
+                        Text("\(Duracion.etiqueta(m)) antes").tag(m)
                     }
                 } label: {
                     Text("Avisar por defecto")
@@ -98,8 +98,7 @@ struct AjustesView: View {
             } header: {
                 Text("AVISOS")
             } footer: {
-                Text("El margen se le pone a cada hora nueva; las tareas que ya "
-                     + "tengan el suyo no se tocan.")
+                Text("El margen se le pone a cada hora nueva; las tareas que ya tengan el suyo no se tocan.")
             }
 
             Section {
@@ -134,10 +133,7 @@ struct AjustesView: View {
             } header: {
                 Text("PERMISOS")
             } footer: {
-                Text("Los avisos hacen falta para las horas y el repaso; el "
-                     + "calendario, para ver los eventos en Hoy. Si están "
-                     + "denegados, se cambian en los ajustes del sistema: el "
-                     + "diálogo no vuelve a salir.")
+                Text("Los avisos hacen falta para las horas y el repaso; el calendario, para ver los eventos en Hoy. Si están denegados, se cambian en los ajustes del sistema: el diálogo no vuelve a salir.")
             }
 
             Section {
@@ -185,13 +181,9 @@ struct AjustesView: View {
                 Text("ICLOUD")
             } footer: {
                 if hayICloud == false {
-                    Text("Sin iCloud, las tareas se quedan en este aparato. Se "
-                         + "activa en Ajustes del sistema ▸ tu nombre ▸ iCloud ▸ iCloud Drive.")
+                    Text("Sin iCloud, las tareas se quedan en este aparato. Se activa en Ajustes del sistema ▸ tu nombre ▸ iCloud ▸ iCloud Drive.")
                 } else {
-                    Text("Tus tareas se cruzan con las de iCloud, que son las mismas del "
-                         + "Mac y del iPad, sin elegir nada. Cada aparato guarda las "
-                         + "suyas, así que funciona también sin red; y de cada tarea "
-                         + "gana la versión más reciente.")
+                    Text("Tus tareas se cruzan con las de iCloud, que son las mismas del Mac y del iPad, sin elegir nada. Cada aparato guarda las suyas, así que funciona también sin red; y de cada tarea gana la versión más reciente.")
                 }
             }
 
@@ -215,8 +207,7 @@ struct AjustesView: View {
             } header: {
                 Text("TUS DATOS")
             } footer: {
-                Text("En este teléfono, en la carpeta que comparte con el widget. "
-                     + "Con iCloud se cruzan arriba.")
+                Text("En este teléfono, en la carpeta que comparte con el widget. Con iCloud se cruzan arriba.")
             }
 
             Section {
@@ -233,8 +224,7 @@ struct AjustesView: View {
             } header: {
                 Text("PAUTA \(SobreLaApp.version)")
             } footer: {
-                Text("Hecho por @jadrdev · © 2026 Joshua A. Díaz Robayna · Todos "
-                     + "los derechos reservados")
+                Text("Hecho por @jadrdev · © 2026 Joshua A. Díaz Robayna · Todos los derechos reservados")
             }
         }
         .scrollContentBackground(.hidden)
@@ -245,8 +235,7 @@ struct AjustesView: View {
                             titleVisibility: .visible) {
             Button("Restaurar") { ajustes.restaurar() }
         } message: {
-            Text("El repaso del día y los avisos vuelven a como venían. "
-                 + "Tus tareas no se tocan.")
+            Text("El repaso del día y los avisos vuelven a como venían. Tus tareas no se tocan.")
         }
         .background(Papel.bg)
         .navigationTitle("Ajustes")
@@ -266,7 +255,7 @@ struct AjustesView: View {
         .onChange(of: ajustes.minutosAplazados) { Avisos.actualizarCategorias() }
     }
 
-    private func enlace(_ titulo: String, _ icono: String, _ url: URL) -> some View {
+    private func enlace(_ titulo: LocalizedStringKey, _ icono: String, _ url: URL) -> some View {
         Button {
             UIApplication.shared.open(url)
         } label: {
@@ -283,7 +272,7 @@ struct AjustesView: View {
 
 /// Un permiso, con lo que se puede hacer al respecto.
 private struct FilaDePermiso: View {
-    let nombre: String
+    let nombre: LocalizedStringKey
     let concedido: Bool
     let decidido: Bool
     let pedir: () async -> Void

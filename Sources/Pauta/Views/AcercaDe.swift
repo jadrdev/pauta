@@ -30,8 +30,7 @@ struct AcercaDeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             BrandMark()
-            Text("Un gestor de tareas para macOS. Las listas son consultas y no "
-                 + "carpetas: mover algo es cambiar lo que hace que caiga ahí.")
+            Text("Un gestor de tareas para macOS. Las listas son consultas y no carpetas: mover algo es cambiar lo que hace que caiga ahí.")
                 .font(.system(size: 12.5))
                 .foregroundStyle(Paper.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
@@ -47,7 +46,7 @@ struct AcercaDeView: View {
             // En maqueta hay que decirlo: enseñar la ruta de iCloud mientras se
             // miran datos inventados sería señalar unos archivos que no son los
             // que hay delante.
-            Text(Launch.demo ? "Maqueta en memoria — no se escribe nada en disco"
+            Text(Launch.demo ? String(localized: "Maqueta en memoria — no se escribe nada en disco")
                              : store.storageLocation)
                 .font(.system(size: 11.5).monospaced())
                 .foregroundStyle(Paper.inkSoft)
@@ -89,7 +88,7 @@ struct AcercaDeView: View {
                 Button {
                     NSWorkspace.shared.open(Enlaces.autor)
                 } label: {
-                    Text("@jadrdev")
+                    Text(verbatim: "@jadrdev")
                         .font(.system(size: 10.5, weight: .semibold))
                         .foregroundStyle(Paper.accentInk)
                 }
@@ -97,7 +96,7 @@ struct AcercaDeView: View {
                 Spacer(minLength: 0)
             }
             .padding(.top, 10)
-            Text(Acercade.copyright.isEmpty ? "Todos los derechos reservados"
+            Text(Acercade.copyright.isEmpty ? String(localized: "Todos los derechos reservados")
                                             : Acercade.copyright)
                 .font(.system(size: 10.5))
                 .foregroundStyle(Paper.inkFaint)
@@ -115,11 +114,11 @@ struct AcercaDeView: View {
 /// Con `Button` y no con `Link`: `Link` pinta el azul del sistema y aquí manda
 /// la paleta de la app.
 struct EnlaceDeTexto: View {
-    private let titulo: String
+    private let titulo: LocalizedStringKey
     private let accion: () -> Void
     @State private var encima = false
 
-    init(_ titulo: String, accion: @escaping () -> Void) {
+    init(_ titulo: LocalizedStringKey, accion: @escaping () -> Void) {
         self.titulo = titulo
         self.accion = accion
     }

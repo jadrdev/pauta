@@ -32,7 +32,7 @@ public struct Evento: Identifiable, Hashable, Sendable {
 
     /// «9:00 – 10:30», o solo la hora de inicio si no dura nada.
     public var timeLabel: String {
-        if isAllDay { return "Todo el día" }
+        if isAllDay { return String(localized: "Todo el día", comment: "Horario de un evento que dura el día entero") }
         let desde = start.formatted(.dateTime.hour().minute())
         guard end > start else { return desde }
         return "\(desde) – \(end.formatted(.dateTime.hour().minute()))"
@@ -209,13 +209,17 @@ public final class Agenda {
                           isAllDay: todoElDia, calendarName: agenda, color: color)
         }
         eventos = [
-            e("Día de la Cruz", 0, 24 * 60, "Festivos",
+            e(String(localized: "Día de la Cruz", comment: "Evento de ejemplo de la maqueta"), 0, 24 * 60,
+              String(localized: "Festivos", comment: "Calendario de ejemplo de la maqueta"),
               RGB(red: 0.95, green: 0.61, blue: 0.16), todoElDia: true),
-            e("Reunión de equipo", 10 * 60, 60, "Trabajo",
+            e(String(localized: "Reunión de equipo", comment: "Evento de ejemplo de la maqueta"), 10 * 60, 60,
+              String(localized: "Trabajo", comment: "Calendario de ejemplo de la maqueta"),
               RGB(red: 0.30, green: 0.55, blue: 0.95)),
-            e("Comida con Ana", 14 * 60, 90, "Personal",
+            e(String(localized: "Comida con Ana", comment: "Evento de ejemplo de la maqueta"), 14 * 60, 90,
+              String(localized: "Personal", comment: "Calendario de ejemplo de la maqueta"),
               RGB(red: 0.36, green: 0.78, blue: 0.45)),
-            e("Fisioterapeuta", 18 * 60 + 30, 45, "Personal",
+            e(String(localized: "Fisioterapeuta", comment: "Evento de ejemplo de la maqueta"), 18 * 60 + 30, 45,
+              String(localized: "Personal", comment: "Calendario de ejemplo de la maqueta"),
               RGB(red: 0.36, green: 0.78, blue: 0.45)),
         ]
     }
@@ -237,7 +241,7 @@ public final class Agenda {
         var vistos = Set<String>()
         return eventos.filter { e in
             let titulo = e.title.folding(options: [.caseInsensitive, .diacriticInsensitive],
-                                         locale: Locale(identifier: "es_ES"))
+                                         locale: .current)
                 .trimmingCharacters(in: .whitespaces)
             let cuando = e.isAllDay
                 ? "dia:\(calendar.startOfDay(for: e.start).timeIntervalSince1970)"
@@ -253,7 +257,9 @@ public final class Agenda {
 
     private static func convertir(_ e: EKEvent) -> Evento {
         Evento(id: e.eventIdentifier ?? UUID().uuidString,
-               title: (e.title ?? "").isEmpty ? "Sin título" : e.title,
+               title: (e.title ?? "").isEmpty
+                   ? String(localized: "Sin título", comment: "Evento del calendario que no tiene nombre")
+                   : e.title,
                start: e.startDate,
                end: e.endDate,
                isAllDay: e.isAllDay,

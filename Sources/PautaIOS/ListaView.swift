@@ -217,7 +217,12 @@ struct ListaView: View {
             if case .inbox = perspectiva, !items.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { vaciando = true } label: {
-                        Label("Vaciar", systemImage: "tray.and.arrow.down")
+                        // Clave propia: en español es el mismo «Vaciar» que el
+                        // de la papelera, pero en inglés la papelera se «empty»
+                        // y la bandeja se «clear».
+                        Label(String(localized: "Vaciar (bandeja)", defaultValue: "Vaciar",
+                                     comment: "Botón que empieza Vaciar la bandeja: decidir una por una qué hacer con cada tarea"),
+                              systemImage: "tray.and.arrow.down")
                     }
                 }
             }
@@ -396,14 +401,14 @@ struct ListaView: View {
         let n = items.count
         let tareas: String
         if case .completed = perspectiva {
-            tareas = n == 1 ? "1 TAREA" : "\(n) TAREAS"
+            tareas = n == 1 ? String(localized: "1 TAREA") : String(localized: "\(n) TAREAS")
         } else {
-            tareas = n == 1 ? "1 ABIERTA" : "\(n) ABIERTAS"
+            tareas = n == 1 ? String(localized: "1 ABIERTA") : String(localized: "\(n) ABIERTAS")
         }
         // Los eventos se cuentan aparte: no son cosas que hacer ni se completan,
         // así que sumarlos a las tareas abiertas mentiría sobre el trabajo.
         guard !eventos.isEmpty else { return tareas }
-        let e = eventos.count == 1 ? "1 EVENTO" : "\(eventos.count) EVENTOS"
+        let e = eventos.count == 1 ? String(localized: "1 EVENTO") : String(localized: "\(eventos.count) EVENTOS")
         return "\(e) · \(tareas)"
     }
 
@@ -447,7 +452,7 @@ struct ListaView: View {
         }
     }
 
-    private func franja(_ icono: String, _ texto: String, _ tinta: Color,
+    private func franja(_ icono: String, _ texto: LocalizedStringKey, _ tinta: Color,
                         _ fondo: Color, _ accion: @escaping () -> Void) -> some View {
         Button(action: accion) {
             HStack(spacing: 8) {
@@ -499,14 +504,14 @@ struct VacioView: View {
     }
 
     private var texto: String {
-        if estrenando { return "Todavía no hay nada. Pulsa + y apunta lo primero." }
+        if estrenando { return String(localized: "Todavía no hay nada. Pulsa + y apunta lo primero.") }
         return switch perspectiva {
-        case .today: "Nada para hoy. Buen día para no hacer nada."
-        case .inbox: "La bandeja está vacía."
-        case .upcoming: "Nada planificado más adelante."
-        case .someday: "Nada aparcado."
-        case .completed: "Todavía no has completado nada."
-        default: "Nada por aquí."
+        case .today: String(localized: "Nada para hoy. Buen día para no hacer nada.")
+        case .inbox: String(localized: "La bandeja está vacía.")
+        case .upcoming: String(localized: "Nada planificado más adelante.")
+        case .someday: String(localized: "Nada aparcado.")
+        case .completed: String(localized: "Todavía no has completado nada.")
+        default: String(localized: "Nada por aquí.")
         }
     }
 }

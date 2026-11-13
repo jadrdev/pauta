@@ -108,7 +108,8 @@ struct CapturaView: View {
     }
 
     private var marcador: String {
-        perspectiva.acceptsNewItems ? "Apunta lo que sea" : "Apuntar en la bandeja"
+        perspectiva.acceptsNewItems ? String(localized: "Apunta lo que sea")
+                                     : String(localized: "Apuntar en la bandeja")
     }
 
     /// Debajo: a dónde va lo que escribes, o lo que ya llevas apuntado.

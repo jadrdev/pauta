@@ -34,7 +34,7 @@ struct PapeleraView: View {
                         ForEach(store.areasBorradas) { area in
                             FilaBorrada(icono: area.icon.isEmpty ? nil : area.icon,
                                         simbolo: "square.stack",
-                                        titulo: area.name.isEmpty ? "Sin título" : area.name,
+                                        titulo: area.name.isEmpty ? String(localized: "Sin título") : area.name,
                                         detalle: detalleArea(area),
                                         cuando: area.deletedAt) {
                                 store.restaurarArea(area.id)
@@ -43,7 +43,7 @@ struct PapeleraView: View {
                         ForEach(store.proyectosBorrados) { proyecto in
                             FilaBorrada(icono: proyecto.icon.isEmpty ? nil : proyecto.icon,
                                         simbolo: "circle.dotted",
-                                        titulo: proyecto.name.isEmpty ? "Sin título" : proyecto.name,
+                                        titulo: proyecto.name.isEmpty ? String(localized: "Sin título") : proyecto.name,
                                         detalle: detalleProyecto(proyecto),
                                         cuando: proyecto.deletedAt) {
                                 store.restaurarProyecto(proyecto.id)
@@ -52,7 +52,7 @@ struct PapeleraView: View {
                         ForEach(store.borradas) { tarea in
                             FilaBorrada(icono: nil,
                                         simbolo: nil,
-                                        titulo: tarea.title.isEmpty ? "Sin título" : tarea.title,
+                                        titulo: tarea.title.isEmpty ? String(localized: "Sin título") : tarea.title,
                                         detalle: nil,
                                         cuando: tarea.deletedAt) {
                                 store.restaurar(tarea.id)
@@ -71,8 +71,7 @@ struct PapeleraView: View {
             Button("Vaciar", role: .destructive) { store.vaciarPapelera() }
             Button("Cancelar", role: .cancel) {}
         } message: {
-            Text("Esto sí borra de verdad, y no se puede deshacer. "
-                 + "Lo que no toques se irá solo a los treinta días.")
+            Text("Esto sí borra de verdad, y no se puede deshacer. Lo que no toques se irá solo a los treinta días.")
         }
     }
 
@@ -107,18 +106,18 @@ struct PapeleraView: View {
         let vuelven = p.sueltos.filter { id in
             store.items.contains { $0.id == id && $0.projectID == nil }
         }.count
-        guard vuelven > 0 else { return "proyecto" }
-        return vuelven == 1 ? "proyecto · vuelve con 1 tarea"
-                            : "proyecto · vuelve con \(vuelven) tareas"
+        guard vuelven > 0 else { return String(localized: "proyecto", comment: "Tipo de elemento en la papelera") }
+        return vuelven == 1 ? String(localized: "proyecto · vuelve con 1 tarea")
+                            : String(localized: "proyecto · vuelve con \(vuelven) tareas")
     }
 
     private func detalleArea(_ a: Area) -> String? {
         let vuelven = a.sueltos.filter { id in
             store.projects.contains { $0.id == id && $0.areaID == nil }
         }.count
-        guard vuelven > 0 else { return "área" }
-        return vuelven == 1 ? "área · vuelve con 1 proyecto"
-                            : "área · vuelve con \(vuelven) proyectos"
+        guard vuelven > 0 else { return String(localized: "área", comment: "Tipo de elemento en la papelera") }
+        return vuelven == 1 ? String(localized: "área · vuelve con 1 proyecto")
+                            : String(localized: "área · vuelve con \(vuelven) proyectos")
     }
 }
 

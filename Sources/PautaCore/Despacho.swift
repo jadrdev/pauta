@@ -25,12 +25,12 @@ public enum Despacho: Hashable, Sendable {
 
     public var titulo: String {
         switch self {
-        case .hoy: "Hoy"
-        case .manana: "Mañana"
-        case .proximaSemana: "Próxima semana"
-        case .algunDia: "Algún día"
-        case .eliminar: "Eliminar"
-        case .proyecto: "A un proyecto"
+        case .hoy: String(localized: "Hoy", comment: "Vaciar la bandeja: botón para decidir qué hacer con una tarea")
+        case .manana: String(localized: "Mañana", comment: "Vaciar la bandeja: botón para decidir qué hacer con una tarea")
+        case .proximaSemana: String(localized: "Próxima semana", comment: "Vaciar la bandeja: botón para decidir qué hacer con una tarea")
+        case .algunDia: String(localized: "Algún día", comment: "Vaciar la bandeja: botón para decidir qué hacer con una tarea")
+        case .eliminar: String(localized: "Eliminar", comment: "Vaciar la bandeja: botón para decidir qué hacer con una tarea")
+        case .proyecto: String(localized: "A un proyecto", comment: "Vaciar la bandeja: botón para decidir qué hacer con una tarea: moverla a un proyecto")
         }
     }
 

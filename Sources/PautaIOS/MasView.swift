@@ -52,16 +52,16 @@ struct MasView: View {
         }
         var titulo: String {
             switch self {
-            case .proyectoNuevo: "Proyecto nuevo"
-            case .areaNueva: "Área nueva"
-            case .renombrarProyecto: "Renombrar proyecto"
-            case .renombrarArea: "Renombrar área"
+            case .proyectoNuevo: String(localized: "Proyecto nuevo")
+            case .areaNueva: String(localized: "Área nueva")
+            case .renombrarProyecto: String(localized: "Renombrar proyecto")
+            case .renombrarArea: String(localized: "Renombrar área")
             }
         }
         var boton: String {
             switch self {
-            case .proyectoNuevo, .areaNueva: "Crear"
-            case .renombrarProyecto, .renombrarArea: "Renombrar"
+            case .proyectoNuevo, .areaNueva: String(localized: "Crear")
+            case .renombrarProyecto, .renombrarArea: String(localized: "Renombrar")
             }
         }
     }

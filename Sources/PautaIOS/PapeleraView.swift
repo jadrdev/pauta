@@ -19,8 +19,7 @@ struct PapeleraView: View {
         List {
             if !store.papeleraLlena {
                 Section {
-                    Text("Aquí aparece lo que borres, y se puede devolver "
-                         + "durante treinta días.")
+                    Text("Aquí aparece lo que borres, y se puede devolver durante treinta días.")
                         .font(.system(size: 14))
                         .foregroundStyle(Papel.inkFaint)
                         .listRowBackground(Papel.bg)
@@ -72,8 +71,7 @@ struct PapeleraView: View {
             Button("Vaciar", role: .destructive) { store.vaciarPapelera() }
             Button("Cancelar", role: .cancel) {}
         } message: {
-            Text("Esto sí borra de verdad y no se puede deshacer. "
-                 + "Lo que no toques se irá solo a los treinta días.")
+            Text("Esto sí borra de verdad y no se puede deshacer. Lo que no toques se irá solo a los treinta días.")
         }
     }
 
@@ -84,7 +82,8 @@ struct PapeleraView: View {
             store.items.contains { $0.id == id && $0.projectID == nil }
         }.count
         guard vuelven > 0 else { return nil }
-        return vuelven == 1 ? "vuelve con 1 tarea" : "vuelve con \(vuelven) tareas"
+        return vuelven == 1 ? String(localized: "vuelve con 1 tarea")
+                             : String(localized: "vuelve con \(vuelven) tareas")
     }
 
     private func cuentaDeArea(_ a: Area) -> String? {
@@ -92,7 +91,8 @@ struct PapeleraView: View {
             store.projects.contains { $0.id == id && $0.areaID == nil }
         }.count
         guard vuelven > 0 else { return nil }
-        return vuelven == 1 ? "vuelve con 1 proyecto" : "vuelve con \(vuelven) proyectos"
+        return vuelven == 1 ? String(localized: "vuelve con 1 proyecto")
+                             : String(localized: "vuelve con \(vuelven) proyectos")
     }
 }
 
@@ -115,7 +115,7 @@ private struct Fila: View {
                     .font(.system(size: 13)).foregroundStyle(Papel.inkFaint)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(titulo.isEmpty ? "Sin título" : titulo)
+                Text(titulo.isEmpty ? String(localized: "Sin título") : titulo)
                     .font(.system(size: 16)).foregroundStyle(Papel.inkSoft)
                 HStack(spacing: 6) {
                     if let detalle { Text(detalle) }

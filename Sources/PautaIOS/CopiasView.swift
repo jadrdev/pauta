@@ -40,9 +40,7 @@ struct CopiasView: View {
                     }
                 }
             } footer: {
-                Text("Una al día, de los últimos \(Copias.cuantas) días. Volver a una deja "
-                     + "todo como estaba ese día; lo apuntado después va a la papelera, "
-                     + "y antes se guarda una copia de ahora.")
+                Text("Una al día, de los últimos \(Copias.cuantas) días. Volver a una deja todo como estaba ese día; lo apuntado después va a la papelera, y antes se guarda una copia de ahora.")
             }
             // Fuera de la app: para quien no usa iCloud, y para pasar las
             // tareas a otro aparato.
@@ -52,7 +50,7 @@ struct CopiasView: View {
                         let (datos, nombre) = try store.exportar()
                         aExportar = CopiaExportada(datos: datos, nombre: nombre)
                     } catch {
-                        restaurada = "Aún faltan tareas por bajar de iCloud. Prueba en un momento."
+                        restaurada = String(localized: "Aún faltan tareas por bajar de iCloud. Prueba en un momento.")
                     }
                 } label: {
                     Label("Exportar una copia…", systemImage: "square.and.arrow.up")
@@ -63,16 +61,14 @@ struct CopiasView: View {
             } header: {
                 Text("FUERA DE LA APP")
             } footer: {
-                Text("Guarda tus tareas, proyectos y áreas en Archivos, en otra nube o "
-                     + "donde quieras, y recupéralas en este u otro aparato. Los "
-                     + "adjuntos no van dentro.")
+                Text("Guarda tus tareas, proyectos y áreas en Archivos, en otra nube o donde quieras, y recupéralas en este u otro aparato. Los adjuntos no van dentro.")
             }
         }
         .fileExporter(isPresented: Binding(get: { aExportar != nil },
                                            set: { if !$0 { aExportar = nil } }),
                       document: aExportar, contentType: .gzip,
                       defaultFilename: aExportar?.nombre) { resultado in
-            if case .success = resultado { restaurada = "Copia exportada." }
+            if case .success = resultado { restaurada = String(localized: "Copia exportada.") }
             aExportar = nil
         }
         .fileImporter(isPresented: $importando, allowedContentTypes: [.gzip, .json]) { resultado in
@@ -83,7 +79,7 @@ struct CopiasView: View {
             defer { if permiso { url.stopAccessingSecurityScopedResource() } }
             guard let datos = try? Data(contentsOf: url),
                   let copia = Copias.leer(datos: datos) else {
-                restaurada = "Ese archivo no es una copia de Pauta."
+                restaurada = String(localized: "Ese archivo no es una copia de Pauta.")
                 return
             }
             importada = copia
@@ -97,12 +93,11 @@ struct CopiasView: View {
             Button("Importar", role: .destructive) {
                 guard let copia = importada else { return }
                 store.restaurar(copia)
-                restaurada = "Hecho: \(copia.items.count) tareas importadas."
+                restaurada = String(localized: "Hecho: \(copia.items.count) tareas importadas.")
                 Task { await leerCopias() }
             }
         } message: {
-            Text("Lo que no esté en ella irá a la papelera. Antes se guarda una copia de "
-                 + "cómo está ahora, por si quieres volver.")
+            Text("Lo que no esté en ella irá a la papelera. Antes se guarda una copia de cómo está ahora, por si quieres volver.")
         }
         .navigationTitle("Copias de seguridad")
         .navigationBarTitleDisplayMode(.inline)
@@ -117,16 +112,15 @@ struct CopiasView: View {
             Button("Volver a esa copia", role: .destructive) {
                 guard let elegida = aRestaurar else { return }
                 guard let copia = Copias.leer(elegida.url) else {
-                    restaurada = "Esa copia aún está bajando. Prueba en un momento."
+                    restaurada = String(localized: "Esa copia aún está bajando. Prueba en un momento.")
                     return
                 }
                 store.restaurar(copia)
-                restaurada = "Hecho: todo está como el \(elegida.titulo.lowercased())."
+                restaurada = String(localized: "Hecho: todo está como el \(elegida.titulo.lowercased()).")
                 Task { await leerCopias() }
             }
         } message: {
-            Text("Lo que hayas apuntado después irá a la papelera. Antes se guarda una "
-                 + "copia de cómo está ahora, por si quieres volver.")
+            Text("Lo que hayas apuntado después irá a la papelera. Antes se guarda una copia de cómo está ahora, por si quieres volver.")
         }
     }
 
