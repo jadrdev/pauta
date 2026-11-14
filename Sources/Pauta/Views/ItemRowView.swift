@@ -88,6 +88,10 @@ struct ItemRowView: View {
     @State private var pasoNuevo = ""
     @State private var poniendoEtiqueta = false
     @State private var eligiendoHora = false
+    /// Los mismos selectores, pedidos desde el clic derecho: cuelgan de la
+    /// fila y no del menú de la ficha, que con la fila cerrada no existe.
+    @State private var fechaDesdeMenu = false
+    @State private var horaDesdeMenu = false
     @State private var isAdjuntando = false
     @FocusState private var titleFocused: Bool
 
@@ -237,6 +241,22 @@ struct ItemRowView: View {
                 store.schedule(item, to: Calendar.current.date(byAdding: .day,
                                                                value: 1, to: .now))
             }
+            // Cualquier otro día y la hora, sin tener que abrir la fila: el
+            // menú solo llegaba a mañana, y para el jueves había que desplegar.
+            Button("Otra fecha…") { fechaDesdeMenu = true }
+            Menu("Hora") {
+                ForEach([8 * 60, 9 * 60, 12 * 60, 15 * 60, 18 * 60, 21 * 60], id: \.self) { m in
+                    Button(Self.hora(m)) {
+                        store.setTime(item, to: m,
+                                      margenInicial: Ajustes.shared.margenPorDefecto)
+                    }
+                }
+                Button("Otra hora…") { horaDesdeMenu = true }
+                if item.timeOfDay != nil {
+                    Divider()
+                    Button("Sin hora") { store.setTime(item, to: nil) }
+                }
+            }
             // Aplazar también desde la lista: el aviso es la puerta principal,
             // pero «ahora no puedo» se piensa igual mirando la lista.
             Button("Aplazar \(Avisos.minutosAplazados) min") {
@@ -262,6 +282,19 @@ struct ItemRowView: View {
                 // si no, queda apuntando a algo que ya no existe.
                 if isSelected { nav.selectedItemID = nil }
                 store.delete(item)
+            }
+        }
+        .popover(isPresented: $fechaDesdeMenu, arrowEdge: .bottom) {
+            SelectorDeFecha(inicial: item.when ?? Date()) { fecha in
+                store.schedule(item, to: fecha)
+                fechaDesdeMenu = false
+            }
+        }
+        .popover(isPresented: $horaDesdeMenu, arrowEdge: .bottom) {
+            SelectorDeHora(inicial: item.timeOfDay ?? 9 * 60) { minutos in
+                store.setTime(item, to: minutos,
+                              margenInicial: Ajustes.shared.margenPorDefecto)
+                horaDesdeMenu = false
             }
         }
     }
