@@ -112,10 +112,15 @@ def build_watch():
     Otro catálogo y no el de iOS: la plataforma va escrita dentro del
     `Contents.json`, y sobre todo el arte no es el mismo — el monograma va más
     pequeño porque la máscara es redonda.
+
+    Y **sobre fondo claro**, no sobre el negro de marca: la esfera del reloj es
+    negra, y un círculo negro sobre negro no se ve como círculo. App Review lo
+    rechazó por eso (norma 4, noviembre de 2026). Es la variante «claro» del
+    Mac: la P en negro de marca y el check verde.
     """
     catalogo = RES / "watch" / "Assets.xcassets" / "AppIcon.appiconset"
     catalogo.mkdir(parents=True, exist_ok=True)
-    lamina_reloj(1024, BRAND_BLACK, "monogram.png").save(catalogo / "icon-1024.png")
+    lamina_reloj(1024, BRAND_LIGHT, "monogram-ink.png").save(catalogo / "icon-1024.png")
     (catalogo / "Contents.json").write_text(
         '{\n  "images" : [\n    {\n      "filename" : "icon-1024.png",\n'
         '      "idiom" : "universal",\n      "platform" : "watchos",\n'
@@ -123,7 +128,7 @@ def build_watch():
         '  "info" : { "author" : "pauta", "version" : 1 }\n}\n')
     (RES / "watch" / "Assets.xcassets" / "Contents.json").write_text(
         '{\n  "info" : { "author" : "pauta", "version" : 1 }\n}\n')
-    lamina_reloj(512, BRAND_BLACK, "monogram.png").save(RES / "icon-reloj-preview.png")
+    lamina_reloj(512, BRAND_LIGHT, "monogram-ink.png").save(RES / "icon-reloj-preview.png")
     print(f"✓ {catalogo.relative_to(ROOT)}")
 
 
