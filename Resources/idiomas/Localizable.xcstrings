@@ -2518,12 +2518,6 @@
     },
     "Busca «Pauta» y elígelo." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Busca «Pauta» y elígelo."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2535,17 +2529,17 @@
             "state" : "translated",
             "value" : "Find “Pauta” and choose it."
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Busca «Pauta» y elígelo."
+          }
         }
       }
     },
     "Busca «Pauta» y tócalo." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Busca «Pauta» y tócalo."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2557,17 +2551,17 @@
             "state" : "translated",
             "value" : "Find “Pauta” and tap it."
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Busca «Pauta» y tócalo."
+          }
         }
       }
     },
     "Busca «Pauta», elige el tamaño y toca «Añadir widget»." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Busca «Pauta», elige el tamaño y toca «Añadir widget»."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2578,6 +2572,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Find “Pauta”, pick a size and tap “Add Widget”."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Busca «Pauta», elige el tamaño y toca «Añadir widget»."
           }
         }
       }
@@ -3665,12 +3665,6 @@
     },
     "Cuántas tareas quedan hoy, en la esfera. Hace falta Pauta instalada en el reloj." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cuántas tareas quedan hoy, en la esfera. Hace falta Pauta instalada en el reloj."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3681,6 +3675,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "How many tasks are left today, on your watch face. Pauta needs to be installed on the watch."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuántas tareas quedan hoy, en la esfera. Hace falta Pauta instalada en el reloj."
           }
         }
       }
@@ -4040,12 +4040,6 @@
     },
     "Desliza hasta las complicaciones y toca un hueco." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desliza hasta las complicaciones y toca un hueco."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4056,6 +4050,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Swipe to the complications and tap a slot."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desliza hasta las complicaciones y toca un hueco."
           }
         }
       }
@@ -4174,12 +4174,6 @@
     },
     "EN EL APPLE WATCH" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "EN EL APPLE WATCH"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4191,17 +4185,17 @@
             "state" : "translated",
             "value" : "ON APPLE WATCH"
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EN EL APPLE WATCH"
+          }
         }
       }
     },
     "EN LA PANTALLA BLOQUEADA" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "EN LA PANTALLA BLOQUEADA"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4213,17 +4207,17 @@
             "state" : "translated",
             "value" : "ON THE LOCK SCREEN"
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EN LA PANTALLA BLOQUEADA"
+          }
         }
       }
     },
     "EN LA PANTALLA DE INICIO" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "EN LA PANTALLA DE INICIO"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4234,6 +4228,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ON THE HOME SCREEN"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EN LA PANTALLA DE INICIO"
           }
         }
       }
@@ -4350,12 +4350,6 @@
     },
     "Elige la pantalla bloqueada y toca el hueco de los widgets, debajo de la hora." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elige la pantalla bloqueada y toca el hueco de los widgets, debajo de la hora."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4366,6 +4360,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pick your Lock Screen and tap the widget area below the time."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige la pantalla bloqueada y toca el hueco de los widgets, debajo de la hora."
           }
         }
       }
@@ -4617,12 +4617,6 @@
     },
     "Enseña lo que toca hoy y lo que se arrastra de días pasados. El círculo tacha la tarea sin abrir la app." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enseña lo que toca hoy y lo que se arrastra de días pasados. El círculo tacha la tarea sin abrir la app."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4633,6 +4627,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shows what's on today and what's carried over from past days. The circle checks off a task without opening the app."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enseña lo que toca hoy y lo que se arrastra de días pasados. El círculo tacha la tarea sin abrir la app."
           }
         }
       }
@@ -5528,12 +5528,6 @@
     },
     "Hoy en la pantalla de inicio, en la bloqueada y en la esfera del reloj, sin abrir la app." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hoy en la pantalla de inicio, en la bloqueada y en la esfera del reloj, sin abrir la app."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5544,6 +5538,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Today on your Home Screen, Lock Screen and watch face, without opening the app."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoy en la pantalla de inicio, en la bloqueada y en la esfera del reloj, sin abrir la app."
           }
         }
       }
@@ -5566,6 +5566,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ICLOUD"
+          }
+        }
+      }
+    },
+    "IDIOMA" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IDIOMA"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IDIOMA"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LANGUAGE"
+          }
+        }
+      }
+    },
+    "Idioma" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idioma"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idioma"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Language"
           }
         }
       }
@@ -6194,12 +6238,6 @@
     },
     "Mantén pulsada la esfera del reloj y toca «Editar»." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mantén pulsada la esfera del reloj y toca «Editar»."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6211,17 +6249,17 @@
             "state" : "translated",
             "value" : "Touch and hold the watch face, then tap “Edit”."
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén pulsada la esfera del reloj y toca «Editar»."
+          }
         }
       }
     },
     "Mantén pulsada la pantalla bloqueada y toca «Personalizar»." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mantén pulsada la pantalla bloqueada y toca «Personalizar»."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6233,17 +6271,17 @@
             "state" : "translated",
             "value" : "Touch and hold the Lock Screen, then tap “Customize”."
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén pulsada la pantalla bloqueada y toca «Personalizar»."
+          }
         }
       }
     },
     "Mantén pulsado un hueco vacío de la pantalla de inicio, hasta que los iconos se muevan." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mantén pulsado un hueco vacío de la pantalla de inicio, hasta que los iconos se muevan."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6254,6 +6292,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Touch and hold an empty spot on the Home Screen until the icons jiggle."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén pulsado un hueco vacío de la pantalla de inicio, hasta que los iconos se muevan."
           }
         }
       }
@@ -8057,12 +8101,6 @@
     },
     "Poner el widget" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Poner el widget"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8073,6 +8111,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Add the Widget"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poner el widget"
           }
         }
       }
@@ -9197,6 +9241,28 @@
         }
       }
     },
+    "Se cambia en los ajustes del sistema, en la página de Pauta. Si allí no sale «Idioma», añade antes el que quieras en General ▸ Idioma y región." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se cambia en los ajustes del sistema, en la página de Pauta. Si allí no sale «Idioma», añade antes el que quieras en General ▸ Idioma y región."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es canvia a la configuració del sistema, a la pàgina de Pauta. Si no hi surt «Idioma», afegeix abans el que vulguis a General ▸ Idioma i regió."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change it in the system Settings, on Pauta's page. If “Language” doesn't appear there, first add the one you want in General ▸ Language & Region."
+          }
+        }
+      }
+    },
     "Se copian a la carpeta de Pauta y viajan con la tarea." : {
       "localizations" : {
         "ca" : {
@@ -9773,12 +9839,6 @@
     },
     "Toca «Editar», arriba, y luego «Añadir widget»." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Toca «Editar», arriba, y luego «Añadir widget»."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9789,6 +9849,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tap “Edit” at the top, then “Add Widget”."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca «Editar», arriba, y luego «Añadir widget»."
           }
         }
       }
@@ -10149,12 +10215,6 @@
     },
     "Una línea con lo siguiente que toca, sin desbloquear." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Una línea con lo siguiente que toca, sin desbloquear."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10165,6 +10225,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "One line with what's next, without unlocking."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una línea con lo siguiente que toca, sin desbloquear."
           }
         }
       }
@@ -10613,12 +10679,6 @@
     },
     "WIDGET" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "WIDGET"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10630,17 +10690,17 @@
             "state" : "translated",
             "value" : "WIDGET"
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WIDGET"
+          }
         }
       }
     },
     "Widget" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Widget"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10648,6 +10708,12 @@
           }
         },
         "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Widget"
+          }
+        },
+        "es" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Widget"

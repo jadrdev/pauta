@@ -62,6 +62,15 @@ struct AjustesView: View {
         return partes.joined(separator: " · ")
     }
 
+    /// El idioma en que está la app ahora, dicho en ese mismo idioma:
+    /// «Español», «Català», «English». Es lo que hay que reconocer para
+    /// volver si alguien la pone en uno que no entiende.
+    static var idiomaActual: String {
+        let codigo = Bundle.main.preferredLocalizations.first ?? "es"
+        let nombre = Locale(identifier: codigo).localizedString(forLanguageCode: codigo) ?? codigo
+        return nombre.prefix(1).uppercased() + nombre.dropFirst()
+    }
+
     var body: some View {
         Form {
             Section {
@@ -99,6 +108,34 @@ struct AjustesView: View {
                 Text("AVISOS")
             } footer: {
                 Text("El margen se le pone a cada hora nueva; las tareas que ya tengan el suyo no se tocan.")
+            }
+
+            // El idioma se elige donde lo elige iOS, en la página de Pauta de los
+            // Ajustes del sistema: ahí cambia al momento y para todo —widgets y
+            // reloj incluidos—. Uno propio obligaría a reiniciar la app y
+            // dejaría a medias lo que no es la app. Esto solo lleva hasta allí.
+            Section {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    HStack {
+                        Text("Idioma").foregroundStyle(Papel.ink)
+                        Spacer()
+                        Text(Self.idiomaActual)
+                            .foregroundStyle(Papel.inkSoft)
+                        Image(systemName: "arrow.up.forward")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Papel.inkFaint)
+                    }
+                }
+            } header: {
+                Text("IDIOMA")
+            } footer: {
+                // iOS solo enseña el idioma de una app si el teléfono tiene más
+                // de uno en su lista; sin esto, quien llega no lo encuentra.
+                Text("Se cambia en los ajustes del sistema, en la página de Pauta. Si allí no sale «Idioma», añade antes el que quieras en General ▸ Idioma y región.")
             }
 
             Section {
