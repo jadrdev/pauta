@@ -139,6 +139,28 @@ public final class Store {
     public private(set) var proyectosBorrados: [Project] = []
     public private(set) var areasBorradas: [Area] = []
 
+    /// Lo borrado tal como lo enseña la papelera: **una fila por serie**.
+    ///
+    /// Una diaria borrada con un mes de historial son treinta tareas en la
+    /// papelera con el mismo nombre si alguna vez se borraron sus vueltas por
+    /// separado. Filas iguales no se leen; una que dice «3 repeticiones» sí, y
+    /// devolverla las devuelve todas. La fila es la vuelta pendiente si la hay
+    /// —la que estaba viva—, y si no, la más reciente.
+    public var borradasEnPapelera: [BorradaEnPapelera] {
+        var vistas: Set<UUID> = []
+        var filas: [BorradaEnPapelera] = []
+        for tarea in borradas where !vistas.contains(tarea.id) {
+            let ids = borradasDeLaSerie(de: tarea.id)
+            vistas.formUnion(ids)
+            let vueltas = borradas.filter { ids.contains($0.id) }
+            let cara = vueltas.first { !$0.isCompleted }
+                ?? vueltas.max { ($0.when ?? $0.createdAt) < ($1.when ?? $1.createdAt) }
+                ?? tarea
+            filas.append(BorradaEnPapelera(tarea: cara, vueltas: vueltas.count))
+        }
+        return filas
+    }
+
     /// Si hay algo que recuperar. La papelera solo se enseña cuando tiene algo:
     /// una lista vacía permanente en la barra lateral es ruido.
     public var papeleraLlena: Bool {
@@ -150,7 +172,7 @@ public final class Store {
     /// No se guarda en disco a propósito: deshacer es de esta sesión y de este
     /// aparato. Lo que sí sobrevive es la papelera, que es donde se va a buscar
     /// lo de ayer.
-    private enum Borrado { case tarea(UUID), proyecto(UUID), area(UUID) }
+    private enum Borrado { case tarea(UUID), serie([UUID]), proyecto(UUID), area(UUID) }
     private var pilaDeBorrados: [Borrado] = []
 
     /// Lo leído de cada archivo en la última carga, por nombre de archivo.
@@ -1060,7 +1082,7 @@ public final class Store {
         guard let sucesora = items.first(where: {
             $0.spawnedFrom == item.id && !$0.isCompleted
         }) else { return }
-        delete(sucesora)
+        enterrar(sucesora.id)
         // Retirada por la app y no por ti. La lápida se queda —el otro aparato
         // tiene que enterarse de que esa vuelta se fue— pero aquí deja de
         // contar como «borrada a mano»: si vuelves a completar la madre, la
@@ -1087,14 +1109,54 @@ public final class Store {
         return true
     }
 
+    /// Borra una tarea, y si se repite, **también sus repeticiones por hacer**.
+    ///
+    /// Una repetitiva no es una tarea, es una cadena: cada vez que se tacha
+    /// nace la siguiente. Borrar solo la que tienes delante dejaba vivo el
+    /// resto —borras la de hoy, ya tachada, y mañana vuelve a salir—, y borrar
+    /// una rutina es decir que se acabó.
+    ///
+    /// Las tachadas no. **Tachar no es borrar**: una vuelta hecha es una tarea
+    /// acabada, historial de Completadas, y sigue ahí aunque la rutina se
+    /// termine. Lo que se va es la que borras y las que quedaban por hacer.
+    /// Se van juntas a la papelera, y `⌘Z` o la papelera las devuelven juntas.
     public func delete(_ item: Item) {
-        guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
+        let ids = Store.serie(de: item.id, en: items).filter { id in
+            id == item.id || items.contains { $0.id == id && !$0.isCompleted }
+        }
+        // La que tienes delante, la última: la papelera enseña lo último
+        // arriba, y es la que buscarás.
+        for id in ids where id != item.id { enterrar(id) }
+        enterrar(item.id)
+        pilaDeBorrados.append(ids.count == 1 ? .tarea(item.id) : .serie(Array(ids)))
+    }
+
+    /// Las vueltas de una serie: la tarea, las que la parieron y las que parió
+    /// ella, siguiendo `spawnedFrom` en los dos sentidos. Una tarea que no se
+    /// repite es una serie de una.
+    nonisolated static func serie(de id: UUID, en tareas: [Item]) -> Set<UUID> {
+        var dentro: Set<UUID> = [id]
+        var pendientes = [id]
+        while let actual = pendientes.popLast() {
+            let madre = tareas.first { $0.id == actual }?.spawnedFrom
+            for t in tareas where !dentro.contains(t.id)
+                && (t.spawnedFrom == actual || t.id == madre) {
+                dentro.insert(t.id)
+                pendientes.append(t.id)
+            }
+        }
+        return dentro.filter { id in tareas.contains { $0.id == id } }
+    }
+
+    /// Una tarea a la papelera, sola. Lo que hacen `delete`, para cada vuelta
+    /// de la serie, y la retirada de una sucesora al destachar.
+    private func enterrar(_ id: UUID) {
+        guard let idx = items.firstIndex(where: { $0.id == id }) else { return }
         var buried = items.remove(at: idx)
         buried.deletedAt = Store.sello(despuesDe: buried.updatedAt)
         buried.updatedAt = buried.deletedAt!
         enterradas.insert(buried.id)
         borradas.insert(buried, at: 0)
-        pilaDeBorrados.append(.tarea(buried.id))
         persist(buried)
     }
 
@@ -1804,9 +1866,26 @@ public final class Store {
     /// Si su proyecto desapareció mientras ella esperaba, vuelve a la bandeja:
     /// una tarea con un `projectID` que no existe no sale en ninguna lista, y un
     /// «recuperado» que la deja invisible es peor que no recuperarla.
+    ///
+    /// Y si era una repetitiva, vuelve con toda su serie: se fue junta, y
+    /// devolver una sola vuelta dejaría la rutina a medias.
     @discardableResult
     public func restaurar(_ id: UUID) -> Bool {
-        guard let idx = borradas.firstIndex(where: { $0.id == id }) else { return false }
+        guard borradas.contains(where: { $0.id == id }) else { return false }
+        for vuelta in borradasDeLaSerie(de: id) { devolver(vuelta) }
+        return true
+    }
+
+    /// Las vueltas borradas de la serie de una tarea. La cadena se sigue
+    /// también por las vivas: las tachadas no se borran, y son las que unen la
+    /// de hoy con la de mañana.
+    private func borradasDeLaSerie(de id: UUID) -> Set<UUID> {
+        let enLaPapelera = Set(borradas.map(\.id))
+        return Store.serie(de: id, en: borradas + items).intersection(enLaPapelera)
+    }
+
+    private func devolver(_ id: UUID) {
+        guard let idx = borradas.firstIndex(where: { $0.id == id }) else { return }
         var vuelta = borradas.remove(at: idx)
         vuelta.deletedAt = nil
         vuelta.updatedAt = Store.sello(despuesDe: vuelta.updatedAt)
@@ -1818,7 +1897,6 @@ public final class Store {
         items.append(vuelta)
         items.sort(by: Item.byCreation)
         persist(vuelta)
-        return true
     }
 
     /// Devuelve un proyecto y le reengancha lo que soltó al borrarse.
@@ -1889,6 +1967,10 @@ public final class Store {
                 guard let t = borradas.first(where: { $0.id == id }) else { continue }
                 let nombre = t.title.isEmpty ? String(localized: "Sin título", comment: "Tarea que no tiene nombre") : t.title
                 if restaurar(id) { return nombre }
+            case .serie(let ids):
+                guard let t = borradas.first(where: { ids.contains($0.id) }) else { continue }
+                let nombre = t.title.isEmpty ? String(localized: "Sin título", comment: "Tarea que no tiene nombre") : t.title
+                if restaurar(t.id) { return nombre }
             case .proyecto(let id):
                 guard let p = proyectosBorrados.first(where: { $0.id == id }) else { continue }
                 let nombre = p.name.isEmpty ? String(localized: "Sin título", comment: "Proyecto que no tiene nombre") : p.name

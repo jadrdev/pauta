@@ -800,3 +800,11 @@ public enum Perspective: Hashable, CaseIterable {
         return true
     }
 }
+
+/// Una fila de la papelera: una tarea, o una serie repetitiva entera, que se
+/// enseña una vez con cuántas vueltas lleva dentro.
+public struct BorradaEnPapelera: Identifiable {
+    public let tarea: Item
+    public let vueltas: Int
+    public var id: UUID { tarea.id }
+}

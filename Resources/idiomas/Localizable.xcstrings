@@ -5572,12 +5572,6 @@
     },
     "IDIOMA" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "IDIOMA"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5589,17 +5583,17 @@
             "state" : "translated",
             "value" : "LANGUAGE"
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IDIOMA"
+          }
         }
       }
     },
     "Idioma" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Idioma"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5610,6 +5604,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Language"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idioma"
           }
         }
       }
@@ -9243,12 +9243,6 @@
     },
     "Se cambia en los ajustes del sistema, en la página de Pauta. Si allí no sale «Idioma», añade antes el que quieras en General ▸ Idioma y región." : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Se cambia en los ajustes del sistema, en la página de Pauta. Si allí no sale «Idioma», añade antes el que quieras en General ▸ Idioma y región."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9259,6 +9253,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Change it in the system Settings, on Pauta's page. If “Language” doesn't appear there, first add the one you want in General ▸ Language & Region."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se cambia en los ajustes del sistema, en la página de Pauta. Si allí no sale «Idioma», añade antes el que quieras en General ▸ Idioma y región."
           }
         }
       }
@@ -11171,6 +11171,28 @@
         }
       }
     },
+    "vuelve con %lld repeticiones" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vuelve con %lld repeticiones"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "torna amb %lld repeticions"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "returns with %lld repeats"
+          }
+        }
+      }
+    },
     "vuelve con %lld tareas" : {
       "localizations" : {
         "ca" : {
@@ -11211,6 +11233,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "vuelve con 1 proyecto"
+          }
+        }
+      }
+    },
+    "vuelve con 1 repetición" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vuelve con 1 repetición"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "torna amb 1 repetició"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "returns with 1 repeat"
           }
         }
       }

@@ -3492,6 +3492,88 @@ struct LoBorradoNoVuelveTests {
     }
 }
 
+/// Borrar una repetitiva se lleva sus repeticiones por hacer, y **no** las
+/// tachadas: tachar es acabar, no borrar.
+@MainActor
+struct BorrarUnaSerieTests {
+    /// Una diaria tachada dos veces: dos hechas y una pendiente.
+    private func serie() -> (Store, primera: UUID, segunda: UUID, pendiente: UUID) {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "Regar", in: .today)
+        s.setRecurrence(s.items.first { $0.id == a.id }!, to: .diaria)
+        s.toggleComplete(s.items.first { $0.id == a.id }!)
+        let b = s.items.first { $0.spawnedFrom == a.id }!
+        s.toggleComplete(b)
+        let c = s.items.first { $0.spawnedFrom == b.id }!
+        return (s, a.id, b.id, c.id)
+    }
+
+    /// El caso que se quejaba: borras la de hoy, ya tachada, y la de mañana
+    /// tiene que irse con ella.
+    @Test func deletingADoneOneTakesThePendingOnes() {
+        let (s, primera, segunda, pendiente) = serie()
+        s.delete(s.items.first { $0.id == segunda }!)
+        #expect(!s.items.contains { $0.id == segunda })
+        #expect(!s.items.contains { $0.id == pendiente })
+        // La otra tachada sigue: es historial.
+        #expect(s.items.contains { $0.id == primera && $0.isCompleted })
+    }
+
+    /// Borrar la pendiente no se lleva el historial.
+    @Test func deletingThePendingOneKeepsTheDoneOnes() {
+        let (s, primera, segunda, pendiente) = serie()
+        s.delete(s.items.first { $0.id == pendiente }!)
+        #expect(s.items.filter { [primera, segunda].contains($0.id) }.count == 2)
+        #expect(!s.items.contains { !$0.isCompleted })
+    }
+
+    /// ⌘Z devuelve lo que se fue junto, junto.
+    @Test func undoBringsThemAllBack() {
+        let (s, _, segunda, pendiente) = serie()
+        s.delete(s.items.first { $0.id == segunda }!)
+        #expect(s.deshacerUltimoBorrado() == "Regar")
+        #expect(s.items.contains { $0.id == segunda })
+        #expect(s.items.contains { $0.id == pendiente })
+        #expect(!s.hayAlgoQueDeshacer)
+    }
+
+    /// La papelera enseña una fila, y devolverla las devuelve todas, aunque
+    /// en la cadena haya tachadas vivas en medio.
+    @Test func theTrashShowsOneRowAndRestoresTheSeries() {
+        let (s, _, segunda, pendiente) = serie()
+        s.delete(s.items.first { $0.id == segunda }!)
+        let filas = s.borradasEnPapelera
+        #expect(filas.count == 1)
+        #expect(filas.first?.vueltas == 2)
+        // La fila es la pendiente, la que estaba viva.
+        #expect(filas.first?.tarea.id == pendiente)
+        s.restaurar(segunda)
+        #expect(s.borradas.isEmpty)
+        #expect(s.items.contains { $0.id == pendiente })
+    }
+
+    /// Una tarea que no se repite se borra sola, como siempre.
+    @Test func aPlainTaskGoesAlone() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "Una", in: .today)
+        _ = s.addItem(title: "Otra", in: .today)
+        s.delete(a)
+        #expect(s.items.map(\.title) == ["Otra"])
+        #expect(s.borradasEnPapelera.first?.vueltas == 1)
+    }
+
+    /// Destachar retira la sucesora, pero eso no es un borrado tuyo: ⌘Z no
+    /// tiene nada que devolver.
+    @Test func uncompletingIsNotSomethingToUndo() {
+        let s = Store(inMemory: true)
+        let a = s.addItem(title: "Regar", in: .today)
+        s.setRecurrence(s.items.first { $0.id == a.id }!, to: .diaria)
+        s.toggleComplete(s.items.first { $0.id == a.id }!)
+        s.toggleComplete(s.items.first { $0.id == a.id }!)
+        #expect(!s.hayAlgoQueDeshacer)
+    }
+}
+
 /// Comparar versiones, que es la única parte de un actualizador que piensa.
 ///
 /// Y la que se rompe sola si se compara como texto: «0.10.0» es **posterior** a

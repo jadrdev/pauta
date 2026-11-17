@@ -47,9 +47,13 @@ struct PapeleraView: View {
             }
             if !store.borradas.isEmpty {
                 Section("TAREAS") {
-                    ForEach(store.borradas) { t in
+                    // Una fila por serie: una repetitiva borrada se lleva sus
+                    // repeticiones por hacer, y vuelven todas con ella.
+                    ForEach(store.borradasEnPapelera) { fila in
+                        let t = fila.tarea
                         Fila(titulo: t.title, icono: "", simbolo: nil,
-                             detalle: nil, cuando: t.deletedAt) {
+                             detalle: Self.repeticiones(fila.vueltas - 1),
+                             cuando: t.deletedAt) {
                             store.restaurar(t.id)
                         }
                     }
@@ -73,6 +77,13 @@ struct PapeleraView: View {
         } message: {
             Text("Esto sí borra de verdad y no se puede deshacer. Lo que no toques se irá solo a los treinta días.")
         }
+    }
+
+    /// Las repeticiones por hacer que vuelven con una tarea borrada.
+    static func repeticiones(_ n: Int) -> String? {
+        guard n > 0 else { return nil }
+        return n == 1 ? String(localized: "vuelve con 1 repetición")
+                      : String(localized: "vuelve con \(n) repeticiones")
     }
 
     /// Con cuántas vuelve, que es lo que hace falta saber antes de pulsar: un
