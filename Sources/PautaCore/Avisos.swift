@@ -244,11 +244,19 @@ public enum Avisos {
         return await centro.pendingNotificationRequests().map(\.identifier)
     }
 
+    /// Si este proceso ya pidió el permiso desde `reschedule`.
+    nonisolated(unsafe) private static var yaSePidio = false
+
     /// Vuelve a programar todos los avisos a partir de las tareas.
     ///
     /// El permiso se pide aquí y solo cuando hay algo que avisar: preguntarlo al
     /// arrancar molestaría a quien no use horas, y no preguntarlo nunca dejaría
     /// los avisos mudos sin explicación.
+    ///
+    /// Pero **una vez por arranque**. En un aparato recién instalado con
+    /// tareas en iCloud, cada tanda que llegaba volvía a reprogramar y a
+    /// pedirlo, y esas peticiones se pisaban con el «Activar» de la tarjeta de
+    /// bienvenida: el botón pasaba a «…» y volvía a «Activar» sin diálogo.
     public static func reschedule(_ items: [Item], now: Date = .now) async {
         guard let centro else { return }
 
@@ -269,7 +277,10 @@ public enum Avisos {
             return
         }
 
-        if await authorization() == .notDetermined { await request() }
+        if !yaSePidio, await authorization() == .notDetermined {
+            yaSePidio = true
+            await request()
+        }
         let permitido = await authorization() == .authorized
         await AvisoEstado.set(!permitido)
         guard permitido else { return }
