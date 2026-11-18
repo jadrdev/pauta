@@ -42,13 +42,14 @@ enum Sincronizar {
         guard !Maqueta.activa else { return nil }
         let nube = SincroniaDelTelefono.shared
         nube.enganchar(store)
+        // CloudKit primero: es lo rápido. El cruce con el contenedor lee
+        // cientos de archivos y tarda segundos en el teléfono, y lo que llega
+        // de CloudKit no tiene por qué esperarlo.
+        await nube.sincronizar(traer: traer)
         let origen = store.storageURL
         // Bloquea la primera vez: fuera del hilo principal.
         let contenedor = await Task.detached(priority: .utility) { Contenedor.documentos() }.value
-        guard contenedor != nil else {
-            await nube.sincronizar(traer: traer)
-            return nil
-        }
+        guard contenedor != nil else { return nil }
         // El marcador de la carpeta del Mac que se elegía antes de la mudanza.
         // Ya no se usa: se suelta para no guardar un permiso para nada.
         UserDefaults.standard.removeObject(forKey: "carpetaDelMac")
@@ -72,8 +73,9 @@ enum Sincronizar {
         // Solo se relee si algo llegó: recargar por costumbre agita las fechas
         // de todo y da trabajo a iCloud por nada.
         if balance.traidas > 0 { store.reload() }
+        // Lo que trajo el contenedor, de un aparato que aún no usa CloudKit,
+        // sube también; el motor lo envía solo en medio segundo.
         nube.traidasDelContenedor(balance.claveTraidas)
-        await nube.sincronizar(traer: traer)
         reintentar(store, quedan: balance.pendientesDeBajar, vez: vez)
         return balance
     }

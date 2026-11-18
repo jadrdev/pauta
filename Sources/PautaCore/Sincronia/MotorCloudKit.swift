@@ -66,10 +66,44 @@ public final class MotorCloudKit: MotorDeSincronia, CKSyncEngineDelegate {
             + borrar.map { CKSyncEngine.PendingRecordZoneChange.deleteRecord(id($0)) }
         guard !cambios.isEmpty else { return }
         motor.state.add(pendingRecordZoneChanges: cambios)
+        enviarPronto()
     }
 
-    public func enviar() async throws { try await motor.sendChanges() }
-    public func traer() async throws { try await motor.fetchChanges() }
+    /// Sube en cuanto se calma la ráfaga, sin esperar a que el motor lo decida.
+    ///
+    /// Solo, `CKSyncEngine` agrupa y sube cuando le parece: medido el 18 de
+    /// noviembre, entre 1,5 y 6 segundos después de tachar en el Mac, y eso
+    /// era más de la mitad de lo que tardaba en verse en el iPhone. Medio
+    /// segundo basta para que un título escrito tecla a tecla salga de una vez.
+    private var pendiente: Task<Void, Never>?
+    private func enviarPronto() {
+        pendiente?.cancel()
+        pendiente = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            try? await self?.enviar()
+        }
+    }
+
+    /// Con prioridad de algo que alguien está esperando. Sin grupo, el motor
+    /// pide a prioridad de fondo, y el sistema puede dejar la petición en
+    /// espera: medido, cinco segundos entre saber que había cambios y pedirlos.
+    private static func grupo(_ nombre: String) -> CKOperationGroup {
+        let grupo = CKOperationGroup()
+        grupo.name = nombre
+        grupo.defaultConfiguration.qualityOfService = .userInitiated
+        return grupo
+    }
+
+    public func enviar() async throws {
+        try await motor.sendChanges(CKSyncEngine.SendChangesOptions(
+            scope: .all, operationGroup: Self.grupo("Pauta: subir")))
+    }
+
+    public func traer() async throws {
+        try await motor.fetchChanges(CKSyncEngine.FetchChangesOptions(
+            scope: .all, operationGroup: Self.grupo("Pauta: traer")))
+    }
 
     private func id(_ clave: Ficha.Clave) -> CKRecord.ID {
         CKRecord.ID(recordName: clave.id.uuidString, zoneID: Ficha.zona)
