@@ -225,6 +225,22 @@ Cuando todos los aparatos lleven la versión nueva:
   `~/Library/Application Support/Pauta`. En este Mac eso son tareas de agosto.
 - La carpeta vieja la borras tú cuando quieras. La app no la borra nunca.
 
+### Resultado (18 de noviembre de 2026): hecha
+
+Con el otro Mac y el iPad en la 1.0.1:
+
+- **Los Mac ya no cruzan la carpeta vieja.** Solo se cruza la carpeta de la
+  sesión si un Mac se muda con la app abierta, hasta el siguiente arranque.
+- **La mudanza se queda.** Un Mac que llegue de una versión anterior se sigue
+  mudando igual: por eso `iCloudRoot` y `Store.carpetaDeAntes` siguen, ahora solo
+  como origen de una mudanza y nunca como sitio donde guardar.
+- **Fuera `CarpetaElegida`** y la vigilancia de la carpeta elegida en
+  `VigilanteDeCarpeta`, que se queda con la del contenedor. Ajustes ya no enseña
+  «Carpeta de antes», y el marcador guardado se suelta en el primer cruce.
+- `adoptData` ya no existía: se había quitado antes.
+- **La nota `LEEME - mudanza.txt`** de la carpeta vieja decía «NO la borres
+  todavía». Cada Mac la reescribe al arrancar: ya no se usa y se puede borrar.
+
 ## Lo que no cambia
 
 - El formato: un archivo JSON por objeto, lápidas, *gana la más reciente*.

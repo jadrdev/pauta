@@ -19,7 +19,6 @@ struct AjustesView: View {
     @Environment(Store.self) private var store
     @Bindable private var ajustes = Ajustes.shared
 
-    @State private var carpeta = CarpetaElegida.shared
     /// Si este aparato tiene iCloud para la app. `nil` mientras se pregunta:
     /// la primera vez el sistema prepara el contenedor y tarda.
     @State private var hayICloud: Bool?
@@ -197,21 +196,6 @@ struct AjustesView: View {
                         Text(Self.resumen(balance))
                             .font(.system(size: 12.5))
                             .foregroundStyle(Papel.inkFaint)
-                    }
-                }
-                // La carpeta del Mac que se elegía antes de la mudanza. Se
-                // sigue cruzando mientras dure, por si hay un Mac sin
-                // actualizar; ya no se ofrece elegir una nueva.
-                if let elegida = carpeta.url {
-                    HStack {
-                        Text("Carpeta de antes")
-                        Spacer()
-                        Text(elegida.lastPathComponent)
-                            .foregroundStyle(Papel.inkSoft)
-                    }
-                    Button("Olvidar la carpeta de antes", role: .destructive) {
-                        carpeta.olvidar()
-                        balance = nil
                     }
                 }
             } header: {

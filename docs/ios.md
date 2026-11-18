@@ -152,8 +152,11 @@ Ahora hay dos piezas, y ninguna de las dos es tiempo real. Conviene decirlo así
 
 ### Mientras la app está delante
 
-Un `NSFilePresenter` sobre la carpeta elegida. Un cambio hecho en el Mac aparece
-en segundos.
+Un `NSMetadataQuery` sobre el contenedor de iCloud de la app
+([`VigilanteDeCarpeta`](../Sources/PautaIOS/VigilanteDeCarpeta.swift)). Se entera
+de que algo cambió en iCloud antes de que baje, y un cambio hecho en el Mac
+aparece en segundos. Hasta la mudanza era un `NSFilePresenter` sobre la carpeta
+elegida a mano.
 
 **No es `FolderWatcher`**, que usa FSEvents y no existe en iOS. Y no es
 `DispatchSource` sobre un descriptor, que es la tentación: eso solo ve altas y
@@ -224,8 +227,9 @@ datos que solo entiende la app.
   Así que `Store.iCloudRoot` sigue siendo `nil` en iOS y el teléfono guarda en la
   carpeta del grupo: funciona, pero solo.
 
-  Lo que sí hay, sin pagar nada, es **el puente**: elegir la carpeta del Mac una
-  vez en el selector del sistema. Está contado abajo.
+  Aquello se resolvió al pasar la cuenta a pago: desde noviembre de 2026 el
+  teléfono cruza con el contenedor de iCloud de la app. Está contado abajo, en
+  «El puente con el Mac».
 - **Enterarse de cambios de fuera.** `FolderWatcher` usa FSEvents, que no existe
   en iOS, así que se compila fuera. En su lugar recarga al volver del fondo. El
   equivalente para una carpeta sincronizada sería `NSMetadataQuery`, y hace falta
@@ -509,56 +513,36 @@ barra lateral con todo, como en el Mac, es otra interfaz y se haría aparte.
 
 ## El puente con el Mac
 
-En iOS una app solo entra donde le dejan, y lo que le deja entrar en una carpeta
-de iCloud Drive es que **la elijas tú** en el selector del sistema. Se elige una
-vez la carpeta `Pauta` de iCloud Drive, y a partir de ahí el teléfono cruza sus
-tareas con las del Mac.
+El teléfono guarda sus tareas en la carpeta del grupo —la que comparte con el
+widget— y las cruza con **el contenedor de iCloud de la app**, el mismo que usa
+el Mac. No hay nada que elegir ni que preparar: con iCloud activado en el
+aparato, cruza solo.
 
-Se ofrece en dos sitios. Siempre en `Más ▸ Ajustes ▸ La carpeta del Mac`; y
-además como **última fila de la tarjeta de bienvenida**, debajo del vacío de
-`Hoy`, mientras no haya ni una tarea apuntada. Estaba solo en los ajustes y eso
-eran tres toques y una pantalla que únicamente abres si ya sospechas que existe:
-quien llegaba al teléfono con el Mac lleno de tareas veía una lista vacía y
-ningún camino.
+**El almacén no apunta al contenedor**, y esa es la decisión que importa. iCloud
+puede no estar —sin red, sin sesión, con archivos todavía en la nube— y un
+almacén apuntando ahí dejaría la app sin datos en vez de funcionar sola. Cada
+lado guarda lo suyo y [`Puente`](../Sources/PautaCore/Puente.swift) los cruza.
 
-Ahí va **dicho como pregunta** —«¿Ya usas Pauta en el Mac?»— y no como una
-instrucción. Quien llega nuevo de verdad la lee, ve que no va con él y sigue;
-«conecta tu Mac» le haría creer que le falta un paso que no existe.
+La regla: **gana la versión modificada más recientemente**, archivo a archivo,
+igual que en el Mac. De ahí sale que dos aparatos tocando tareas distintas no
+se pisen nunca, y que un borrado viaje —una lápida es una versión más—. Los
+archivos que iCloud aún no ha bajado se cuentan y **no se copian**: copiar uno
+sería poner la nada encima de una tarea de verdad.
 
-Y se ofrece **solo mientras no hay nada apuntado**, que es la condición que hace
-que esto no se convierta en un mueble. A un permiso se le contesta que sí o que
-no y desaparece; a esto no hay forma de contestarle «no tengo Mac». Atada al
-estreno se resuelve sola para los dos casos: quien viene del Mac elige la
-carpeta, y quien empieza de cero apunta su primera tarea y la fila se va. Que
-además es el único momento en que la oferta significa algo — traer tus tareas se
-ofrece cuando no hay ninguna.
+Se cruza al abrir, al volver del fondo, cuando el sistema despierta la app y
+cuando el contenedor avisa de un cambio con la app delante; y a mano, desde
+Ajustes, con un botón que dice qué se movió: «2 de iCloud · 11 a iCloud». Sin
+iCloud no hace nada y la app sigue igual.
 
-**No apunta el almacén a esa carpeta**, y esa es la decisión que importa. La
-carpeta puede no estar —el teléfono sin red, el permiso caducado, los archivos
-todavía en la nube— y un almacén apuntando ahí dejaría la app sin datos en vez de
-funcionar sola. Cada lado guarda lo suyo y
-[`Puente`](../Sources/PautaCore/Puente.swift) los cruza.
+### Antes, la carpeta del Mac
 
-La regla no es nueva: **gana la versión modificada más recientemente**, archivo a
-archivo, que es la misma que usa la sincronización del Mac. De ahí sale que dos
-aparatos tocando tareas distintas no se pisen nunca, y que un borrado viaje —una
-lápida es una versión más—. Los marcadores `.icloud` de lo que iCloud no ha
-bajado se cuentan y **no se copian**: copiar uno sería poner la nada encima de
-una tarea de verdad.
-
-Se cruza **al volver del fondo** —entre dejar el teléfono y volver a cogerlo es
-cuando se ha estado delante del Mac— y a mano, con un botón que dice qué se
-movió: «2 del Mac · 11 al Mac». Si no hay carpeta elegida, no hace nada y la app
-sigue igual.
-
-### El marcador se puede romper, y se dice
-
-Lo que se guarda de tu elección no es la ruta: una ruta no da permiso. Es un
-**marcador** que el sistema sabe volver a convertir en una carpeta con permiso.
-Si mueves o renombras esa carpeta, deja de resolver — y una sincronización que se
-detiene en silencio es peor que no tenerla. Así que
-[`CarpetaElegida`](../Sources/PautaCore/CarpetaElegida.swift) guarda que caducó,
-y los ajustes lo dicen en rojo y piden elegirla otra vez.
+Hasta la mudanza al contenedor (noviembre de 2026), el puente era una carpeta de
+iCloud Drive que había que **elegir a mano** en el selector del sistema, una vez
+por aparato, guardada como marcador de ámbito seguro. Era lo frágil: el permiso
+caducaba, el marcador se rompía al mover la carpeta, y el iPad había que
+prepararlo aparte. Durante la mudanza se cruzaba con las dos; desde el 18 de
+noviembre de 2026, con todos los aparatos actualizados, solo con el contenedor
+(docs/plan-contenedor-icloud.md, fase 4), y el marcador se suelta solo.
 
 ## Apuntar con la voz
 

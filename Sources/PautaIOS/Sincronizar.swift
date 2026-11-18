@@ -14,10 +14,6 @@ import PautaCore
 /// permiso caducaba, el marcador se rompía, y el iPad había que prepararlo
 /// aparte. El cruce es el de siempre; lo que cambia es con quién.
 ///
-/// Mientras dure la mudanza (docs/plan-contenedor-icloud.md), si había una
-/// carpeta elegida se cruza **también** con ella: así lo que haga un Mac todavía
-/// en la versión anterior llega aunque el Mac ya mudado esté apagado.
-///
 /// Y siempre **puede no hacer nada**: sin iCloud devuelve `nil` y la app sigue
 /// con sus datos como si nada. Eso es lo que hace que esto sea un puente y no
 /// un cordón umbilical.
@@ -39,9 +35,10 @@ enum Sincronizar {
         let origen = store.storageURL
         // Bloquea la primera vez: fuera del hilo principal.
         let contenedor = await Task.detached(priority: .utility) { Contenedor.documentos() }.value
-        let carpeta = CarpetaElegida.shared
-        let vieja = carpeta.url ?? carpeta.abrir()
-        guard contenedor != nil || vieja != nil else { return nil }
+        guard contenedor != nil else { return nil }
+        // El marcador de la carpeta del Mac que se elegía antes de la mudanza.
+        // Ya no se usa: se suelta para no guardar un permiso para nada.
+        UserDefaults.standard.removeObject(forKey: "carpetaDelMac")
 
         // Antes del primer cruce con el contenedor, una copia de cómo estaba
         // el teléfono. Si no sale, no se cruza con él.
@@ -57,7 +54,6 @@ enum Sincronizar {
         let balance = await Task.detached(priority: .utility) {
             var total = Puente.Balance()
             if let conContenedor { total.sumar(Puente.cruzar(origen, conContenedor)) }
-            if let vieja { total.sumar(Puente.cruzar(origen, vieja)) }
             return total
         }.value
         // Solo se relee si algo llegó: recargar por costumbre agita las fechas

@@ -70,8 +70,9 @@ struct RaizView: View {
     /// de apuntar. Con un booleano habría que acordarse de bajarlo, y dos
     /// toques seguidos en el widget no harían nada la segunda vez.
     @State private var pulsoApuntar = 0
-    /// Vigila la carpeta del Mac mientras la app está delante, para que un
-    /// cambio hecho allí aparezca aquí sin tener que salir y volver.
+    /// Vigila el contenedor de iCloud mientras la app está delante, para que
+    /// un cambio hecho en otro aparato aparezca aquí sin tener que salir y
+    /// volver.
     @State private var vigilante = VigilanteDeCarpeta()
 
     private enum Pestana: Hashable { case hoy, proximamente, bandeja, mas }
@@ -128,9 +129,8 @@ struct RaizView: View {
         // Al volver del fondo: el día pudo cambiar mientras la app dormía, y lo
         // que era «de hoy» pasó a ser atrasado.
         .onChange(of: fase) { _, nueva in
-            // Al irse al fondo se suelta la carpeta —mantener abierto un permiso
-            // de ámbito seguro sin nadie mirando no sirve de nada— y se pide el
-            // siguiente despertar.
+            // Al irse al fondo se deja de vigilar —sin nadie mirando no sirve
+            // de nada— y se pide el siguiente despertar.
             guard nueva == .active else {
                 vigilante.parar()
                 RefrescoEnSegundoPlano.programar()
@@ -152,7 +152,7 @@ struct RaizView: View {
             store.copiaDelDia()
             // Al volver del fondo es cuando hace falta cruzar con el Mac: entre
             // dejar el teléfono y volver a cogerlo es cuando se ha estado
-            // delante del otro aparato. Sin carpeta elegida no hace nada, y
+            // delante del otro aparato. Sin iCloud no hace nada, y
             // nunca en el hilo principal: son archivos, y algunos hay que
             // bajarlos.
             Task { await Sincronizar.conICloud(store) }

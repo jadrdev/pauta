@@ -2900,6 +2900,7 @@
       }
     },
     "Carpeta de antes" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ca" : {
           "stringUnit" : {
@@ -7255,6 +7256,7 @@
       }
     },
     "Olvidar la carpeta de antes" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ca" : {
           "stringUnit" : {
@@ -7765,6 +7767,7 @@
     },
     "Pauta se está mudando al contenedor de iCloud de la app.\n\nDesde el %@, este Mac guarda sus datos allí.\nMientras haya aparatos con una versión anterior, esta carpeta se sigue\ncruzando con la nueva, así que NO la borres todavía. Cuando todos estén\nactualizados dejará de usarse, y entonces podrás borrarla tú." : {
       "comment" : "Nota de texto que se deja en la carpeta vieja de iCloud Drive",
+      "extractionState" : "stale",
       "localizations" : {
         "ca" : {
           "stringUnit" : {
@@ -7782,6 +7785,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pauta se está mudando al contenedor de iCloud de la app.\n\nDesde el %@, este Mac guarda sus datos allí.\nMientras haya aparatos con una versión anterior, esta carpeta se sigue\ncruzando con la nueva, así que NO la borres todavía. Cuando todos estén\nactualizados dejará de usarse, y entonces podrás borrarla tú."
+          }
+        }
+      }
+    },
+    "Pauta se ha mudado al contenedor de iCloud de la app.\n\nDesde el %@, este Mac guarda sus datos allí, y esta carpeta ya no se usa.\nPuedes borrarla cuando quieras. Pauta no la borra nunca." : {
+      "comment" : "Nota de texto que se deja en la carpeta vieja de iCloud Drive",
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauta se ha mudado al contenedor de iCloud de la app.\n\nDesde el %@, este Mac guarda sus datos allí, y esta carpeta ya no se usa.\nPuedes borrarla cuando quieras. Pauta no la borra nunca."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauta s'ha traslladat al contenidor d'iCloud de l'app.\n\nDes del %@, aquest Mac hi desa les dades, i aquesta carpeta ja no es fa servir.\nLa pots esborrar quan vulguis. Pauta no l'esborra mai."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauta has moved to the app's iCloud container.\n\nSince %@, this Mac keeps its data there, and this folder is no longer used.\nYou can delete it whenever you like. Pauta never deletes it."
           }
         }
       }
@@ -11173,12 +11199,6 @@
     },
     "vuelve con %lld repeticiones" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vuelve con %lld repeticiones"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11189,6 +11209,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "returns with %lld repeats"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vuelve con %lld repeticiones"
           }
         }
       }
@@ -11239,12 +11265,6 @@
     },
     "vuelve con 1 repetición" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vuelve con 1 repetición"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11255,6 +11275,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "returns with 1 repeat"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vuelve con 1 repetición"
           }
         }
       }
