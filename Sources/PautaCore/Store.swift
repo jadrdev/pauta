@@ -1016,6 +1016,8 @@ public final class Store {
         guard !items.contains(where: { $0.spawnedFrom == item.id }) else { return }
         // La cuenta sale de la fecha que tenía y no de hoy, para que una semanal
         // completada con un día de retraso siga cayendo en su día de la semana.
+        // Y si se trasladó, del día que le tocaba y no del de destino: pasar
+        // el miércoles al jueves no convierte la serie en de los jueves.
         //
         // Pero se avanza hasta pasar de hoy. Sin eso, completar una diaria con
         // tres días de retraso paría una sucesora ya vencida, y habría que
@@ -1023,7 +1025,7 @@ public final class Store {
         // ponerse al día: la app pidiendo cuentas por unos días que ya pasaron.
         let cal = Calendar.current
         let hoy = cal.startOfDay(for: momento)
-        var proxima = recurrence.next(after: item.when ?? Store.stamped(momento))
+        var proxima = recurrence.next(after: item.diaDeLaSerie ?? Store.stamped(momento))
         // El tope corta un bucle infinito si alguna vez `next` no avanzara.
         var vueltas = 0
         while cal.startOfDay(for: proxima) <= hoy, vueltas < 5000 {
@@ -1164,7 +1166,7 @@ public final class Store {
     /// tarea aparcada y con fecha a la vez sería un estado contradictorio.
     public func schedule(_ item: Item, to date: Date?) {
         mutateItem(item.id) {
-            $0.when = date.map { Calendar.current.startOfDay(for: $0) }
+            $0.ponerDia(date.map { Calendar.current.startOfDay(for: $0) })
             $0.isSomeday = false
             // Quitar el día se lleva la hora: una hora sin día no dice cuándo.
             if date == nil { $0.sinHora() }
@@ -1357,7 +1359,7 @@ public final class Store {
         }
         mutateItem(item.id) {
             if let destino, destino != $0.day {
-                $0.when = destino
+                $0.ponerDia(destino)
                 $0.isSomeday = false
             }
             $0.position = nueva
@@ -1374,7 +1376,7 @@ public final class Store {
         case .inbox:
             // La bandeja es lo que no tiene nada decidido: ni fecha, ni proyecto.
             mutateItem(item.id) {
-                $0.when = nil
+                $0.ponerDia(nil)
                 $0.sinHora()
                 $0.isSomeday = false
                 $0.projectID = nil
@@ -1383,7 +1385,7 @@ public final class Store {
             }
         case .today:
             mutateItem(item.id) {
-                $0.when = Calendar.current.startOfDay(for: .now)
+                $0.ponerDia(Calendar.current.startOfDay(for: .now))
                 $0.isSomeday = false
                 $0.isCompleted = false
                 $0.completedAt = nil
@@ -1394,8 +1396,8 @@ public final class Store {
                 for: Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now)
             mutateItem(item.id) {
                 let actual = $0.when.map { Calendar.current.startOfDay(for: $0) }
-                $0.when = (actual.map { $0 > Calendar.current.startOfDay(for: .now) } == true)
-                    ? actual : manana
+                $0.ponerDia((actual.map { $0 > Calendar.current.startOfDay(for: .now) } == true)
+                    ? actual : manana)
                 $0.isSomeday = false
                 $0.isCompleted = false
                 $0.completedAt = nil
@@ -1403,7 +1405,7 @@ public final class Store {
         case .anytime:
             // Se puede hacer ya, pero sin día asignado. Conserva el proyecto.
             mutateItem(item.id) {
-                $0.when = nil
+                $0.ponerDia(nil)
                 $0.sinHora()
                 $0.isSomeday = false
                 $0.isCompleted = false
@@ -1412,7 +1414,7 @@ public final class Store {
         case .someday:
             mutateItem(item.id) {
                 $0.isSomeday = true
-                $0.when = nil
+                $0.ponerDia(nil)
                 $0.sinHora()
                 $0.isCompleted = false
                 $0.completedAt = nil
@@ -1449,11 +1451,25 @@ public final class Store {
 
     /// Fija o quita la repetición. Quitarla borra también su fecha de fin: un
     /// «hasta» sin repetición no significa nada.
+    ///
+    /// Elegirla de nuevo cuenta desde el día que tiene ahora: la serie empieza
+    /// donde está la tarea, y lo que hubiera de un traslado anterior se olvida.
     public func setRecurrence(_ item: Item, to recurrence: Recurrence?) {
         mutateItem(item.id) {
             $0.recurrence = recurrence
+            $0.recurrenceAnchor = nil
             if recurrence == nil { $0.recurrenceEnd = nil }
         }
+    }
+
+    /// Que la serie siga desde el día que tiene ahora la tarea.
+    ///
+    /// Trasladar una vuelta no mueve la serie; esto sí. Es para cuando el
+    /// cambio no es de una vez —«la reunión pasa a los jueves»— y no para
+    /// cuando hoy no se pudo.
+    public func repetirDesdeAqui(_ item: Item) {
+        guard items.first(where: { $0.id == item.id })?.recurrenceAnchor != nil else { return }
+        mutateItem(item.id) { $0.recurrenceAnchor = nil }
     }
 
     /// Hasta cuándo se repite. `nil` = no acaba nunca.
@@ -1467,7 +1483,7 @@ public final class Store {
     public func park(_ item: Item) {
         mutateItem(item.id) {
             $0.isSomeday = true
-            $0.when = nil
+            $0.ponerDia(nil)
             $0.sinHora()
         }
     }

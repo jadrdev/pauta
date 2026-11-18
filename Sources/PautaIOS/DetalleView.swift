@@ -130,6 +130,17 @@ struct DetalleView: View {
                                 .foregroundStyle(Papel.inkSoft)
                         }
                     }
+                    // Solo si se trasladó: trasladar mueve esta vuelta y no la
+                    // serie, y aquí se ve qué día le tocaba y se puede mover
+                    // la serie para siempre.
+                    if let copia = actual, copia.recurrence != nil,
+                       let ancla = copia.recurrenceAnchor, let when = copia.when {
+                        Text("Le tocaba el \(Self.diaDeLaSemana(ancla))")
+                            .foregroundStyle(Papel.inkSoft)
+                        Button("Repetir desde el \(Self.diaDeLaSemana(when))") {
+                            store.repetirDesdeAqui(copia)
+                        }
+                    }
                 }
                 seccionDeAdjuntos
                 Section {
@@ -350,6 +361,11 @@ struct DetalleView: View {
         copia.title = titulo
         copia.notes = notas
         store.update(copia)
+    }
+
+    /// «mié 25 nov»: con el día de la semana, que es lo que una serie guarda.
+    static func diaDeLaSemana(_ dia: Date) -> String {
+        dia.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
     }
 
     static func hora(_ minutos: Int) -> String {

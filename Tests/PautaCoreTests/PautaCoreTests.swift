@@ -274,6 +274,83 @@ struct RecurrenceTests {
         #expect(siguiente?.when == esperado)
     }
 
+    /// Una semanal de hoy trasladada a mañana vuelve dentro de siete días
+    /// contados desde hoy, no desde mañana: trasladar una vuelta no mueve la
+    /// serie.
+    @Test func postponingAnOccurrenceKeepsTheSeriesDay() {
+        let s = Store(inMemory: true)
+        let cal = Calendar.current
+        let hoy = cal.startOfDay(for: .now)
+        let manana = cal.date(byAdding: .day, value: 1, to: hoy)!
+        let t = s.addItem(title: "Semanal de hoy", in: .today)
+        s.setRecurrence(t, to: .semanal)
+
+        s.schedule(s.items[0], to: manana)
+        #expect(s.items[0].recurrenceAnchor == hoy)
+
+        s.toggleComplete(s.items[0], momento: manana)
+        let siguiente = s.items.first { !$0.isCompleted }
+        #expect(siguiente?.when == Recurrence.semanal.next(after: hoy))
+        #expect(siguiente?.recurrenceAnchor == nil)
+    }
+
+    /// Trasladarla dos veces no cambia el día que le tocaba, y devolverla a su
+    /// día deja de necesitar el apunte.
+    @Test func theAnchorIsTheFirstDayNotTheLastMove() {
+        let s = Store(inMemory: true)
+        let cal = Calendar.current
+        let hoy = cal.startOfDay(for: .now)
+        let t = s.addItem(title: "Semanal", in: .today)
+        s.setRecurrence(t, to: .semanal)
+
+        s.schedule(s.items[0], to: cal.date(byAdding: .day, value: 1, to: hoy)!)
+        s.schedule(s.items[0], to: cal.date(byAdding: .day, value: 3, to: hoy)!)
+        #expect(s.items[0].recurrenceAnchor == hoy)
+        // Pasar por «Algún día» tampoco lo pierde.
+        s.park(s.items[0])
+        #expect(s.items[0].recurrenceAnchor == hoy)
+
+        s.schedule(s.items[0], to: hoy)
+        #expect(s.items[0].recurrenceAnchor == nil)
+    }
+
+    /// «Repetir desde aquí» sí mueve la serie: es el cambio para siempre.
+    @Test func repeatingFromHereMovesTheSeries() {
+        let s = Store(inMemory: true)
+        let cal = Calendar.current
+        let hoy = cal.startOfDay(for: .now)
+        let manana = cal.date(byAdding: .day, value: 1, to: hoy)!
+        let t = s.addItem(title: "Pasa a los jueves", in: .today)
+        s.setRecurrence(t, to: .semanal)
+        s.schedule(s.items[0], to: manana)
+
+        s.repetirDesdeAqui(s.items[0])
+        #expect(s.items[0].recurrenceAnchor == nil)
+        s.toggleComplete(s.items[0], momento: manana)
+        let siguiente = s.items.first { !$0.isCompleted }
+        #expect(siguiente?.when == Recurrence.semanal.next(after: manana))
+    }
+
+    /// Una tarea que no se repite no apunta nada al trasladarla.
+    @Test func nonRecurringTasksKeepNoAnchor() {
+        let s = Store(inMemory: true)
+        let t = s.addItem(title: "Normal", in: .today)
+        s.schedule(t, to: Calendar.current.date(byAdding: .day, value: 2, to: .now)!)
+        #expect(s.items[0].recurrenceAnchor == nil)
+    }
+
+    /// Una tarea escrita por una versión que no conoce el campo se lee igual,
+    /// y el campo sobrevive a guardarla y leerla.
+    @Test func theAnchorRoundTrips() throws {
+        var t = Item(title: "x")
+        t.recurrence = .semanal
+        t.recurrenceAnchor = Calendar.current.startOfDay(for: .now)
+        let datos = try JSONEncoder().encode(t)
+        #expect(try JSONDecoder().decode(Item.self, from: datos).recurrenceAnchor == t.recurrenceAnchor)
+        let viejo = Data(#"{"title":"y","recurrence":"semanal"}"#.utf8)
+        #expect(try JSONDecoder().decode(Item.self, from: viejo).recurrenceAnchor == nil)
+    }
+
     /// Marcar y desmarcar no debe dejar copias acumuladas.
     @Test func uncompletingRetiresTheSpawnedSuccessor() {
         let s = Store(inMemory: true)

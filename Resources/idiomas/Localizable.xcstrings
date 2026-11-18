@@ -5813,6 +5813,28 @@
         }
       }
     },
+    "Le tocaba el %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le tocaba el %@"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Li tocava el %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Originally on %@"
+          }
+        }
+      }
+    },
     "Listo" : {
       "localizations" : {
         "ca" : {
@@ -7792,12 +7814,6 @@
     "Pauta se ha mudado al contenedor de iCloud de la app.\n\nDesde el %@, este Mac guarda sus datos allí, y esta carpeta ya no se usa.\nPuedes borrarla cuando quieras. Pauta no la borra nunca." : {
       "comment" : "Nota de texto que se deja en la carpeta vieja de iCloud Drive",
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pauta se ha mudado al contenedor de iCloud de la app.\n\nDesde el %@, este Mac guarda sus datos allí, y esta carpeta ya no se usa.\nPuedes borrarla cuando quieras. Pauta no la borra nunca."
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7808,6 +7824,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pauta has moved to the app's iCloud container.\n\nSince %@, this Mac keeps its data there, and this folder is no longer used.\nYou can delete it whenever you like. Pauta never deletes it."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauta se ha mudado al contenedor de iCloud de la app.\n\nDesde el %@, este Mac guarda sus datos allí, y esta carpeta ya no se usa.\nPuedes borrarla cuando quieras. Pauta no la borra nunca."
           }
         }
       }
@@ -8971,6 +8993,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Repetición"
+          }
+        }
+      }
+    },
+    "Repetir desde el %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetir desde el %@"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetir a partir del %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat from %@"
           }
         }
       }

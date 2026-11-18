@@ -768,6 +768,15 @@ struct ItemRowView: View {
                 Button("No acaba nunca") { store.setRecurrenceEnd(item, to: nil) }
                 Button("Acabar en una fecha…") { eligiendoFin = true }
             }
+            // Solo si se trasladó: dice qué día le tocaba, que si no la
+            // serie seguiría un día que no se ve, y deja moverla para siempre.
+            if item.recurrence != nil, let ancla = item.recurrenceAnchor, let when = item.when {
+                Divider()
+                Text("Le tocaba el \(Self.diaDeLaSemana(ancla))")
+                Button("Repetir desde el \(Self.diaDeLaSemana(when))") {
+                    store.repetirDesdeAqui(item)
+                }
+            }
         } label: {
             Text(repeticionLabel.uppercased())
                 .rubricStyle()
@@ -842,6 +851,11 @@ struct ItemRowView: View {
         let base = Calendar.current.startOfDay(for: .now)
         return Calendar.current.date(byAdding: .minute, value: minutos, to: base)?
             .formatted(.dateTime.hour().minute()) ?? ""
+    }
+
+    /// «mié 25 nov»: con el día de la semana, que es lo que una serie guarda.
+    static func diaDeLaSemana(_ dia: Date) -> String {
+        dia.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
     }
 
     /// «Cada semana», o «Cada semana → 30 nov» cuando tiene fin.

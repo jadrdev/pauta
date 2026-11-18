@@ -147,6 +147,13 @@ public struct Item: Identifiable, Codable, Hashable {
     public var recurrence: Recurrence?
     /// Último día en que puede caer una repetición. `nil` = no acaba nunca.
     public var recurrenceEnd: Date?
+    /// El día que le tocaba según su serie, si se trasladó a otro.
+    ///
+    /// Trasladar una vuelta —«hoy no puedo, mañana»— mueve **esa vuelta y no
+    /// la serie**: una semanal de los miércoles pasada al jueves tiene que
+    /// volver el miércoles siguiente, no el jueves. La cuenta de la siguiente
+    /// sale de aquí cuando lo hay, y de `when` cuando no. `nil` = está en su día.
+    public var recurrenceAnchor: Date?
     /// Si esta tarea nació al completarse otra repetitiva, cuál era.
     ///
     /// Sirve para deshacer: si descompletas la original, la sucesora que generó
@@ -234,6 +241,7 @@ public struct Item: Identifiable, Codable, Hashable {
         deadline    = try c.decodeIfPresent(Date.self,   forKey: .deadline)
         recurrence  = try c.decodeIfPresent(Recurrence.self, forKey: .recurrence)
         recurrenceEnd = try c.decodeIfPresent(Date.self, forKey: .recurrenceEnd)
+        recurrenceAnchor = try c.decodeIfPresent(Date.self, forKey: .recurrenceAnchor)
         spawnedFrom = try c.decodeIfPresent(UUID.self,   forKey: .spawnedFrom)
         adjuntos    = try c.decodeIfPresent([Adjunto].self, forKey: .adjuntos) ?? []
     }
@@ -345,6 +353,27 @@ public struct Item: Identifiable, Codable, Hashable {
         warnBefore = nil
         snoozedUntil = nil
     }
+
+    /// Le cambia el día sin mover su serie.
+    ///
+    /// La primera vez que una repetitiva sale de su día, se apunta cuál era;
+    /// los traslados siguientes ya no lo tocan, porque el día que le tocaba no
+    /// cambia por moverla dos veces. Si vuelve a su día, deja de hacer falta.
+    /// Todo lo que cambia `when` pasa por aquí, para que ninguna puerta se lo
+    /// salte.
+    public mutating func ponerDia(_ dia: Date?, calendar: Calendar = .current) {
+        if recurrence != nil, recurrenceAnchor == nil, let when {
+            recurrenceAnchor = calendar.startOfDay(for: when)
+        }
+        when = dia
+        if let ancla = recurrenceAnchor, let dia,
+           calendar.isDate(ancla, inSameDayAs: dia) {
+            recurrenceAnchor = nil
+        }
+    }
+
+    /// El día desde el que se cuenta la siguiente vuelta.
+    public var diaDeLaSerie: Date? { recurrenceAnchor ?? when }
 
     /// El momento exacto, cuando tiene día y hora.
     public var scheduledAt: Date? {
