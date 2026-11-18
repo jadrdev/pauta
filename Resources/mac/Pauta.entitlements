@@ -16,8 +16,14 @@
     <!-- El contenedor de iCloud propio (fase 0 del plan del contenedor). -->
     <key>com.apple.developer.icloud-container-identifiers</key>
     <array><string>iCloud.dev.jadrdev.pauta</string></array>
+    <!-- CloudKit, desde la fase 0 del plan de CloudKit (docs/plan-cloudkit.md). -->
     <key>com.apple.developer.icloud-services</key>
-    <array><string>CloudDocuments</string></array>
+    <array><string>CloudDocuments</string><string>CloudKit</string></array>
+    <!-- Los avisos silenciosos con los que CloudKit dice «ha cambiado algo». En
+         desarrollo aquí; al exportar para la tienda o con Developer ID, Xcode lo
+         pasa a producción. -->
+    <key>com.apple.developer.aps-environment</key>
+    <string>development</string>
     <key>com.apple.developer.ubiquity-container-identifiers</key>
     <array><string>iCloud.dev.jadrdev.pauta</string></array>
 </dict>

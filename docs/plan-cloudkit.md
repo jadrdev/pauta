@@ -147,6 +147,57 @@ antes de escribir nada que dependa de ello.
 **Si algo de esto falla, el plan se para aquí**, como pudo pasar con el
 contenedor.
 
+### Resultado parcial (18 de noviembre de 2026), en desarrollo
+
+- **CloudKit activado** en el contenedor, con los avisos (`aps-environment`),
+  en el iPhone y en el Mac. Xcode lo activó solo en el identificador de la app
+  al compilar con `-allowProvisioningUpdates`.
+- **Escribir y leer funciona en los dos sentidos.** Un registro tarda de 0,1 a
+  0,8 s en llegar al servidor.
+- **Al iPhone los avisos le llegan en 0,9 s** desde que el Mac escribe, con la
+  app delante. La consola de CloudKit lo confirma: el iPhone pide los cambios
+  un segundo después de cada escritura del Mac.
+- **Al Mac no le llegan en desarrollo, y no es cosa de Pauta.** Un aviso
+  mandado a mano desde la consola de avisos de Apple sale «descartado porque el
+  aparato estaba desconectado»: el Mac no está conectado al servidor de avisos
+  de **desarrollo**. El de producción es otro, el que usa el Mac para todo; se
+  comprueba con la compilación de Developer ID.
+- CloudKit no avisa al aparato que hizo el cambio: para medir hacen falta dos.
+
+### Producción (18 de noviembre de 2026)
+
+- Publicado el tipo `Prueba` en el esquema de producción (se queda para
+  siempre, vacío).
+- **El Mac con Developer ID habla con CloudKit en producción**: la exportación
+  pone `icloud-container-environment` y `aps-environment` en producción solas
+  (`iCloudContainerEnvironment` en `ExportOptions-devid.plist`). Escribe, lee,
+  crea zona y suscripción.
+- **El iPhone de TestFlight (1.0.2, compilación 42.1) escribe en producción** y
+  el Mac lee lo que escribe.
+- **Al Mac no le llega ningún aviso, ni de CloudKit ni mandado a mano** desde
+  la consola de avisos de Apple, aunque se registra y tiene identificador. Se
+  probó: arrancada desde el terminal y como app; con la Pauta de Aplicaciones
+  abierta y cerrada; con y sin permiso de notificaciones (provisional). La
+  sospecha que queda: el sistema entrega los avisos a **la copia registrada**
+  de la app —la de `/Applicaciones`—, no a una copia suelta en otra carpeta.
+  Para comprobarlo hay que poner la compilación de prueba en `/Aplicaciones`.
+- **Comprobado y descartado:** con la compilación de prueba en
+  `/Applications`, el sistema la registra para avisos de producción con
+  CloudKit (`registered push with environment production … cloudkit: true`),
+  pero no entra ningún aviso, ni de CloudKit ni mandado a mano. Sin resolver.
+
+### Conclusión de la fase 0
+
+- **Sigue adelante en el iPhone y el iPad**: CloudKit funciona en producción
+  y los avisos llegan en menos de un segundo.
+- **En el Mac, CloudKit funciona pero los avisos no llegan.** Hasta saber por
+  qué, el Mac pediría los cambios él mismo: al abrirse, al volver a primer
+  plano y cada pocos segundos mientras está abierto (`CKSyncEngine` lo permite
+  con `fetchChanges()`). No es tiempo real, pero con 15 segundos se acerca, y
+  cuesta muy poco. Si un día los avisos llegan, se quita el temporizador.
+- Lo que queda en el esquema de producción: el tipo `Prueba`, vacío. La zona y
+  la suscripción de prueba se borran al quitar el andamio.
+
 ## Fase 1 — El núcleo, sin interfaz
 
 En `PautaCore`, un módulo `Sincronia` probado de punta a punta antes de que
@@ -167,6 +218,39 @@ ninguna app lo use:
   - un aparato que pasa una semana sin red y vuelve;
   - una lápida caducada;
   - la cuenta de iCloud que cambia a media sincronía.
+
+### Resultado (18 de noviembre de 2026): hecha
+
+En `Sources/PautaCore/Sincronia/`, sin que ninguna app lo use todavía:
+
+- **`Ficha`**: un objeto tal como viaja, con su JSON entero y las dos fechas al
+  lado. Se lee y se escribe en la carpeta del almacén con la regla del Puente,
+  y se convierte en registro de CloudKit (tipos `Item`, `Project`, `Area`;
+  campos `json`, `jsonAsset` si pasa de 700 KB, `updatedAt` y `deletedAt`).
+- **`Sincronia`**: la lógica. Qué se apunta para subir, qué entra de lo que
+  llega, cómo se resuelve un conflicto, qué pasa con un borrado del servidor y
+  con la cuenta. **Trabaja sobre los archivos**: lo que llega se escribe en la
+  carpeta y el almacén recarga, como después de un cruce.
+- **`MotorDeSincronia`**: el protocolo delante del motor. **`MotorCloudKit`** es
+  el de verdad, sobre `CKSyncEngine`; en las pruebas hay uno de mentira con un
+  servidor en memoria.
+- El almacén avisa de cada objeto que escribe (`alEscribir`) y de cada lápida
+  caducada que barre (`alPurgar`).
+- **14 pruebas**, con todos los casos de arriba más el JSON grande, lo ilegible
+  y lo que entra sin volver a subir. Se comprobó que detectan un fallo:
+  rompiendo la regla de los conflictos, falla la de los dos aparatos tocando la
+  misma tarea.
+
+Decisiones tomadas por el camino:
+
+- En un empate de fechas gana **la del servidor**: es la que ya tienen los
+  demás, y así no se sube nada.
+- Si el servidor borra un registro que aquí está **vivo**, no se lo lleva: se
+  vuelve a subir. Un borrado del servidor solo barre lápidas.
+- Con **otra cuenta** no se sube nada hasta decidir; decir que no deja el
+  aparato sin sincronizar, **sin borrar nada**.
+- Si la zona entera desaparece del servidor (se borraron los datos de iCloud
+  de la app), se vuelve a subir todo lo de este aparato.
 
 ## Fase 2 — Los Mac
 

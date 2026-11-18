@@ -562,10 +562,18 @@ public final class Store {
     /// Escritura atómica del objeto tocado, y solo de ese: reescribir todo en
     /// cada cambio agitaría las fechas de modificación de archivos intactos, que
     /// es justo lo que hace trabajar de más a la sincronización.
+    /// Avisa de cada objeto que se escribe, para subirlo (`Sincronia`). Lo que
+    /// entra por una recarga no pasa por aquí: no es un cambio de este aparato.
+    public var alEscribir: ((Ficha.Clave) -> Void)?
+    /// Avisa de las lápidas caducadas que se barren, para borrarlas también
+    /// del servidor.
+    public var alPurgar: (([Ficha.Clave]) -> Void)?
+
     private func persist(_ item: Item) {
         guard !inMemory, let data = try? encoder.encode(item) else { return }
         let file = url(forItem: item.id)
         try? data.write(to: file, options: .atomic)
+        alEscribir?(Ficha.Clave(.tarea, item.id))
         // Lo que acabamos de escribir ya lo tenemos en memoria: anotarlo evita
         // que la recarga que dispara nuestra propia escritura lo lea otra vez.
         itemCache[file.lastPathComponent] = Cached(stamp: stamp(of: file), value: item)
@@ -575,6 +583,7 @@ public final class Store {
         guard !inMemory, let data = try? encoder.encode(project) else { return }
         let file = url(forProject: project.id)
         try? data.write(to: file, options: .atomic)
+        alEscribir?(Ficha.Clave(.proyecto, project.id))
         projectCache[file.lastPathComponent] = Cached(stamp: stamp(of: file), value: project)
     }
 
@@ -582,6 +591,7 @@ public final class Store {
         guard !inMemory, let data = try? encoder.encode(area) else { return }
         let file = url(forArea: area.id)
         try? data.write(to: file, options: .atomic)
+        alEscribir?(Ficha.Clave(.area, area.id))
         areaCache[file.lastPathComponent] = Cached(stamp: stamp(of: file), value: area)
     }
 
@@ -1251,6 +1261,7 @@ public final class Store {
         let fm = FileManager.default
         let limite = now.addingTimeInterval(-retention)
         var borrados = 0
+        var barridas: [Ficha.Clave] = []
 
         func purge<T: Timestamped>(_ dir: URL, as type: T.Type,
                                    deletedAt: (T) -> Date?) {
@@ -1262,12 +1273,19 @@ public final class Store {
                       let objeto = try? decoder.decode(T.self, from: data),
                       let fecha = deletedAt(objeto), fecha < limite,
                       objeto.updatedAt < limite else { continue }
-                if (try? fm.removeItem(at: file)) != nil { borrados += 1 }
+                if (try? fm.removeItem(at: file)) != nil {
+                    borrados += 1
+                    if let tipo = Ficha.Tipo(carpeta: dir.lastPathComponent),
+                       let id = UUID(uuidString: file.deletingPathExtension().lastPathComponent) {
+                        barridas.append(Ficha.Clave(tipo, id))
+                    }
+                }
             }
         }
         purge(itemsDir, as: Item.self) { $0.deletedAt }
         purge(projectsDir, as: Project.self) { $0.deletedAt }
         purge(areasDir, as: Area.self) { $0.deletedAt }
+        if !barridas.isEmpty { alPurgar?(barridas) }
         return borrados
     }
 
