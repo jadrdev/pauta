@@ -192,7 +192,8 @@ contenedor.
   y los avisos llegan en menos de un segundo.
 - **En el Mac, CloudKit funciona pero los avisos no llegan.** Hasta saber por
   qué, el Mac pediría los cambios él mismo: al abrirse, al volver a primer
-  plano y cada pocos segundos mientras está abierto (`CKSyncEngine` lo permite
+  plano y cada pocos segundos mientras está abierto (15 al principio, 5 desde
+  la 1.0.3) (`CKSyncEngine` lo permite
   con `fetchChanges()`). No es tiempo real, pero con 15 segundos se acerca, y
   cuesta muy poco. Si un día los avisos llegan, se quita el temporizador.
 - Lo que queda en el esquema de producción: el tipo `Prueba`, vacío. La zona y

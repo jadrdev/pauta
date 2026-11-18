@@ -10,7 +10,7 @@ import PautaCore
 ///    copia completa de antes, cruce y comprobación. El almacén la usa desde el
 ///    siguiente arranque.
 /// 2. **La sincronía**, una vez mudado: `Sincronia` con `MotorCloudKit`. Sube lo
-///    que el almacén escribe, y trae lo de los demás **cada 15 segundos** y al
+///    que el almacén escribe, y trae lo de los demás **cada 5 segundos** y al
 ///    volver a primer plano. Los avisos silenciosos de CloudKit no llegan al Mac
 ///    (fase 0, sin resolver), así que se pregunta en vez de esperar.
 /// 3. **La transición**: mientras haya aparatos en versiones sin CloudKit, el
@@ -111,10 +111,12 @@ enum SincroniaDelMac {
             apuntar("sincronizando · \(s.estado)")
             await traer()
         }
-        // Cada 15 segundos mientras la app está abierta.
+        // Cada 5 segundos mientras la app está abierta. Eran 15, y era lo que
+        // más tardaba un cambio del iPhone en verse aquí. Preguntar sin
+        // cambios es una petición pequeña, y solo con la app abierta.
         Task {
             while true {
-                try? await Task.sleep(for: .seconds(15))
+                try? await Task.sleep(for: .seconds(5))
                 await traer()
             }
         }
