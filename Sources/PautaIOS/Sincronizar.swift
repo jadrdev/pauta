@@ -27,15 +27,28 @@ enum Sincronizar {
     /// verdad —sesenta y siete archivos, la mitad sin bajar de iCloud— dejó la
     /// app congelada hasta que hubo que cerrarla. Leer archivos es trabajo de
     /// disco y de red: no se hace donde se dibuja.
+    ///
+    /// Con CloudKit (docs/plan-cloudkit.md, fase 3) hace dos cosas: sube lo
+    /// pendiente a CloudKit —y trae lo de los demás si se pide con `traer`—, y
+    /// mientras dure la transición sigue cruzando con el contenedor de iCloud,
+    /// para que lo vean los aparatos que aún no tienen esta versión. Lo que
+    /// trae el contenedor sube a CloudKit; lo que llega de CloudKit sale al
+    /// contenedor en el cruce siguiente. Gana lo más reciente en los dos lados,
+    /// así que llegan a lo mismo.
     @discardableResult
-    static func conICloud(_ store: Store, vez: Int = 0) async -> Puente.Balance? {
+    static func conICloud(_ store: Store, traer: Bool = false, vez: Int = 0) async -> Puente.Balance? {
         // La maqueta de las capturas no toca iCloud: llevaría sus tareas de
         // muestra a las de verdad.
         guard !Maqueta.activa else { return nil }
+        let nube = SincroniaDelTelefono.shared
+        nube.enganchar(store)
         let origen = store.storageURL
         // Bloquea la primera vez: fuera del hilo principal.
         let contenedor = await Task.detached(priority: .utility) { Contenedor.documentos() }.value
-        guard contenedor != nil else { return nil }
+        guard contenedor != nil else {
+            await nube.sincronizar(traer: traer)
+            return nil
+        }
         // El marcador de la carpeta del Mac que se elegía antes de la mudanza.
         // Ya no se usa: se suelta para no guardar un permiso para nada.
         UserDefaults.standard.removeObject(forKey: "carpetaDelMac")
@@ -59,6 +72,8 @@ enum Sincronizar {
         // Solo se relee si algo llegó: recargar por costumbre agita las fechas
         // de todo y da trabajo a iCloud por nada.
         if balance.traidas > 0 { store.reload() }
+        nube.traidasDelContenedor(balance.claveTraidas)
+        await nube.sincronizar(traer: traer)
         reintentar(store, quedan: balance.pendientesDeBajar, vez: vez)
         return balance
     }

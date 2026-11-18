@@ -92,12 +92,17 @@ public final class Sincronia {
             // La primera vez: lo que hay en el aparato sube a esta cuenta.
             adoptar(id)
         case id:
-            // Si se vuelve de estar sin sesión, lo que se cambió mientras tanto
-            // no se apuntó: se sube todo, y lo que el servidor ya tenga se
-            // resuelve al enviar.
-            let volvia = estado != .activa
+            // Si se vuelve de estar sin sesión, se sube todo, y lo que el
+            // servidor ya tenga se resuelve al enviar.
+            //
+            // Al arrancar no: la cola del motor sobrevive a cerrar la app, y lo
+            // escrito mientras no se podía subir está en los apuntes. Subirlo
+            // todo en cada arranque eran cuatrocientos registros que los demás
+            // aparatos tenían que volver a bajar.
+            let volvia = estado != .activa && estado != .esperando
             estado = .activa
             if volvia { subirTodo() }
+            recogerApuntes()
         case let antes?:
             estado = .otraCuenta(antes: antes, ahora: id)
         }
@@ -153,8 +158,12 @@ public final class Sincronia {
     // MARK: - Lo que dice el almacén
 
     /// El almacén escribió este objeto.
+    ///
+    /// Si ahora no se puede subir —arrancando, sin cuenta—, se apunta para
+    /// cuando se pueda (`Apuntes`): perderlo sería que ese cambio no saliera
+    /// nunca de este aparato.
     public func escrito(_ clave: Ficha.Clave) {
-        guard puedeSubir else { return }
+        guard puedeSubir else { return Apuntes.apuntar(guardar: [clave], en: raiz) }
         motor?.apuntar(guardar: [clave], borrar: [])
     }
 
@@ -162,8 +171,20 @@ public final class Sincronia {
     /// también. Si otro aparato lo hace a la vez, el segundo encuentra el
     /// registro ya borrado y no pasa nada.
     public func purgadas(_ claves: [Ficha.Clave]) {
-        guard puedeSubir, !claves.isEmpty else { return }
+        guard !claves.isEmpty else { return }
+        guard puedeSubir else { return Apuntes.apuntar(borrar: claves, en: raiz) }
         motor?.apuntar(guardar: [], borrar: claves)
+    }
+
+    /// Lo que escribieron los almacenes sin enganchar —el widget, Siri, los
+    /// botones de un aviso— pasa a la cola (ver `Apuntes`). Sin sincronía
+    /// activa se quedan donde están, para cuando la haya.
+    public func recogerApuntes() {
+        guard puedeSubir else { return }
+        let r = Apuntes.recoger(en: raiz)
+        guard !r.archivos.isEmpty else { return }
+        motor?.apuntar(guardar: r.guardar, borrar: r.borrar)
+        Apuntes.olvidar(r.archivos)
     }
 
     // MARK: - Lo que pide y trae el motor

@@ -289,6 +289,7 @@
       }
     },
     "%lld a iCloud" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ca" : {
           "stringUnit" : {
@@ -422,6 +423,7 @@
       }
     },
     "%lld de iCloud" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ca" : {
           "stringUnit" : {
@@ -719,6 +721,7 @@
       }
     },
     "%lld sin bajar de iCloud" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ca" : {
           "stringUnit" : {
@@ -1736,6 +1739,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ajustes"
+          }
+        }
+      }
+    },
+    "Al día · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al día · %@"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al dia · %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Up to date · %@"
           }
         }
       }
@@ -3530,6 +3555,7 @@
       }
     },
     "Cruzar ahora" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ca" : {
           "stringUnit" : {
@@ -3771,6 +3797,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Definir la paleta de color"
+          }
+        }
+      }
+    },
+    "Dejarlas solo en este aparato" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dejarlas solo en este aparato"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deixar-les només en aquest aparell"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep Them Only on This Device"
           }
         }
       }
@@ -4528,6 +4576,7 @@
       }
     },
     "En este teléfono, en la carpeta que comparte con el widget. Con iCloud se cruzan arriba." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ca" : {
           "stringUnit" : {
@@ -4545,6 +4594,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "En este teléfono, en la carpeta que comparte con el widget. Con iCloud se cruzan arriba."
+          }
+        }
+      }
+    },
+    "En este teléfono, en la carpeta que comparte con el widget. Con iCloud se sincronizan arriba." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En este teléfono, en la carpeta que comparte con el widget. Con iCloud se sincronizan arriba."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En aquest telèfon, a la carpeta que comparteix amb el giny. Amb iCloud se sincronitzen a dalt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On this phone, in the folder it shares with the widget. iCloud syncing is up above."
           }
         }
       }
@@ -4924,6 +4995,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Espacio"
+          }
+        }
+      }
+    },
+    "Estas tareas eran de otra cuenta de iCloud. Puedes subirlas a la de ahora o dejarlas solo aquí; en los dos casos se quedan en este aparato." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estas tareas eran de otra cuenta de iCloud. Puedes subirlas a la de ahora o dejarlas solo aquí; en los dos casos se quedan en este aparato."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aquestes tasques eren d'un altre compte d'iCloud. Pots pujar-les al d'ara o deixar-les només aquí; en tots dos casos es queden en aquest aparell."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These tasks belonged to another iCloud account. You can upload them to the current one or keep them only here; either way, they stay on this device."
           }
         }
       }
@@ -5815,12 +5908,6 @@
     },
     "Le tocaba el %@" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le tocaba el %@"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5831,6 +5918,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Originally on %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le tocaba el %@"
           }
         }
       }
@@ -6748,6 +6841,7 @@
       }
     },
     "Nada que cruzar · %lld sin bajar de iCloud" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ca" : {
           "stringUnit" : {
@@ -6770,6 +6864,7 @@
       }
     },
     "Nada que cruzar: ya estaban iguales" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ca" : {
           "stringUnit" : {
@@ -7384,6 +7479,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ordenar áreas y proyectos alfabéticamente"
+          }
+        }
+      }
+    },
+    "Otra cuenta" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otra cuenta"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un altre compte"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another Account"
           }
         }
       }
@@ -8999,12 +9116,6 @@
     },
     "Repetir desde el %@" : {
       "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repetir desde el %@"
-          }
-        },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9015,6 +9126,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Repeat from %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetir desde el %@"
           }
         }
       }
@@ -9555,6 +9672,7 @@
       }
     },
     "Sin iCloud, las tareas se quedan en este aparato. Se activa en Ajustes del sistema ▸ tu nombre ▸ iCloud ▸ iCloud Drive." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ca" : {
           "stringUnit" : {
@@ -9572,6 +9690,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sin iCloud, las tareas se quedan en este aparato. Se activa en Ajustes del sistema ▸ tu nombre ▸ iCloud ▸ iCloud Drive."
+          }
+        }
+      }
+    },
+    "Sin iCloud, las tareas se quedan en este aparato. Se activa en Ajustes del sistema ▸ tu nombre ▸ iCloud." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin iCloud, las tareas se quedan en este aparato. Se activa en Ajustes del sistema ▸ tu nombre ▸ iCloud."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sense iCloud, les tasques es queden en aquest aparell. S'activa a Configuració ▸ el teu nom ▸ iCloud."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without iCloud, tasks stay on this device. Turn it on in Settings ▸ your name ▸ iCloud."
           }
         }
       }
@@ -9709,6 +9849,28 @@
         }
       }
     },
+    "Sincronizar ahora" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sincronizar ahora"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sincronitza ara"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync Now"
+          }
+        }
+      }
+    },
     "Solo en este Mac, sin iCloud" : {
       "localizations" : {
         "ca" : {
@@ -9727,6 +9889,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Solo en este Mac, sin iCloud"
+          }
+        }
+      }
+    },
+    "Subirlas a esta cuenta" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subirlas a esta cuenta"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pujar-les a aquest compte"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload Them to This Account"
           }
         }
       }
@@ -10130,6 +10314,7 @@
       }
     },
     "Tus tareas se cruzan con las de iCloud, que son las mismas del Mac y del iPad, sin elegir nada. Cada aparato guarda las suyas, así que funciona también sin red; y de cada tarea gana la versión más reciente." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ca" : {
           "stringUnit" : {
@@ -10147,6 +10332,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tus tareas se cruzan con las de iCloud, que son las mismas del Mac y del iPad, sin elegir nada. Cada aparato guarda las suyas, así que funciona también sin red; y de cada tarea gana la versión más reciente."
+          }
+        }
+      }
+    },
+    "Tus tareas se sincronizan con iCloud en segundos: las mismas en el iPhone, el iPad y el Mac. Cada aparato guarda las suyas, así que funciona también sin red; y de cada tarea gana la versión más reciente." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus tareas se sincronizan con iCloud en segundos: las mismas en el iPhone, el iPad y el Mac. Cada aparato guarda las suyas, así que funciona también sin red; y de cada tarea gana la versión más reciente."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les teves tasques se sincronitzen amb iCloud en segons: les mateixes a l'iPhone, l'iPad i el Mac. Cada aparell desa les seves, així que també funciona sense xarxa; i de cada tasca guanya la versió més recent."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your tasks sync with iCloud in seconds: the same ones on your iPhone, iPad and Mac. Each device keeps its own copy, so it works offline too; and for each task, the most recent version wins."
           }
         }
       }

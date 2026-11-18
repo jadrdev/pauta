@@ -125,6 +125,9 @@ enum SincroniaDelMac {
 
     private static func traer() async {
         guard let motor else { return }
+        // Lo que escribió otro almacén —una orden del terminal, por ejemplo—
+        // sale con esta vuelta.
+        sincronia?.recogerApuntes()
         do {
             try await motor.traer()
         } catch {

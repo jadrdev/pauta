@@ -11,8 +11,8 @@ import PautaCore
 /// que arregla no es la app —esa se cruza al abrirla— sino lo que se ve **sin**
 /// abrirla: el widget, el globo del icono y lo que el reloj tenga guardado.
 ///
-/// Para tiempo real de verdad haría falta CloudKit, que es cambiarle los
-/// cimientos a la app y perder que tus tareas sean archivos tuyos en tu carpeta.
+/// El tiempo real lo dan los avisos silenciosos de CloudKit
+/// (`SincroniaDelTelefono`); esto queda como red por si alguno no llega.
 @MainActor
 enum RefrescoEnSegundoPlano {
     static let identificador = "dev.jadrdev.pauta.refresco"
@@ -45,8 +45,17 @@ enum RefrescoEnSegundoPlano {
     /// no hay ninguna interfaz montada de la que sacarlo.
     static func cruzarYAvisar() async {
         let almacen = Store()
-        await Sincronizar.conICloud(almacen)
+        await Sincronizar.conICloud(almacen, traer: true)
         almacen.reload()
+        await avisar(almacen)
+    }
+
+    /// Pone al día lo que se ve sin abrir la app después de que algo llegara
+    /// de fuera: el widget, el reloj, el globo y los avisos, que pueden haber
+    /// cambiado de hora en otro aparato.
+    static func avisar(_ dado: Store? = nil) async {
+        let almacen = dado ?? Store()
+        await Avisos.reschedule(almacen.items)
         let vistazo = Vistazo.de(almacen.items, proyectos: almacen.projects,
                                  limite: Vistazo.limitePublicado)
         WidgetCenter.shared.reloadAllTimelines()

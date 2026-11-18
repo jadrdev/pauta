@@ -19,15 +19,10 @@ struct AjustesView: View {
     @Environment(Store.self) private var store
     @Bindable private var ajustes = Ajustes.shared
 
-    /// Si este aparato tiene iCloud para la app. `nil` mientras se pregunta:
-    /// la primera vez el sistema prepara el contenedor y tarda.
-    @State private var hayICloud: Bool?
-    /// Lo que movió el último cruce, para poder decirlo en vez de dejar al
-    /// usuario adivinando si sirvió de algo.
-    @State private var balance: Puente.Balance?
-    /// Mientras cruza, se dice. El primer cruce con una carpeta de verdad tarda
-    /// —hay archivos que iCloud todavía tiene que bajar—, y un botón que no
-    /// responde y no explica nada es una app colgada a ojos de cualquiera.
+    /// La sincronía con CloudKit, que dice en qué está.
+    private var nube = SincroniaDelTelefono.shared
+    /// Mientras sincroniza a mano, se dice: un botón que no responde y no
+    /// explica nada es una app colgada a ojos de cualquiera.
     @State private var cruzando = false
     @State private var avisos: UNAuthorizationStatus = .notDetermined
     @State private var calendario = Agenda.authorization
@@ -41,24 +36,22 @@ struct AjustesView: View {
         guard !cruzando else { return }
         cruzando = true
         Task {
-            balance = await Sincronizar.conICloud(store)
+            await Sincronizar.conICloud(store, traer: true)
             cruzando = false
         }
     }
 
-    private static func resumen(_ b: Puente.Balance) -> String {
-        if b.traidas == 0 && b.llevadas == 0 {
-            return b.pendientesDeBajar > 0
-                ? String(localized: "Nada que cruzar · \(b.pendientesDeBajar) sin bajar de iCloud")
-                : String(localized: "Nada que cruzar: ya estaban iguales")
+    /// Lo que dice la fila de iCloud.
+    private var estadoDeICloud: String {
+        switch nube.estado {
+        case .esperando: String(localized: "Mirando…")
+        case .sinCuenta: String(localized: "No disponible")
+        case .otraCuenta: String(localized: "Otra cuenta")
+        case .activa:
+            nube.ultima.map {
+                String(localized: "Al día · \($0.formatted(.relative(presentation: .named)))")
+            } ?? String(localized: "Sincroniza")
         }
-        var partes: [String] = []
-        if b.traidas > 0 { partes.append(String(localized: "\(b.traidas) de iCloud")) }
-        if b.llevadas > 0 { partes.append(String(localized: "\(b.llevadas) a iCloud")) }
-        if b.pendientesDeBajar > 0 {
-            partes.append(String(localized: "\(b.pendientesDeBajar) sin bajar de iCloud"))
-        }
-        return partes.joined(separator: " · ")
     }
 
     /// El idioma en que está la app ahora, dicho en ese mismo idioma:
@@ -176,15 +169,21 @@ struct AjustesView: View {
                 HStack {
                     Text("iCloud")
                     Spacer()
-                    Text(hayICloud == nil ? "Mirando…" : hayICloud == true ? "Sincroniza" : "No disponible")
-                        .foregroundStyle(hayICloud == false ? Papel.warning : Papel.inkSoft)
+                    Text(estadoDeICloud)
+                        .foregroundStyle(nube.estado == .sinCuenta ? Papel.warning : Papel.inkSoft)
                 }
-                if hayICloud == true {
+                if case .otraCuenta = nube.estado {
+                    // Lo de una cuenta no se mezcla con lo de otra sin
+                    // preguntar, y ninguna de las dos respuestas borra nada.
+                    Button("Subirlas a esta cuenta") { nube.decidirOtraCuenta(subir: true) }
+                    Button("Dejarlas solo en este aparato") { nube.decidirOtraCuenta(subir: false) }
+                }
+                if nube.estado == .activa {
                     Button {
                         cruzar()
                     } label: {
                         HStack {
-                            Label("Cruzar ahora", systemImage: "arrow.triangle.2.circlepath")
+                            Label("Sincronizar ahora", systemImage: "arrow.triangle.2.circlepath")
                             if cruzando {
                                 Spacer()
                                 ProgressView()
@@ -192,19 +191,22 @@ struct AjustesView: View {
                         }
                     }
                     .disabled(cruzando)
-                    if let balance {
-                        Text(Self.resumen(balance))
+                    if let fallo = nube.fallo {
+                        Text(fallo)
                             .font(.system(size: 12.5))
-                            .foregroundStyle(Papel.inkFaint)
+                            .foregroundStyle(Papel.warning)
                     }
                 }
             } header: {
                 Text("ICLOUD")
             } footer: {
-                if hayICloud == false {
-                    Text("Sin iCloud, las tareas se quedan en este aparato. Se activa en Ajustes del sistema ▸ tu nombre ▸ iCloud ▸ iCloud Drive.")
-                } else {
-                    Text("Tus tareas se cruzan con las de iCloud, que son las mismas del Mac y del iPad, sin elegir nada. Cada aparato guarda las suyas, así que funciona también sin red; y de cada tarea gana la versión más reciente.")
+                switch nube.estado {
+                case .sinCuenta:
+                    Text("Sin iCloud, las tareas se quedan en este aparato. Se activa en Ajustes del sistema ▸ tu nombre ▸ iCloud.")
+                case .otraCuenta:
+                    Text("Estas tareas eran de otra cuenta de iCloud. Puedes subirlas a la de ahora o dejarlas solo aquí; en los dos casos se quedan en este aparato.")
+                default:
+                    Text("Tus tareas se sincronizan con iCloud en segundos: las mismas en el iPhone, el iPad y el Mac. Cada aparato guarda las suyas, así que funciona también sin red; y de cada tarea gana la versión más reciente.")
                 }
             }
 
@@ -242,7 +244,7 @@ struct AjustesView: View {
             } header: {
                 Text("TUS DATOS")
             } footer: {
-                Text("En este teléfono, en la carpeta que comparte con el widget. Con iCloud se cruzan arriba.")
+                Text("En este teléfono, en la carpeta que comparte con el widget. Con iCloud se sincronizan arriba.")
             }
 
             Section {
@@ -275,9 +277,6 @@ struct AjustesView: View {
         .background(Papel.bg)
         .navigationTitle("Ajustes")
         .task {
-            hayICloud = await Task.detached(priority: .utility) {
-                Contenedor.documentos() != nil
-            }.value
             avisos = await Avisos.authorization()
             calendario = Agenda.authorization
             globo = await Avisos.puedeGlobo()

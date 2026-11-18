@@ -14,6 +14,7 @@ import PautaCore
 struct PautaIOSApp: App {
     @State private var store = Maqueta.activa ? Store.demo() : Store()
     @State private var agenda = Agenda()
+    @UIApplicationDelegateAdaptor(DelegadoDeLaApp.self) private var delegado
 
     init() {
         // Antes de la interfaz: un aviso pulsado con la app cerrada se entrega
@@ -33,6 +34,9 @@ struct PautaIOSApp: App {
         RefrescoEnSegundoPlano.registrar {
             await RefrescoEnSegundoPlano.cruzarYAvisar()
         }
+        // CloudKit, antes de la interfaz: si iOS despierta la app por un aviso
+        // del servidor, no monta ninguna, y el motor tiene que estar.
+        SincroniaDelTelefono.shared.arrancar()
     }
 
     var body: some Scene {
@@ -154,8 +158,9 @@ struct RaizView: View {
             // dejar el teléfono y volver a cogerlo es cuando se ha estado
             // delante del otro aparato. Sin iCloud no hace nada, y
             // nunca en el hilo principal: son archivos, y algunos hay que
-            // bajarlos.
-            Task { await Sincronizar.conICloud(store) }
+            // bajarlos. Y se trae lo de CloudKit: un aviso silencioso pudo no
+            // llegar con la app dormida.
+            Task { await Sincronizar.conICloud(store, traer: true) }
             // Los eventos se releen a la fuerza: pudo aceptarse una invitación
             // o moverse una reunión mientras la app dormía, y el día que se
             // enseña ya no sería el de verdad.
@@ -186,7 +191,8 @@ struct RaizView: View {
             // deja el primer cruce a merced de si el sistema pasa por
             // «inactiva» antes de «activa». Cruzar dos veces no hace nada, así
             // que sobra pedirlo dos veces y falta no pedirlo ninguna.
-            await Sincronizar.conICloud(store)
+            SincroniaDelTelefono.shared.enganchar(store)
+            await Sincronizar.conICloud(store, traer: true)
             // La copia de seguridad del día, si aún no está.
             store.copiaDelDia()
             // Se avisa a fuera **aquí también**, no solo en el bloque de

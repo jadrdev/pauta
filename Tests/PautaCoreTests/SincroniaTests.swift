@@ -504,3 +504,96 @@ struct MudanzaACloudKitTests {
         #expect(viejo.items.first { $0.id == t.id }?.title == "Cambiada en el otro Mac")
     }
 }
+
+// MARK: - Los apuntes
+
+/// Lo que escriben los almacenes que no están enganchados —el widget, Siri,
+/// los botones de un aviso— también sube.
+@MainActor
+struct ApuntesTests {
+    @Test func whatTheWidgetWritesGoesUp() async throws {
+        let servidor = ServidorDeMentira()
+        let a = Aparato(servidor), b = Aparato(servidor)
+        try FileManager.default.createDirectory(
+            at: MudanzaACloudKit.carpetaDelEstado(en: a.raiz), withIntermediateDirectories: true)
+        try await a.sincronizar(); try await b.sincronizar()
+
+        // El widget: otro almacén sobre la misma carpeta, sin enganchar.
+        let widget = Store(root: a.raiz)
+        let nueva = widget.addItem(title: "Desde el widget", in: .today)
+        #expect(!Apuntes.recoger(en: a.raiz).guardar.isEmpty)
+
+        a.store.reload()
+        a.sincronia.recogerApuntes()
+        try await a.sincronizar()
+        try await b.sincronizar()
+        #expect(b.tarea(nueva.id)?.title == "Desde el widget")
+        #expect(Apuntes.recoger(en: a.raiz).archivos.isEmpty, "recogidos, se quitan")
+    }
+
+    /// Sin sincronía en la carpeta no se apunta nada: en un Mac sin mudar, la
+    /// carpeta es la de iCloud Drive y cada apunte sería un archivo más.
+    @Test func withoutSyncNothingIsNoted() throws {
+        let raiz = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-apuntes-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: raiz) }
+        let store = Store(root: raiz)
+        store.addItem(title: "x", in: .today)
+        #expect(!FileManager.default.fileExists(atPath: MudanzaACloudKit.carpetaDelEstado(en: raiz).path))
+    }
+
+    /// Sin cuenta, los apuntes esperan: recogerlos sin poder subir sería
+    /// perderlos.
+    @Test func withoutAnAccountTheyWait() throws {
+        let servidor = ServidorDeMentira()
+        let a = Aparato(servidor, cuenta: nil)
+        try FileManager.default.createDirectory(
+            at: MudanzaACloudKit.carpetaDelEstado(en: a.raiz), withIntermediateDirectories: true)
+        Store(root: a.raiz).addItem(title: "x", in: .today)
+        a.sincronia.recogerApuntes()
+        #expect(Apuntes.recoger(en: a.raiz).guardar.count == 1)
+    }
+
+    /// Volver a abrir la app con la misma cuenta no sube todo otra vez: eran
+    /// cuatrocientos registros por arranque que los demás tenían que bajar.
+    /// Lo escrito mientras arrancaba sí sale, por los apuntes.
+    @Test func relaunchingDoesNotUploadEverything() async throws {
+        let servidor = ServidorDeMentira()
+        let raiz = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-apuntes-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: raiz) }
+        let estado = MudanzaACloudKit.carpetaDelEstado(en: raiz).appendingPathComponent("sincronia.json")
+        let store = Store(root: raiz)
+        let s1 = Sincronia(raiz: raiz, estado: estado)
+        let m1 = MotorDeMentira(servidor, s1)
+        s1.motor = m1
+        store.alEscribir = { s1.escrito($0) }
+        s1.cuenta("yo")
+        store.addItem(title: "Una", in: .today)
+        store.addItem(title: "Otra", in: .today)
+        try await m1.enviar()
+        #expect(m1.subidas == 2)
+
+        // Otro arranque: mientras no se sabe la cuenta, se escribe algo.
+        let s2 = Sincronia(raiz: raiz, estado: estado)
+        let m2 = MotorDeMentira(servidor, s2)
+        s2.motor = m2
+        store.alEscribir = { s2.escrito($0) }
+        let nueva = store.addItem(title: "Mientras arranca", in: .today)
+        s2.cuenta("yo")
+        #expect(m2.porGuardar == [Ficha.Clave(.tarea, nueva.id)])
+    }
+
+    /// Escribir dos veces lo mismo deja un solo apunte.
+    @Test func oneNotePerObject() throws {
+        let raiz = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-apuntes-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: raiz) }
+        try FileManager.default.createDirectory(
+            at: MudanzaACloudKit.carpetaDelEstado(en: raiz), withIntermediateDirectories: true)
+        let store = Store(root: raiz)
+        let t = store.addItem(title: "x", in: .today)
+        store.toggleComplete(t)
+        #expect(Apuntes.recoger(en: raiz).guardar == [Ficha.Clave(.tarea, t.id)])
+    }
+}

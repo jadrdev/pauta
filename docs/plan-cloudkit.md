@@ -306,6 +306,38 @@ carpeta: solo cambia con qué se cruza.
   hace 10 s») y el botón «Cruzar ahora» pasa a «Sincronizar ahora», por si
   acaso.
 
+### Resultado (18 de noviembre de 2026): hecha en el código
+
+- **`SincroniaDelTelefono`**: `Sincronia` con `MotorCloudKit` sobre la carpeta
+  del grupo, con el estado en `<carpeta>/.sincronia`. Arranca en el `init` de la
+  app, antes de la interfaz: cuando un aviso del servidor despierta la app en
+  segundo plano no se monta ninguna vista, y el motor tiene que estar ya.
+- **Avisos silenciosos**: un delegado mínimo se registra para ellos y, al
+  llegar uno del contenedor, sube lo pendiente y trae. Si llega algo con la app
+  dormida, pone al día el widget, el reloj, el globo y los avisos.
+- **`Sincronizar.conICloud`** sigue siendo la única puerta, y la llaman los
+  mismos sitios de siempre: sube a CloudKit (y trae al volver a primer plano,
+  al arrancar, en el refresco de fondo y a mano) y cruza con el contenedor.
+- **Cambio sobre el plan: el teléfono también sigue cruzando con el
+  contenedor** durante la transición, no solo el Mac. Si solo cruzara el Mac,
+  quien no tiene Mac y actualiza el iPhone antes que el iPad se quedaría sin
+  sincronía entre los dos hasta actualizar el otro. Las dos vías aplican la
+  misma regla —gana el más reciente— y llegan a lo mismo. Se quita en la fase 4.
+- **Los apuntes** (`Apuntes`): el widget, Siri, los botones de un aviso y el
+  refresco de fondo abren su propio almacén, que no tiene a quién avisar. Ahora
+  dejan un archivo vacío por objeto en `.sincronia/apuntes/`, y la app los
+  recoge al sincronizar. También el Mac, para lo que escribe una orden del
+  terminal. Lo escrito mientras no se puede subir (arrancando, sin cuenta)
+  también va a los apuntes.
+- **Ya no se sube todo en cada arranque.** Con la misma cuenta, arrancar
+  subía los cuatrocientos registros, y los demás aparatos los volvían a bajar.
+  La cola del motor sobrevive a cerrar la app, y lo demás va por los apuntes.
+- **Ajustes**: «iCloud · Al día · hace 10 s», «Sincronizar ahora», el último
+  fallo si lo hay, y la pregunta si las tareas eran de otra cuenta.
+- Pruebas: 5 nuevas (440 en total). En el simulador, sin cuenta de iCloud, el
+  motor arranca, no falla y Ajustes dice «No disponible». **Con cuenta, en el
+  iPhone y el iPad de TestFlight** (el simulador no tiene sesión de iCloud).
+
 ## Fase 4 — Limpieza (cuando tú lo digas)
 
 Cuando todos los aparatos lleven la versión nueva:

@@ -583,11 +583,17 @@ public final class Store {
     /// del servidor.
     public var alPurgar: (([Ficha.Clave]) -> Void)?
 
+    /// A quien sincroniza, o a los apuntes si este almacén no está enganchado
+    /// (el del widget, el de Siri, el de los avisos): ver `Apuntes`.
+    private func escrito(_ clave: Ficha.Clave) {
+        if let alEscribir { alEscribir(clave) } else { Apuntes.apuntar(guardar: [clave], en: root) }
+    }
+
     private func persist(_ item: Item) {
         guard !inMemory, let data = try? encoder.encode(item) else { return }
         let file = url(forItem: item.id)
         try? data.write(to: file, options: .atomic)
-        alEscribir?(Ficha.Clave(.tarea, item.id))
+        escrito(Ficha.Clave(.tarea, item.id))
         // Lo que acabamos de escribir ya lo tenemos en memoria: anotarlo evita
         // que la recarga que dispara nuestra propia escritura lo lea otra vez.
         itemCache[file.lastPathComponent] = Cached(stamp: stamp(of: file), value: item)
@@ -597,7 +603,7 @@ public final class Store {
         guard !inMemory, let data = try? encoder.encode(project) else { return }
         let file = url(forProject: project.id)
         try? data.write(to: file, options: .atomic)
-        alEscribir?(Ficha.Clave(.proyecto, project.id))
+        escrito(Ficha.Clave(.proyecto, project.id))
         projectCache[file.lastPathComponent] = Cached(stamp: stamp(of: file), value: project)
     }
 
@@ -605,7 +611,7 @@ public final class Store {
         guard !inMemory, let data = try? encoder.encode(area) else { return }
         let file = url(forArea: area.id)
         try? data.write(to: file, options: .atomic)
-        alEscribir?(Ficha.Clave(.area, area.id))
+        escrito(Ficha.Clave(.area, area.id))
         areaCache[file.lastPathComponent] = Cached(stamp: stamp(of: file), value: area)
     }
 
@@ -1301,7 +1307,9 @@ public final class Store {
         purge(itemsDir, as: Item.self) { $0.deletedAt }
         purge(projectsDir, as: Project.self) { $0.deletedAt }
         purge(areasDir, as: Area.self) { $0.deletedAt }
-        if !barridas.isEmpty { alPurgar?(barridas) }
+        if !barridas.isEmpty {
+            if let alPurgar { alPurgar(barridas) } else { Apuntes.apuntar(borrar: barridas, en: root) }
+        }
         return borrados
     }
 
