@@ -354,7 +354,17 @@ struct Entry {
 
 @MainActor
 struct PautaApp: App {
-    @State private var store = Launch.demo ? Store.demo() : Store()
+    /// El almacén, **uno solo** y creado una vez.
+    ///
+    /// Con `@State private var store = Store()` había dos: el valor inicial de
+    /// un `@State` de un objeto observable se evalúa cada vez que se lee antes
+    /// de que SwiftUI lo instale, así que el que veía `init` —el que se
+    /// enganchaba a CloudKit— no era el de las ventanas. Lo que se tachaba en
+    /// una ventana no avisaba a la sincronía, y subía solo cuando la vuelta de
+    /// cada 15 segundos recogía los apuntes: medido el 18 de noviembre, 9
+    /// segundos de espera en el Mac. Saliendo de aquí, los dos son el mismo.
+    private static let almacen = Launch.demo ? Store.demo() : Store()
+    @State private var store = PautaApp.almacen
 
     init() {
         // La mudanza al contenedor de iCloud, en segundo plano y desde aquí y no
@@ -364,7 +374,7 @@ struct PautaApp: App {
         if !Launch.demo && MudanzaACloudKit.mudadoDesde() == nil { MudanzaDelMac.arrancar() }
         // Y CloudKit (docs/plan-cloudkit.md), también sin esperar a una ventana:
         // Pauta vive en la barra de menús y puede no abrir ninguna.
-        if !Launch.demo { SincroniaDelMac.arrancar(store) }
+        if !Launch.demo { SincroniaDelMac.arrancar(PautaApp.almacen) }
     }
     @State private var nav = Navigation()
     /// Vigila la carpeta de datos para recoger lo que llegue de otro
