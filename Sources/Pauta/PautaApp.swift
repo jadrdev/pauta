@@ -283,6 +283,10 @@ struct Entry {
                             } ?? ""
                             print("  \(f.string(from: r.escrito)) · \(r.aparato)\(servidor)")
                         }
+                    case "suscripciones":
+                        let subs = try await PruebaCloudKit.suscripciones()
+                        print("\(subs.count) suscripciones")
+                        subs.forEach { print("  \($0)") }
                     case "borrar":
                         try await PruebaCloudKit.borrarTodo()
                         PruebaCloudKit.olvidarAvisos()

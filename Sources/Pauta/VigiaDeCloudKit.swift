@@ -32,11 +32,18 @@ final class VigiaDeCloudKit: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.registerForRemoteNotifications()
+        // Y una llamada a CloudKit: puede que el sistema no apunte el proceso
+        // a los avisos del contenedor hasta que lo usa.
+        Task {
+            print("cuenta de iCloud: \(await PruebaCloudKit.cuenta())")
+            let subs = (try? await PruebaCloudKit.suscripciones()) ?? []
+            print("suscripciones: \(subs.count)")
+        }
     }
 
     func application(_ application: NSApplication,
                      didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        print("registrado para avisos")
+        print("registrado para avisos · token \(deviceToken.map { String(format: "%02x", $0) }.joined())")
     }
 
     func application(_ application: NSApplication,
@@ -47,6 +54,7 @@ final class VigiaDeCloudKit: NSObject, NSApplicationDelegate {
     func application(_ application: NSApplication,
                      didReceiveRemoteNotification userInfo: [String: Any]) {
         let ahora = Date()
+        print("aviso crudo: \(PruebaCloudKit.apuntarCrudo(userInfo, ahora))")
         guard PruebaCloudKit.esDeLaPrueba(userInfo) else { return }
         Task {
             let a = await PruebaCloudKit.alRecibirAviso(ahora)

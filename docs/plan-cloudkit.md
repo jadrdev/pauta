@@ -147,6 +147,25 @@ antes de escribir nada que dependa de ello.
 **Si algo de esto falla, el plan se para aquí**, como pudo pasar con el
 contenedor.
 
+### Resultado parcial (18 de noviembre de 2026), en desarrollo
+
+- **CloudKit activado** en el contenedor, con los avisos (`aps-environment`),
+  en el iPhone y en el Mac. Xcode lo activó solo en el identificador de la app
+  al compilar con `-allowProvisioningUpdates`.
+- **Escribir y leer funciona en los dos sentidos.** Un registro tarda de 0,1 a
+  0,8 s en llegar al servidor.
+- **Al iPhone los avisos le llegan en 0,9 s** desde que el Mac escribe, con la
+  app delante. La consola de CloudKit lo confirma: el iPhone pide los cambios
+  un segundo después de cada escritura del Mac.
+- **Al Mac no le llegan en desarrollo, y no es cosa de Pauta.** Un aviso
+  mandado a mano desde la consola de avisos de Apple sale «descartado porque el
+  aparato estaba desconectado»: el Mac no está conectado al servidor de avisos
+  de **desarrollo**. El de producción es otro, el que usa el Mac para todo; se
+  comprueba con la compilación de Developer ID.
+- CloudKit no avisa al aparato que hizo el cambio: para medir hacen falta dos.
+- Falta: **producción** —Developer ID en el Mac y TestFlight en el iPhone—, que
+  necesita el tipo `Prueba` publicado en el esquema de producción.
+
 ## Fase 1 — El núcleo, sin interfaz
 
 En `PautaCore`, un módulo `Sincronia` probado de punta a punta antes de que

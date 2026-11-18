@@ -29,6 +29,8 @@ final class DelegadoDePruebaCloudKit: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didReceiveRemoteNotification userInfo: [AnyHashable: Any]) async
         -> UIBackgroundFetchResult {
+        _ = PruebaCloudKit.apuntarCrudo(userInfo)
+        NotificationCenter.default.post(name: .avisoDePruebaCloudKit, object: nil)
         guard PruebaCloudKit.esDeLaPrueba(userInfo) else { return .noData }
         await PruebaCloudKit.alRecibirAviso()
         NotificationCenter.default.post(name: .avisoDePruebaCloudKit, object: nil)
@@ -45,6 +47,7 @@ struct PruebaCloudKitView: View {
     @State private var cuenta = "…"
     @State private var registros: [PruebaCloudKit.Registro] = []
     @State private var avisos = PruebaCloudKit.avisos
+    @State private var crudos = PruebaCloudKit.crudos
     @State private var linea = ""
     @State private var ocupado = false
 
@@ -88,6 +91,12 @@ struct PruebaCloudKitView: View {
                     }
                 } header: { Text(verbatim: "AVISOS RECIBIDOS") }
                 Section {
+                    if crudos.isEmpty { Text(verbatim: "Ninguno").foregroundStyle(.secondary) }
+                    ForEach(Array(crudos.enumerated()), id: \.offset) { _, c in
+                        Text(verbatim: c).font(.caption)
+                    }
+                } header: { Text(verbatim: "CUALQUIER AVISO, SIN FILTRAR") }
+                Section {
                     ForEach(Array(registros.enumerated()), id: \.offset) { _, r in
                         Text(verbatim: "\(hora(r.escrito)) · \(r.aparato)")
                     }
@@ -100,6 +109,7 @@ struct PruebaCloudKitView: View {
         .task { cuenta = await PruebaCloudKit.cuenta() }
         .onReceive(NotificationCenter.default.publisher(for: .avisoDePruebaCloudKit)) { _ in
             avisos = PruebaCloudKit.avisos
+            crudos = PruebaCloudKit.crudos
         }
     }
 

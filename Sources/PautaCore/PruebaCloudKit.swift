@@ -78,6 +78,16 @@ public enum PruebaCloudKit {
         _ = try await base.modifyRecordZones(saving: [], deleting: [zona])
     }
 
+    /// Las suscripciones que tiene la base, para comprobar que la de la prueba
+    /// está y con qué.
+    public static func suscripciones() async throws -> [String] {
+        try await base.allSubscriptions().map { sub in
+            let zona = (sub as? CKRecordZoneSubscription)?.zoneID.zoneName ?? "-"
+            let silenciosa = sub.notificationInfo?.shouldSendContentAvailable ?? false
+            return "\(sub.subscriptionID) · zona \(zona) · silenciosa \(silenciosa)"
+        }
+    }
+
     // MARK: - Escribir y leer
 
     @discardableResult
@@ -137,6 +147,23 @@ public enum PruebaCloudKit {
     public static func olvidarAvisos() {
         UserDefaults.standard.removeObject(forKey: claveAvisos)
     }
+
+    private static let claveCrudos = "pruebaCloudKit.crudos"
+
+    /// Cualquier aviso remoto que llegue, sin filtrar: para saber si llega algo
+    /// aunque no sea lo que se espera.
+    public static func apuntarCrudo(_ userInfo: [AnyHashable: Any], _ momento: Date = Date()) -> String {
+        let ck = CKNotification(fromRemoteNotificationDictionary: userInfo)
+        let f = DateFormatter(); f.dateFormat = "HH:mm:ss.SSS"
+        let linea = "\(f.string(from: momento)) · claves \(userInfo.keys.map { "\($0)" }.sorted()) · "
+            + "sub \(ck?.subscriptionID ?? "ninguna") · tipo \(ck.map { "\($0.notificationType.rawValue)" } ?? "-")"
+        var todos = UserDefaults.standard.stringArray(forKey: claveCrudos) ?? []
+        todos.insert(linea, at: 0)
+        UserDefaults.standard.set(Array(todos.prefix(30)), forKey: claveCrudos)
+        return linea
+    }
+
+    public static var crudos: [String] { UserDefaults.standard.stringArray(forKey: claveCrudos) ?? [] }
 
     /// Si un aviso remoto es de la suscripción de la prueba.
     public static func esDeLaPrueba(_ userInfo: [AnyHashable: Any]) -> Bool {
