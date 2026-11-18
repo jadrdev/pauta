@@ -181,6 +181,22 @@ contenedor.
   sospecha que queda: el sistema entrega los avisos a **la copia registrada**
   de la app —la de `/Applicaciones`—, no a una copia suelta en otra carpeta.
   Para comprobarlo hay que poner la compilación de prueba en `/Aplicaciones`.
+- **Comprobado y descartado:** con la compilación de prueba en
+  `/Applications`, el sistema la registra para avisos de producción con
+  CloudKit (`registered push with environment production … cloudkit: true`),
+  pero no entra ningún aviso, ni de CloudKit ni mandado a mano. Sin resolver.
+
+### Conclusión de la fase 0
+
+- **Sigue adelante en el iPhone y el iPad**: CloudKit funciona en producción
+  y los avisos llegan en menos de un segundo.
+- **En el Mac, CloudKit funciona pero los avisos no llegan.** Hasta saber por
+  qué, el Mac pediría los cambios él mismo: al abrirse, al volver a primer
+  plano y cada pocos segundos mientras está abierto (`CKSyncEngine` lo permite
+  con `fetchChanges()`). No es tiempo real, pero con 15 segundos se acerca, y
+  cuesta muy poco. Si un día los avisos llegan, se quita el temporizador.
+- Lo que queda en el esquema de producción: el tipo `Prueba`, vacío. La zona y
+  la suscripción de prueba se borran al quitar el andamio.
 
 ## Fase 1 — El núcleo, sin interfaz
 
