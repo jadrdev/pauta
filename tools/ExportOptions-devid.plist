@@ -5,5 +5,8 @@
     <key>method</key><string>developer-id</string>
     <key>signingStyle</key><string>automatic</string>
     <key>teamID</key><string>26W4G92PSS</string>
+    <!-- CloudKit en producción: lo que usa quien instala el disco. Sin esto,
+         una app con Developer ID no sabe a qué entorno hablar. -->
+    <key>iCloudContainerEnvironment</key><string>Production</string>
 </dict>
 </plist>

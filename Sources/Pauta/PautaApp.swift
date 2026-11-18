@@ -258,6 +258,44 @@ struct Entry {
             }
             return
         }
+        // ANDAMIO-CLOUDKIT: la fase 0 del plan de CloudKit, desde el terminal.
+        //   --cloudkit-prueba [cuenta|preparar|escribir|leer|borrar|vigilar]
+        if let i = CommandLine.arguments.firstIndex(of: "--cloudkit-prueba") {
+            let accion = CommandLine.arguments.dropFirst(i + 1).first ?? "cuenta"
+            if accion == "vigilar" { VigiaDeCloudKit.vigilar(); return }
+            runOnMainLoop {
+                print("cuenta de iCloud: \(await PruebaCloudKit.cuenta())")
+                let f = DateFormatter(); f.dateFormat = "HH:mm:ss.SSS"
+                do {
+                    switch accion {
+                    case "preparar":
+                        try await PruebaCloudKit.preparar()
+                        print("zona «Prueba» y suscripción preparadas")
+                    case "escribir":
+                        let t = try await PruebaCloudKit.escribir(desde: "Mac")
+                        print("escrito a las \(f.string(from: t))")
+                    case "leer":
+                        let registros = try await PruebaCloudKit.leer()
+                        print("\(registros.count) registros")
+                        for r in registros.prefix(20) {
+                            let servidor = r.llegadoAlServidor.map {
+                                String(format: " (al servidor +%.1f s)", $0.timeIntervalSince(r.escrito))
+                            } ?? ""
+                            print("  \(f.string(from: r.escrito)) · \(r.aparato)\(servidor)")
+                        }
+                    case "borrar":
+                        try await PruebaCloudKit.borrarTodo()
+                        PruebaCloudKit.olvidarAvisos()
+                        print("zona y suscripción borradas")
+                    default:
+                        break
+                    }
+                } catch {
+                    print("✗ \(PruebaCloudKit.describir(error))")
+                }
+            }
+            return
+        }
         // En qué punto está la mudanza al contenedor de iCloud de este Mac.
         if CommandLine.arguments.contains("--mudanza") {
             let desde = Mudanza.mudadoDesde()

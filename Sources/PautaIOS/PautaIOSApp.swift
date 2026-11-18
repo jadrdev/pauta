@@ -12,6 +12,8 @@ import PautaCore
 @main
 @MainActor
 struct PautaIOSApp: App {
+    // ANDAMIO-CLOUDKIT (fase 0): los avisos silenciosos llegan por el delegado.
+    @UIApplicationDelegateAdaptor private var delegado: DelegadoDePruebaCloudKit
     @State private var store = Maqueta.activa ? Store.demo() : Store()
     @State private var agenda = Agenda()
 
@@ -70,6 +72,8 @@ struct RaizView: View {
     /// de apuntar. Con un booleano habría que acordarse de bajarlo, y dos
     /// toques seguidos en el widget no harían nada la segunda vez.
     @State private var pulsoApuntar = 0
+    // ANDAMIO-CLOUDKIT (fase 0).
+    @State private var pruebaCloudKit = false
     /// Vigila el contenedor de iCloud mientras la app está delante, para que
     /// un cambio hecho en otro aparato aparezca aquí sin tener que salir y
     /// volver.
@@ -107,8 +111,12 @@ struct RaizView: View {
         // así da igual en qué pestaña estuvieras y no hay que llevar el enlace
         // a mano hasta el fondo de la vista que la enseña.
         .sheet(item: $delEnlace) { DetalleView(item: $0) }
+        // ANDAMIO-CLOUDKIT (fase 0).
+        .sheet(isPresented: $pruebaCloudKit) { PruebaCloudKitView() }
         .task { if let p = Self.pestanaDeMaqueta { pestana = p } }
         .onOpenURL { url in
+            // ANDAMIO-CLOUDKIT (fase 0): `pauta://cloudkit-prueba`.
+            if url.host == "cloudkit-prueba" { pruebaCloudKit = true; return }
             switch Enlaces.destino(url) {
             case .hoy:
                 pestana = .hoy
