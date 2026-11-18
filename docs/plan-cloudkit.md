@@ -271,6 +271,26 @@ Decisiones tomadas por el camino:
    viejo llega a CloudKit, y al revés.
 5. Probar en este Mac, y luego en el otro.
 
+### Resultado (18 de noviembre de 2026): este Mac, mudado
+
+- Hace falta crear los tipos en **desarrollo** y publicarlos en producción
+  antes de que una compilación de Developer ID suba nada: en producción no se
+  crean tipos. `Pauta --cloudkit-esquema` (solo en depuración) los crea con
+  todos sus campos; publicar lo hizo el usuario en la consola.
+- La mudanza: copia en `~/Pauta antes de CloudKit 2026-11-18`, 389 archivos
+  llevados, comprobada. Al volver a abrir, la app usa la carpeta local con 335
+  tareas, 18 proyectos y 3 áreas.
+- CloudKit: zona y suscripción creadas, y todo subido en la primera vuelta
+  (395 registros conocidos).
+- La transición, con el iPhone todavía sin CloudKit: **tachar en el Mac llega
+  al iPhone en un par de segundos; apuntar en el iPhone llega al Mac en unos
+  12** (iPhone → contenedor → Mac → CloudKit).
+- `Pauta --cloudkit` dice en qué punto está.
+
+Pendiente antes de la fase 4: **los adjuntos por CloudKit** (`CKAsset`). Hoy
+viajan solo por el contenedor, que el Puente sigue cruzando; cuando se quite
+el Puente, tienen que ir por CloudKit.
+
 ## Fase 3 — El iPhone y el iPad
 
 El almacén ya es local (la carpeta del grupo), así que no hay mudanza de
