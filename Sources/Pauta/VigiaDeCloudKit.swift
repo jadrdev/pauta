@@ -1,4 +1,5 @@
 import AppKit
+import UserNotifications
 import PautaCore
 
 // ANDAMIO-CLOUDKIT: todo este archivo es de la fase 0 del plan de CloudKit
@@ -32,6 +33,12 @@ final class VigiaDeCloudKit: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.registerForRemoteNotifications()
+        // En el Mac los avisos remotos pasan por el centro de notificaciones,
+        // y cada copia de la app tiene su propio permiso. Provisional: no
+        // enseña ningún diálogo.
+        UNUserNotificationCenter.current().requestAuthorization(options: [.provisional]) { ok, error in
+            print("permiso de notificaciones: \(ok ? "concedido" : "no")\(error.map { " (\($0.localizedDescription))" } ?? "")")
+        }
         // Y una llamada a CloudKit: puede que el sistema no apunte el proceso
         // a los avisos del contenedor hasta que lo usa.
         Task {

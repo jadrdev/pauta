@@ -163,8 +163,24 @@ contenedor.
   de **desarrollo**. El de producción es otro, el que usa el Mac para todo; se
   comprueba con la compilación de Developer ID.
 - CloudKit no avisa al aparato que hizo el cambio: para medir hacen falta dos.
-- Falta: **producción** —Developer ID en el Mac y TestFlight en el iPhone—, que
-  necesita el tipo `Prueba` publicado en el esquema de producción.
+
+### Producción (18 de noviembre de 2026)
+
+- Publicado el tipo `Prueba` en el esquema de producción (se queda para
+  siempre, vacío).
+- **El Mac con Developer ID habla con CloudKit en producción**: la exportación
+  pone `icloud-container-environment` y `aps-environment` en producción solas
+  (`iCloudContainerEnvironment` en `ExportOptions-devid.plist`). Escribe, lee,
+  crea zona y suscripción.
+- **El iPhone de TestFlight (1.0.2, compilación 42.1) escribe en producción** y
+  el Mac lee lo que escribe.
+- **Al Mac no le llega ningún aviso, ni de CloudKit ni mandado a mano** desde
+  la consola de avisos de Apple, aunque se registra y tiene identificador. Se
+  probó: arrancada desde el terminal y como app; con la Pauta de Aplicaciones
+  abierta y cerrada; con y sin permiso de notificaciones (provisional). La
+  sospecha que queda: el sistema entrega los avisos a **la copia registrada**
+  de la app —la de `/Applicaciones`—, no a una copia suelta en otra carpeta.
+  Para comprobarlo hay que poner la compilación de prueba en `/Aplicaciones`.
 
 ## Fase 1 — El núcleo, sin interfaz
 
