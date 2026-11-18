@@ -258,6 +258,20 @@ struct Entry {
             }
             return
         }
+        #if DEBUG
+        if CommandLine.arguments.contains("--cloudkit-esquema") {
+            runOnMainLoop {
+                try await SincroniaDelMac.crearEsquema()
+                print("tipos Item, Project y Area creados en desarrollo")
+            }
+            return
+        }
+        #endif
+        // En qué punto está CloudKit en este Mac.
+        if CommandLine.arguments.contains("--cloudkit") {
+            print(SincroniaDelMac.resumen)
+            return
+        }
         // En qué punto está la mudanza al contenedor de iCloud de este Mac.
         if CommandLine.arguments.contains("--mudanza") {
             let desde = Mudanza.mudadoDesde()
@@ -344,8 +358,13 @@ struct PautaApp: App {
 
     init() {
         // La mudanza al contenedor de iCloud, en segundo plano y desde aquí y no
-        // desde una ventana: tiene que hacerse aunque no se abra ninguna.
-        if !Launch.demo { MudanzaDelMac.arrancar() }
+        // desde una ventana: tiene que hacerse aunque no se abra ninguna. Un Mac
+        // ya mudado a CloudKit no la necesita: su transición la lleva
+        // `SincroniaDelMac`.
+        if !Launch.demo && MudanzaACloudKit.mudadoDesde() == nil { MudanzaDelMac.arrancar() }
+        // Y CloudKit (docs/plan-cloudkit.md), también sin esperar a una ventana:
+        // Pauta vive en la barra de menús y puede no abrir ninguna.
+        if !Launch.demo { SincroniaDelMac.arrancar(store) }
     }
     @State private var nav = Navigation()
     /// Vigila la carpeta de datos para recoger lo que llegue de otro

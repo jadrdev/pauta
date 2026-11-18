@@ -183,10 +183,11 @@ public enum Mudanza {
     /// donde se escribió esto—, Documentos **es** iCloud, y una copia de
     /// seguridad en el mismo sitio que lo que protege no protege nada.
     #if os(macOS)
-    public static func carpetaDelResguardo(ahora: Date = .now) -> URL {
+    public static func carpetaDelResguardo(ahora: Date = .now,
+                                           nombre: String = "Pauta antes de la mudanza") -> URL {
         let dia = ahora.formatted(.iso8601.year().month().day())
         return FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Pauta antes de la mudanza \(dia)", isDirectory: true)
+            .appendingPathComponent("\(nombre) \(dia)", isDirectory: true)
     }
     #endif
 

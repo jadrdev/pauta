@@ -426,3 +426,81 @@ struct SincroniaTests {
         #expect(iphone.motor.porGuardar.isEmpty)
     }
 }
+
+// MARK: - La mudanza del Mac y la transición
+
+@MainActor
+struct MudanzaACloudKitTests {
+    private func carpeta(_ nombre: String) -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("pauta-\(nombre)-\(UUID().uuidString)", isDirectory: true)
+    }
+
+    /// La carpeta nueva solo si la mudanza se comprobó **y** existe.
+    @Test func theRootOnlyMovesWhenItIsThere() throws {
+        let antes = carpeta("antes"), nueva = carpeta("nueva")
+        defer { [antes, nueva].forEach { try? FileManager.default.removeItem(at: $0) } }
+        #expect(MudanzaACloudKit.raiz(mudado: false, nueva: nueva, antes: antes) == antes)
+        #expect(MudanzaACloudKit.raiz(mudado: true, nueva: nueva, antes: antes) == antes,
+                "mudado pero sin carpeta: se queda en la de antes")
+        try FileManager.default.createDirectory(at: nueva, withIntermediateDirectories: true)
+        #expect(MudanzaACloudKit.raiz(mudado: true, nueva: nueva, antes: antes) == nueva)
+    }
+
+    /// Se lleva todo, cuadra, y repetirla no cambia nada.
+    @Test func itMovesEverythingAndCanBeRepeated() throws {
+        let antes = carpeta("antes"), nueva = carpeta("nueva")
+        defer { [antes, nueva].forEach { try? FileManager.default.removeItem(at: $0) } }
+        let store = Store(root: antes)
+        let p = store.addProject(name: "Casa")
+        _ = store.addItem(title: "Una", in: .today)
+        _ = store.addItem(title: "Otra", in: .project(p.id))
+        let r = MudanzaACloudKit.mudar(desde: antes, a: nueva, enLocal: { _ in true })
+        #expect(r.cuadra)
+        #expect(Store(root: nueva).items.count == 2)
+        let otra = MudanzaACloudKit.mudar(desde: antes, a: nueva, enLocal: { _ in true })
+        #expect(otra.cuadra)
+        #expect(otra.balance.llevadas == 0)
+    }
+
+    /// El Puente dice qué objetos trajo, por clave.
+    @Test func theBridgeSaysWhatItBrought() throws {
+        let aqui = carpeta("aqui"), alla = carpeta("alla")
+        defer { [aqui, alla].forEach { try? FileManager.default.removeItem(at: $0) } }
+        let suyo = Store(root: alla)
+        let t = suyo.addItem(title: "Del otro lado", in: .today)
+        _ = Store(root: aqui)
+        let b = Puente.cruzar(aqui, alla, enLocal: { _ in true })
+        #expect(b.claveTraidas == [Ficha.Clave(.tarea, t.id)])
+    }
+
+    /// La transición: un iPhone viejo trabaja en la carpeta del contenedor; el
+    /// Mac la cruza con su almacén y sube a CloudKit lo que trae. Y lo que llega
+    /// de CloudKit acaba en el contenedor para el iPhone viejo.
+    @Test func anOldDeviceReachesCloudKitThroughTheMac() async throws {
+        let contenedor = carpeta("contenedor")
+        defer { try? FileManager.default.removeItem(at: contenedor) }
+        let servidor = ServidorDeMentira()
+        let mac = Aparato(servidor), otroMac = Aparato(servidor)
+        let viejo = Store(root: contenedor)
+
+        // El viejo apunta algo; el Mac cruza y lo sube.
+        let t = viejo.addItem(title: "Desde el iPhone viejo", in: .today)
+        let b = Puente.cruzar(mac.raiz, contenedor, enLocal: { _ in true })
+        for clave in b.claveTraidas { mac.sincronia.escrito(clave) }
+        mac.store.reload()
+        try await mac.sincronizar()
+        try await otroMac.sincronizar()
+        #expect(otroMac.tarea(t.id)?.title == "Desde el iPhone viejo")
+
+        // El otro Mac lo cambia por CloudKit; el Mac lo trae y lo cruza al
+        // contenedor, donde lo lee el viejo.
+        await respirar()
+        otroMac.renombrar(t.id, "Cambiada en el otro Mac")
+        try await otroMac.sincronizar()
+        try await mac.sincronizar()
+        _ = Puente.cruzar(mac.raiz, contenedor, enLocal: { _ in true })
+        viejo.reload()
+        #expect(viejo.items.first { $0.id == t.id }?.title == "Cambiada en el otro Mac")
+    }
+}

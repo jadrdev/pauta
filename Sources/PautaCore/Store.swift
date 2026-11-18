@@ -187,6 +187,7 @@ public final class Store {
     /// Si los datos viven en iCloud Drive o solo en local.
     public var isSynced: Bool {
         root == Store.iCloudRoot || (Contenedor.rutaEnElMac.map { root == $0 } ?? false)
+            || (MudanzaACloudKit.mudadoDesde() != nil && root == MudanzaACloudKit.carpeta)
     }
 
     /// Carpeta de la app dentro de iCloud Drive, si iCloud Drive está activo.
@@ -267,6 +268,19 @@ public final class Store {
     /// comprobado (docs/plan-contenedor-icloud.md); si no, la carpeta de
     /// siempre en iCloud Drive.
     public nonisolated static var defaultRoot: URL {
+        #if os(macOS)
+        // Con la mudanza a CloudKit comprobada, la carpeta local nueva
+        // (docs/plan-cloudkit.md, fase 2). Si no, la de la mudanza anterior.
+        return MudanzaACloudKit.raiz(mudado: MudanzaACloudKit.mudadoDesde() != nil,
+                                     nueva: MudanzaACloudKit.carpeta, antes: raizAntesDeCloudKit)
+        #else
+        return iCloudRoot ?? grupoRoot ?? localRoot
+        #endif
+    }
+
+    /// La carpeta del Mac antes de CloudKit: el contenedor de iCloud si este
+    /// Mac se mudó a él, y si no, la de siempre.
+    public nonisolated static var raizAntesDeCloudKit: URL {
         #if os(macOS)
         return Mudanza.raiz(mudado: Mudanza.mudadoDesde() != nil,
                             contenedor: Contenedor.rutaEnElMac, vieja: carpetaDeAntes) ?? carpetaDeAntes

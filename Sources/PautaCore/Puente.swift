@@ -28,6 +28,9 @@ public enum Puente {
         /// Marcadores de iCloud encontrados: hay datos que aún no han bajado y
         /// que aparecerán en el siguiente cruce.
         public var pendientesDeBajar = 0
+        /// Qué objetos vinieron, por clave. Lo usa la transición a CloudKit:
+        /// lo que trae un aparato viejo por la carpeta hay que subirlo también.
+        public var claveTraidas: [Ficha.Clave] = []
 
         public init() {}
 
@@ -36,6 +39,7 @@ public enum Puente {
             traidas += otro.traidas
             llevadas += otro.llevadas
             pendientesDeBajar += otro.pendientesDeBajar
+            claveTraidas += otro.claveTraidas
         }
     }
 
@@ -134,6 +138,13 @@ public enum Puente {
 
             let deAqui = nombres(dirAqui)
             let deAlla = nombres(dirAlla)
+            func traida(_ nombre: String) {
+                balance.traidas += 1
+                if let tipo = Ficha.Tipo(carpeta: sub),
+                   let id = UUID(uuidString: (nombre as NSString).deletingPathExtension) {
+                    balance.claveTraidas.append(Ficha.Clave(tipo, id))
+                }
+            }
 
             // Lo que está a medio bajar en cualquiera de los dos lados no se
             // toca hasta el cruce siguiente. Antes se tomaba por ausente y se
@@ -148,16 +159,16 @@ public enum Puente {
                 case (true, false):
                     if copiar(uno, a: otro) { balance.llevadas += 1 }
                 case (false, true):
-                    if copiar(otro, a: uno) { balance.traidas += 1 }
+                    if copiar(otro, a: uno) { traida(nombre) }
                 case (true, true):
                     guard let mia = version(uno), let suya = version(otro) else {
                         // Uno de los dos no se entiende: gana el que sí, y si
                         // ninguno se entiende no se toca nada.
                         if version(uno) != nil, copiar(uno, a: otro) { balance.llevadas += 1 }
-                        else if version(otro) != nil, copiar(otro, a: uno) { balance.traidas += 1 }
+                        else if version(otro) != nil, copiar(otro, a: uno) { traida(nombre) }
                         continue
                     }
-                    if suya > mia, copiar(otro, a: uno) { balance.traidas += 1 }
+                    if suya > mia, copiar(otro, a: uno) { traida(nombre) }
                     else if mia > suya, copiar(uno, a: otro) { balance.llevadas += 1 }
                 case (false, false):
                     continue
