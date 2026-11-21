@@ -145,10 +145,10 @@ struct RaizView: View {
                 return
             }
             vigilante.empezar {
-                Task {
-                    await Sincronizar.conICloud(store)
-                    store.reload()
-                }
+                // Sin recargar aparte: el cruce ya recarga cuando trae algo,
+                // y recargar por costumbre en cada aviso de iCloud era
+                // trabajo en el hilo principal por cada archivo que llegaba.
+                Task { await Sincronizar.conICloud(store) }
             }
             store.reload()
             // El teléfono puede pasar días sin cerrarse del todo: la copia del
@@ -209,10 +209,10 @@ struct RaizView: View {
             // «activa» cuando la app se abre de cero, y apoyarse solo en él deja
             // la primera sesión sin vigilante.
             vigilante.empezar {
-                Task {
-                    await Sincronizar.conICloud(store)
-                    store.reload()
-                }
+                // Sin recargar aparte: el cruce ya recarga cuando trae algo,
+                // y recargar por costumbre en cada aviso de iCloud era
+                // trabajo en el hilo principal por cada archivo que llegaba.
+                Task { await Sincronizar.conICloud(store) }
             }
             RefrescoEnSegundoPlano.programar()
             // Y quién atiende lo que pida el reloj, que hasta ahora solo

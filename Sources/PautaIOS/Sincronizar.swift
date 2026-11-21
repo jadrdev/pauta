@@ -21,7 +21,53 @@ import PautaCore
 enum Sincronizar {
     private static let claveCopia = "contenedor.copiaDeAntes"
 
-    /// Cruza **fuera del hilo principal**.
+    /// Si hay un cruce en marcha.
+    private static var cruzando = false
+    /// Si alguien pidió cruzar mientras había uno en marcha, y si alguno de
+    /// esos pidió también traer de CloudKit.
+    private static var otraVez = false
+    private static var otraVezTrayendo = false
+    /// Quienes esperan al cruce que empezará cuando acabe el de ahora.
+    private static var esperando: [CheckedContinuation<Puente.Balance?, Never>] = []
+
+    /// Cruza, **de uno en uno**.
+    ///
+    /// Se pide desde muchos sitios —el vigilante, cada cambio de las tareas,
+    /// volver del fondo, el arranque—, y en un aparato recién instalado con
+    /// tareas en iCloud llegan a la vez: iCloud avisa archivo a archivo, cada
+    /// cruce que trae algo recarga, y recargar cambia las tareas, que vuelve a
+    /// pedir otro. En el iPad cada cruce con el contenedor tarda de seis a
+    /// once segundos, así que se montaban unos encima de otros y la app se
+    /// quedaba trabada justo en el primer arranque (un iPad recién formateado,
+    /// noviembre de 2026).
+    ///
+    /// Ahora, si llega una petición con un cruce en marcha, no se lanza otro:
+    /// se apunta, y al acabar el de ahora se hace **uno más** por todas las
+    /// que llegaron mientras tanto —trayendo de CloudKit si alguna lo pidió—.
+    /// Uno y no ninguno, porque lo que las motivó pudo pasar después de que el
+    /// cruce en marcha leyera las carpetas.
+    private static func cruzarUnaVez(_ store: Store, traer: Bool, vez: Int) async -> Puente.Balance? {
+        if cruzando {
+            otraVez = true
+            if traer { otraVezTrayendo = true }
+            return await withCheckedContinuation { esperando.append($0) }
+        }
+        cruzando = true
+        var balance = await cruzarUnaVez(store, traer: traer, vez: vez)
+        while otraVez {
+            let trayendo = otraVezTrayendo
+            otraVez = false
+            otraVezTrayendo = false
+            let estos = esperando
+            esperando = []
+            balance = await cruzarUnaVez(store, traer: trayendo, vez: vez)
+            for espera in estos { espera.resume(returning: balance) }
+        }
+        cruzando = false
+        return balance
+    }
+
+    /// Un cruce, **fuera del hilo principal**.
     ///
     /// Esto se escribió primero en el hilo principal y con una carpeta de
     /// verdad —sesenta y siete archivos, la mitad sin bajar de iCloud— dejó la
